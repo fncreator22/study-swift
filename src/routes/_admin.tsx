@@ -10,15 +10,14 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_admin")({ component: AdminLayout });
 
-const items = [
+const items: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/tests", label: "Tests", icon: BookOpen },
-  { to: "/admin/questions", label: "Questions", icon: ListChecks },
   { to: "/admin/courses", label: "Courses", icon: PlayCircle },
   { to: "/admin/comments", label: "Comments", icon: MessageSquare },
   { to: "/admin/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 function AdminLayout() {
   const { user, isAdmin, loading, signOut } = useAuth();
