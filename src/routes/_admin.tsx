@@ -5,7 +5,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, BookOpen, ListChecks, PlayCircle, MessageSquare, Settings, LogOut, Lock } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_admin")({ component: AdminLayout });
@@ -50,7 +50,7 @@ function AdminLayout() {
                     return (
                       <SidebarMenuItem key={it.to}>
                         <SidebarMenuButton asChild isActive={active}>
-                          <Link to={it.to}><it.icon className="h-4 w-4" /><span>{it.label}</span></Link>
+                          <Link to={it.to as any}><it.icon className="h-4 w-4" /><span>{it.label}</span></Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
