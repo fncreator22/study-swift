@@ -16,6 +16,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as StudentDashboardRouteImport } from './routes/_student.dashboard'
 import { Route as StudentTestsIndexRouteImport } from './routes/_student.tests.index'
+import { Route as StudentTestsTestIdIndexRouteImport } from './routes/_student.tests.$testId.index'
+import { Route as StudentTestsTestIdAttemptRouteImport } from './routes/_student.tests.$testId.attempt'
+import { Route as StudentTestsTestIdReviewAttemptIdRouteImport } from './routes/_student.tests.$testId.review.$attemptId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -51,6 +54,23 @@ const StudentTestsIndexRoute = StudentTestsIndexRouteImport.update({
   path: '/tests/',
   getParentRoute: () => StudentRoute,
 } as any)
+const StudentTestsTestIdIndexRoute = StudentTestsTestIdIndexRouteImport.update({
+  id: '/tests/$testId/',
+  path: '/tests/$testId/',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentTestsTestIdAttemptRoute =
+  StudentTestsTestIdAttemptRouteImport.update({
+    id: '/tests/$testId/attempt',
+    path: '/tests/$testId/attempt',
+    getParentRoute: () => StudentRoute,
+  } as any)
+const StudentTestsTestIdReviewAttemptIdRoute =
+  StudentTestsTestIdReviewAttemptIdRouteImport.update({
+    id: '/tests/$testId/review/$attemptId',
+    path: '/tests/$testId/review/$attemptId',
+    getParentRoute: () => StudentRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,6 +79,9 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof StudentDashboardRoute
   '/admin/login': typeof AdminLoginRoute
   '/tests/': typeof StudentTestsIndexRoute
+  '/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/tests/$testId/': typeof StudentTestsTestIdIndexRoute
+  '/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +90,9 @@ export interface FileRoutesByTo {
   '/dashboard': typeof StudentDashboardRoute
   '/admin/login': typeof AdminLoginRoute
   '/tests': typeof StudentTestsIndexRoute
+  '/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/tests/$testId': typeof StudentTestsTestIdIndexRoute
+  '/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,6 +103,9 @@ export interface FileRoutesById {
   '/_student/dashboard': typeof StudentDashboardRoute
   '/admin/login': typeof AdminLoginRoute
   '/_student/tests/': typeof StudentTestsIndexRoute
+  '/_student/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/_student/tests/$testId/': typeof StudentTestsTestIdIndexRoute
+  '/_student/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,8 +116,20 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/admin/login'
     | '/tests/'
+    | '/tests/$testId/attempt'
+    | '/tests/$testId/'
+    | '/tests/$testId/review/$attemptId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/dashboard' | '/admin/login' | '/tests'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/dashboard'
+    | '/admin/login'
+    | '/tests'
+    | '/tests/$testId/attempt'
+    | '/tests/$testId'
+    | '/tests/$testId/review/$attemptId'
   id:
     | '__root__'
     | '/'
@@ -98,6 +139,9 @@ export interface FileRouteTypes {
     | '/_student/dashboard'
     | '/admin/login'
     | '/_student/tests/'
+    | '/_student/tests/$testId/attempt'
+    | '/_student/tests/$testId/'
+    | '/_student/tests/$testId/review/$attemptId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -159,17 +203,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentTestsIndexRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/_student/tests/$testId/': {
+      id: '/_student/tests/$testId/'
+      path: '/tests/$testId'
+      fullPath: '/tests/$testId/'
+      preLoaderRoute: typeof StudentTestsTestIdIndexRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/tests/$testId/attempt': {
+      id: '/_student/tests/$testId/attempt'
+      path: '/tests/$testId/attempt'
+      fullPath: '/tests/$testId/attempt'
+      preLoaderRoute: typeof StudentTestsTestIdAttemptRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/tests/$testId/review/$attemptId': {
+      id: '/_student/tests/$testId/review/$attemptId'
+      path: '/tests/$testId/review/$attemptId'
+      fullPath: '/tests/$testId/review/$attemptId'
+      preLoaderRoute: typeof StudentTestsTestIdReviewAttemptIdRouteImport
+      parentRoute: typeof StudentRoute
+    }
   }
 }
 
 interface StudentRouteChildren {
   StudentDashboardRoute: typeof StudentDashboardRoute
   StudentTestsIndexRoute: typeof StudentTestsIndexRoute
+  StudentTestsTestIdAttemptRoute: typeof StudentTestsTestIdAttemptRoute
+  StudentTestsTestIdIndexRoute: typeof StudentTestsTestIdIndexRoute
+  StudentTestsTestIdReviewAttemptIdRoute: typeof StudentTestsTestIdReviewAttemptIdRoute
 }
 
 const StudentRouteChildren: StudentRouteChildren = {
   StudentDashboardRoute: StudentDashboardRoute,
   StudentTestsIndexRoute: StudentTestsIndexRoute,
+  StudentTestsTestIdAttemptRoute: StudentTestsTestIdAttemptRoute,
+  StudentTestsTestIdIndexRoute: StudentTestsTestIdIndexRoute,
+  StudentTestsTestIdReviewAttemptIdRoute:
+    StudentTestsTestIdReviewAttemptIdRoute,
 }
 
 const StudentRouteWithChildren =
