@@ -9,38 +9,344 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as StudentRouteImport } from './routes/_student'
+import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as StudentSettingsRouteImport } from './routes/_student.settings'
+import { Route as StudentRankingsRouteImport } from './routes/_student.rankings'
+import { Route as StudentPurchasedRouteImport } from './routes/_student.purchased'
+import { Route as StudentProfileRouteImport } from './routes/_student.profile'
+import { Route as StudentHistoryRouteImport } from './routes/_student.history'
+import { Route as StudentDashboardRouteImport } from './routes/_student.dashboard'
+import { Route as StudentCoursesRouteImport } from './routes/_student.courses'
+import { Route as StudentTestsIndexRouteImport } from './routes/_student.tests.index'
+import { Route as AdminAdminIndexRouteImport } from './routes/_admin.admin.index'
+import { Route as AdminAdminUsersRouteImport } from './routes/_admin.admin.users'
+import { Route as AdminAdminTestsRouteImport } from './routes/_admin.admin.tests'
+import { Route as AdminAdminSettingsRouteImport } from './routes/_admin.admin.settings'
+import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
+import { Route as AdminAdminCommentsRouteImport } from './routes/_admin.admin.comments'
+import { Route as StudentTestsTestIdIndexRouteImport } from './routes/_student.tests.$testId.index'
+import { Route as StudentTestsTestIdAttemptRouteImport } from './routes/_student.tests.$testId.attempt'
+import { Route as AdminAdminQuestionsTestIdRouteImport } from './routes/_admin.admin.questions.$testId'
+import { Route as StudentTestsTestIdReviewAttemptIdRouteImport } from './routes/_student.tests.$testId.review.$attemptId'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentRoute = StudentRouteImport.update({
+  id: '/_student',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/_admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentSettingsRoute = StudentSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentRankingsRoute = StudentRankingsRouteImport.update({
+  id: '/rankings',
+  path: '/rankings',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentPurchasedRoute = StudentPurchasedRouteImport.update({
+  id: '/purchased',
+  path: '/purchased',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentProfileRoute = StudentProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentHistoryRoute = StudentHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentDashboardRoute = StudentDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentCoursesRoute = StudentCoursesRouteImport.update({
+  id: '/courses',
+  path: '/courses',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentTestsIndexRoute = StudentTestsIndexRouteImport.update({
+  id: '/tests/',
+  path: '/tests/',
+  getParentRoute: () => StudentRoute,
+} as any)
+const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminTestsRoute = AdminAdminTestsRouteImport.update({
+  id: '/admin/tests',
+  path: '/admin/tests',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminCoursesRoute = AdminAdminCoursesRouteImport.update({
+  id: '/admin/courses',
+  path: '/admin/courses',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminCommentsRoute = AdminAdminCommentsRouteImport.update({
+  id: '/admin/comments',
+  path: '/admin/comments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const StudentTestsTestIdIndexRoute = StudentTestsTestIdIndexRouteImport.update({
+  id: '/tests/$testId/',
+  path: '/tests/$testId/',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentTestsTestIdAttemptRoute =
+  StudentTestsTestIdAttemptRouteImport.update({
+    id: '/tests/$testId/attempt',
+    path: '/tests/$testId/attempt',
+    getParentRoute: () => StudentRoute,
+  } as any)
+const AdminAdminQuestionsTestIdRoute =
+  AdminAdminQuestionsTestIdRouteImport.update({
+    id: '/admin/questions/$testId',
+    path: '/admin/questions/$testId',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const StudentTestsTestIdReviewAttemptIdRoute =
+  StudentTestsTestIdReviewAttemptIdRouteImport.update({
+    id: '/tests/$testId/review/$attemptId',
+    path: '/tests/$testId/review/$attemptId',
+    getParentRoute: () => StudentRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/courses': typeof StudentCoursesRoute
+  '/dashboard': typeof StudentDashboardRoute
+  '/history': typeof StudentHistoryRoute
+  '/profile': typeof StudentProfileRoute
+  '/purchased': typeof StudentPurchasedRoute
+  '/rankings': typeof StudentRankingsRoute
+  '/settings': typeof StudentSettingsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/comments': typeof AdminAdminCommentsRoute
+  '/admin/courses': typeof AdminAdminCoursesRoute
+  '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/tests': typeof AdminAdminTestsRoute
+  '/admin/users': typeof AdminAdminUsersRoute
+  '/admin/': typeof AdminAdminIndexRoute
+  '/tests/': typeof StudentTestsIndexRoute
+  '/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
+  '/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/tests/$testId/': typeof StudentTestsTestIdIndexRoute
+  '/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/courses': typeof StudentCoursesRoute
+  '/dashboard': typeof StudentDashboardRoute
+  '/history': typeof StudentHistoryRoute
+  '/profile': typeof StudentProfileRoute
+  '/purchased': typeof StudentPurchasedRoute
+  '/rankings': typeof StudentRankingsRoute
+  '/settings': typeof StudentSettingsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/comments': typeof AdminAdminCommentsRoute
+  '/admin/courses': typeof AdminAdminCoursesRoute
+  '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/tests': typeof AdminAdminTestsRoute
+  '/admin/users': typeof AdminAdminUsersRoute
+  '/admin': typeof AdminAdminIndexRoute
+  '/tests': typeof StudentTestsIndexRoute
+  '/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
+  '/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/tests/$testId': typeof StudentTestsTestIdIndexRoute
+  '/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_admin': typeof AdminRouteWithChildren
+  '/_student': typeof StudentRouteWithChildren
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/_student/courses': typeof StudentCoursesRoute
+  '/_student/dashboard': typeof StudentDashboardRoute
+  '/_student/history': typeof StudentHistoryRoute
+  '/_student/profile': typeof StudentProfileRoute
+  '/_student/purchased': typeof StudentPurchasedRoute
+  '/_student/rankings': typeof StudentRankingsRoute
+  '/_student/settings': typeof StudentSettingsRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/_admin/admin/comments': typeof AdminAdminCommentsRoute
+  '/_admin/admin/courses': typeof AdminAdminCoursesRoute
+  '/_admin/admin/settings': typeof AdminAdminSettingsRoute
+  '/_admin/admin/tests': typeof AdminAdminTestsRoute
+  '/_admin/admin/users': typeof AdminAdminUsersRoute
+  '/_admin/admin/': typeof AdminAdminIndexRoute
+  '/_student/tests/': typeof StudentTestsIndexRoute
+  '/_admin/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
+  '/_student/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/_student/tests/$testId/': typeof StudentTestsTestIdIndexRoute
+  '/_student/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/courses'
+    | '/dashboard'
+    | '/history'
+    | '/profile'
+    | '/purchased'
+    | '/rankings'
+    | '/settings'
+    | '/admin/login'
+    | '/admin/comments'
+    | '/admin/courses'
+    | '/admin/settings'
+    | '/admin/tests'
+    | '/admin/users'
+    | '/admin/'
+    | '/tests/'
+    | '/admin/questions/$testId'
+    | '/tests/$testId/attempt'
+    | '/tests/$testId/'
+    | '/tests/$testId/review/$attemptId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/courses'
+    | '/dashboard'
+    | '/history'
+    | '/profile'
+    | '/purchased'
+    | '/rankings'
+    | '/settings'
+    | '/admin/login'
+    | '/admin/comments'
+    | '/admin/courses'
+    | '/admin/settings'
+    | '/admin/tests'
+    | '/admin/users'
+    | '/admin'
+    | '/tests'
+    | '/admin/questions/$testId'
+    | '/tests/$testId/attempt'
+    | '/tests/$testId'
+    | '/tests/$testId/review/$attemptId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_admin'
+    | '/_student'
+    | '/login'
+    | '/signup'
+    | '/_student/courses'
+    | '/_student/dashboard'
+    | '/_student/history'
+    | '/_student/profile'
+    | '/_student/purchased'
+    | '/_student/rankings'
+    | '/_student/settings'
+    | '/admin/login'
+    | '/_admin/admin/comments'
+    | '/_admin/admin/courses'
+    | '/_admin/admin/settings'
+    | '/_admin/admin/tests'
+    | '/_admin/admin/users'
+    | '/_admin/admin/'
+    | '/_student/tests/'
+    | '/_admin/admin/questions/$testId'
+    | '/_student/tests/$testId/attempt'
+    | '/_student/tests/$testId/'
+    | '/_student/tests/$testId/review/$attemptId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  StudentRoute: typeof StudentRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
+  AdminLoginRoute: typeof AdminLoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_student': {
+      id: '/_student'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof StudentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_admin': {
+      id: '/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +354,204 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_student/settings': {
+      id: '/_student/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof StudentSettingsRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/rankings': {
+      id: '/_student/rankings'
+      path: '/rankings'
+      fullPath: '/rankings'
+      preLoaderRoute: typeof StudentRankingsRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/purchased': {
+      id: '/_student/purchased'
+      path: '/purchased'
+      fullPath: '/purchased'
+      preLoaderRoute: typeof StudentPurchasedRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/profile': {
+      id: '/_student/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof StudentProfileRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/history': {
+      id: '/_student/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof StudentHistoryRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/dashboard': {
+      id: '/_student/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof StudentDashboardRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/courses': {
+      id: '/_student/courses'
+      path: '/courses'
+      fullPath: '/courses'
+      preLoaderRoute: typeof StudentCoursesRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/tests/': {
+      id: '/_student/tests/'
+      path: '/tests'
+      fullPath: '/tests/'
+      preLoaderRoute: typeof StudentTestsIndexRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_admin/admin/': {
+      id: '/_admin/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminAdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/users': {
+      id: '/_admin/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminAdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/tests': {
+      id: '/_admin/admin/tests'
+      path: '/admin/tests'
+      fullPath: '/admin/tests'
+      preLoaderRoute: typeof AdminAdminTestsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/settings': {
+      id: '/_admin/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminAdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/courses': {
+      id: '/_admin/admin/courses'
+      path: '/admin/courses'
+      fullPath: '/admin/courses'
+      preLoaderRoute: typeof AdminAdminCoursesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/comments': {
+      id: '/_admin/admin/comments'
+      path: '/admin/comments'
+      fullPath: '/admin/comments'
+      preLoaderRoute: typeof AdminAdminCommentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_student/tests/$testId/': {
+      id: '/_student/tests/$testId/'
+      path: '/tests/$testId'
+      fullPath: '/tests/$testId/'
+      preLoaderRoute: typeof StudentTestsTestIdIndexRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/tests/$testId/attempt': {
+      id: '/_student/tests/$testId/attempt'
+      path: '/tests/$testId/attempt'
+      fullPath: '/tests/$testId/attempt'
+      preLoaderRoute: typeof StudentTestsTestIdAttemptRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_admin/admin/questions/$testId': {
+      id: '/_admin/admin/questions/$testId'
+      path: '/admin/questions/$testId'
+      fullPath: '/admin/questions/$testId'
+      preLoaderRoute: typeof AdminAdminQuestionsTestIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_student/tests/$testId/review/$attemptId': {
+      id: '/_student/tests/$testId/review/$attemptId'
+      path: '/tests/$testId/review/$attemptId'
+      fullPath: '/tests/$testId/review/$attemptId'
+      preLoaderRoute: typeof StudentTestsTestIdReviewAttemptIdRouteImport
+      parentRoute: typeof StudentRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminAdminCommentsRoute: typeof AdminAdminCommentsRoute
+  AdminAdminCoursesRoute: typeof AdminAdminCoursesRoute
+  AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
+  AdminAdminTestsRoute: typeof AdminAdminTestsRoute
+  AdminAdminUsersRoute: typeof AdminAdminUsersRoute
+  AdminAdminIndexRoute: typeof AdminAdminIndexRoute
+  AdminAdminQuestionsTestIdRoute: typeof AdminAdminQuestionsTestIdRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdminCommentsRoute: AdminAdminCommentsRoute,
+  AdminAdminCoursesRoute: AdminAdminCoursesRoute,
+  AdminAdminSettingsRoute: AdminAdminSettingsRoute,
+  AdminAdminTestsRoute: AdminAdminTestsRoute,
+  AdminAdminUsersRoute: AdminAdminUsersRoute,
+  AdminAdminIndexRoute: AdminAdminIndexRoute,
+  AdminAdminQuestionsTestIdRoute: AdminAdminQuestionsTestIdRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface StudentRouteChildren {
+  StudentCoursesRoute: typeof StudentCoursesRoute
+  StudentDashboardRoute: typeof StudentDashboardRoute
+  StudentHistoryRoute: typeof StudentHistoryRoute
+  StudentProfileRoute: typeof StudentProfileRoute
+  StudentPurchasedRoute: typeof StudentPurchasedRoute
+  StudentRankingsRoute: typeof StudentRankingsRoute
+  StudentSettingsRoute: typeof StudentSettingsRoute
+  StudentTestsIndexRoute: typeof StudentTestsIndexRoute
+  StudentTestsTestIdAttemptRoute: typeof StudentTestsTestIdAttemptRoute
+  StudentTestsTestIdIndexRoute: typeof StudentTestsTestIdIndexRoute
+  StudentTestsTestIdReviewAttemptIdRoute: typeof StudentTestsTestIdReviewAttemptIdRoute
+}
+
+const StudentRouteChildren: StudentRouteChildren = {
+  StudentCoursesRoute: StudentCoursesRoute,
+  StudentDashboardRoute: StudentDashboardRoute,
+  StudentHistoryRoute: StudentHistoryRoute,
+  StudentProfileRoute: StudentProfileRoute,
+  StudentPurchasedRoute: StudentPurchasedRoute,
+  StudentRankingsRoute: StudentRankingsRoute,
+  StudentSettingsRoute: StudentSettingsRoute,
+  StudentTestsIndexRoute: StudentTestsIndexRoute,
+  StudentTestsTestIdAttemptRoute: StudentTestsTestIdAttemptRoute,
+  StudentTestsTestIdIndexRoute: StudentTestsTestIdIndexRoute,
+  StudentTestsTestIdReviewAttemptIdRoute:
+    StudentTestsTestIdReviewAttemptIdRoute,
+}
+
+const StudentRouteWithChildren =
+  StudentRoute._addFileChildren(StudentRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  StudentRoute: StudentRouteWithChildren,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
+  AdminLoginRoute: AdminLoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
