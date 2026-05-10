@@ -11,6 +11,7 @@ export const Route = createFileRoute("/_student/tests/")({ component: TestsList 
 type Test = {
   id: string; title: string; description: string; tier: "free" | "paid" | "premium";
   price: number; duration_min: number; total_marks: number; created_at: string;
+  test_type: "mcq" | "written";
 };
 
 function TestsList() {
@@ -47,7 +48,7 @@ function TestsList() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold">All tests</h1>
-          <p className="mt-1 text-muted-foreground">Browse free, paid, and premium MCQ tests.</p>
+          <p className="mt-1 text-muted-foreground">Browse MCQ and written tests across all tiers.</p>
         </div>
         <div className="flex gap-2">
           <Select value={tier} onValueChange={setTier}>
@@ -78,7 +79,10 @@ function TestsList() {
           return (
             <div key={t.id} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-soft">
               <div className="mb-3 flex items-center justify-between">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${t.tier === 'free' ? 'bg-success/10 text-success' : 'bg-accent text-accent-foreground'}`}>{t.tier}</span>
+                <div className="flex gap-1.5">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${t.tier === 'free' ? 'bg-success/10 text-success' : 'bg-accent text-accent-foreground'}`}>{t.tier}</span>
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">{t.test_type === 'written' ? 'Written' : 'MCQ'}</span>
+                </div>
                 <span className="text-sm font-semibold">{t.tier === 'free' ? 'Free' : `₹${t.price}`}</span>
               </div>
               <h3 className="font-display text-lg font-semibold">{t.title}</h3>

@@ -1,44 +1,62 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, X } from "lucide-react";
+import { Check, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_student/tests/$testId/review/$attemptId")({ component: Review });
 
-type Q = { id: string; question: string; option_a: string; option_b: string; option_c: string; option_d: string; correct_option: string };
+type Q = {
+  id: string;
+  question: string;
+  question_type: "mcq" | "written";
+  option_a: string | null; option_b: string | null; option_c: string | null; option_d: string | null;
+  correct_option: string | null;
+  max_words: number | null;
+};
 type Attempt = { score: number; total: number; submitted_at: string };
 
 function Review() {
   const { testId, attemptId } = Route.useParams();
   const [attempt, setAttempt] = useState<Attempt | null>(null);
+  const [test, setTest] = useState<{ test_type: "mcq" | "written" } | null>(null);
   const [questions, setQuestions] = useState<Q[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string | null>>({});
+  const [answers, setAnswers] = useState<Record<string, { selected: string | null; written: string | null }>>({});
 
   useEffect(() => {
     (async () => {
+      const { data: t } = await supabase.from("tests").select("test_type").eq("id", testId).maybeSingle();
+      setTest(t as any);
       const { data: a } = await supabase.from("test_attempts").select("score,total,submitted_at").eq("id", attemptId).maybeSingle();
       setAttempt(a as Attempt);
       const { data: qs } = await supabase.from("test_questions").select("*").eq("test_id", testId).order("position");
       setQuestions((qs as Q[]) ?? []);
-      const { data: ans } = await supabase.from("test_answers").select("question_id,selected_option").eq("attempt_id", attemptId);
-      const m: Record<string, string | null> = {};
-      (ans ?? []).forEach((r: any) => { m[r.question_id] = r.selected_option; });
+      const { data: ans } = await supabase.from("test_answers").select("question_id,selected_option,written_answer").eq("attempt_id", attemptId);
+      const m: Record<string, { selected: string | null; written: string | null }> = {};
+      (ans ?? []).forEach((r: any) => { m[r.question_id] = { selected: r.selected_option, written: r.written_answer }; });
       setAnswers(m);
     })();
   }, [testId, attemptId]);
 
-  if (!attempt) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (!attempt || !test) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  const isWritten = test.test_type === "written";
   const pct = attempt.total ? Math.round((attempt.score / attempt.total) * 100) : 0;
 
   return (
     <div className="mx-auto max-w-3xl">
       <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
-        <p className="text-sm text-muted-foreground">Your result</p>
-        <div className="mt-2 flex flex-wrap items-end gap-6">
-          <div><p className="font-display text-5xl font-bold">{attempt.score}<span className="text-2xl text-muted-foreground">/{attempt.total}</span></p><p className="text-sm text-muted-foreground">Score</p></div>
-          <div><p className="font-display text-5xl font-bold text-primary">{pct}%</p><p className="text-sm text-muted-foreground">Percentage</p></div>
-        </div>
+        <p className="text-sm text-muted-foreground">{isWritten ? "Submission received" : "Your result"}</p>
+        {isWritten ? (
+          <div className="mt-3">
+            <p className="font-display text-2xl font-bold">Awaiting review</p>
+            <p className="mt-1 text-sm text-muted-foreground">Written answers are graded manually. You'll see your score once it's reviewed.</p>
+          </div>
+        ) : (
+          <div className="mt-2 flex flex-wrap items-end gap-6">
+            <div><p className="font-display text-5xl font-bold">{attempt.score}<span className="text-2xl text-muted-foreground">/{attempt.total}</span></p><p className="text-sm text-muted-foreground">Score</p></div>
+            <div><p className="font-display text-5xl font-bold text-primary">{pct}%</p><p className="text-sm text-muted-foreground">Percentage</p></div>
+          </div>
+        )}
         <div className="mt-6 flex gap-2">
           <Link to="/rankings"><Button variant="outline">View rankings</Button></Link>
           <Link to="/tests"><Button variant="ghost">More tests</Button></Link>
@@ -47,7 +65,22 @@ function Review() {
 
       <div className="mt-8 space-y-4">
         {questions.map((q, i) => {
-          const sel = answers[q.id];
+          const a = answers[q.id];
+          if (q.question_type === "written") {
+            return (
+              <div key={q.id} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">Question {i + 1} · Written</p>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <h3 className="mt-1 font-display font-semibold">{q.question}</h3>
+                <div className="mt-3 rounded-xl bg-muted p-4 text-sm whitespace-pre-wrap">
+                  {a?.written?.trim() ? a.written : <span className="text-muted-foreground italic">No answer submitted.</span>}
+                </div>
+              </div>
+            );
+          }
+          const sel = a?.selected ?? null;
           const correct = q.correct_option;
           return (
             <div key={q.id} className="rounded-2xl border border-border bg-card p-6 shadow-soft">

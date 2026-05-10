@@ -105,18 +105,21 @@ export type Database = {
           id: string
           question_id: string
           selected_option: string | null
+          written_answer: string | null
         }
         Insert: {
           attempt_id: string
           id?: string
           question_id: string
           selected_option?: string | null
+          written_answer?: string | null
         }
         Update: {
           attempt_id?: string
           id?: string
           question_id?: string
           selected_option?: string | null
+          written_answer?: string | null
         }
         Relationships: [
           {
@@ -175,39 +178,45 @@ export type Database = {
       }
       test_questions: {
         Row: {
-          correct_option: string
+          correct_option: string | null
           created_at: string
           id: string
-          option_a: string
-          option_b: string
-          option_c: string
-          option_d: string
+          max_words: number | null
+          option_a: string | null
+          option_b: string | null
+          option_c: string | null
+          option_d: string | null
           position: number
           question: string
+          question_type: string
           test_id: string
         }
         Insert: {
-          correct_option: string
+          correct_option?: string | null
           created_at?: string
           id?: string
-          option_a: string
-          option_b: string
-          option_c: string
-          option_d: string
+          max_words?: number | null
+          option_a?: string | null
+          option_b?: string | null
+          option_c?: string | null
+          option_d?: string | null
           position?: number
           question: string
+          question_type?: string
           test_id: string
         }
         Update: {
-          correct_option?: string
+          correct_option?: string | null
           created_at?: string
           id?: string
-          option_a?: string
-          option_b?: string
-          option_c?: string
-          option_d?: string
+          max_words?: number | null
+          option_a?: string | null
+          option_b?: string | null
+          option_c?: string | null
+          option_d?: string | null
           position?: number
           question?: string
+          question_type?: string
           test_id?: string
         }
         Relationships: [
@@ -228,9 +237,11 @@ export type Database = {
           id: string
           instructions: string
           price: number
+          test_type: string
           tier: Database["public"]["Enums"]["test_tier"]
           title: string
           total_marks: number
+          word_limit: number
         }
         Insert: {
           created_at?: string
@@ -239,9 +250,11 @@ export type Database = {
           id?: string
           instructions?: string
           price?: number
+          test_type?: string
           tier?: Database["public"]["Enums"]["test_tier"]
           title: string
           total_marks?: number
+          word_limit?: number
         }
         Update: {
           created_at?: string
@@ -250,9 +263,11 @@ export type Database = {
           id?: string
           instructions?: string
           price?: number
+          test_type?: string
           tier?: Database["public"]["Enums"]["test_tier"]
           title?: string
           total_marks?: number
+          word_limit?: number
         }
         Relationships: []
       }
