@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_student/tests/$testId/")({ component: TestDetail });
 
-type Test = { id: string; title: string; description: string; tier: string; price: number; duration_min: number; total_marks: number; instructions: string };
+type Test = { id: string; title: string; description: string; tier: string; price: number; duration_min: number; total_marks: number; instructions: string; test_type: "mcq" | "written"; word_limit: number };
 type Comment = { id: string; body: string; created_at: string; user_id: string };
 
 function TestDetail() {
@@ -77,7 +77,7 @@ function TestDetail() {
         <div className="mt-6 grid gap-4 rounded-xl bg-muted p-4 sm:grid-cols-3">
           <div><p className="text-xs text-muted-foreground">Duration</p><p className="font-semibold"><Clock className="mr-1 inline h-3 w-3" />{test.duration_min} min</p></div>
           <div><p className="text-xs text-muted-foreground">Total marks</p><p className="font-semibold">{test.total_marks}</p></div>
-          <div><p className="text-xs text-muted-foreground">Type</p><p className="font-semibold">MCQ</p></div>
+          <div><p className="text-xs text-muted-foreground">Type</p><p className="font-semibold">{test.test_type === "written" ? "Written" : "MCQ"}</p></div>
         </div>
 
         {test.instructions && (
