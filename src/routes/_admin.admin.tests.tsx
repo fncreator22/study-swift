@@ -6,17 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, ListChecks } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Pencil, Trash2, ListChecks, FileText, ListOrdered } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_admin/admin/tests")({ component: TestsAdmin });
 
-const empty = { title: "", description: "", price: 0, tier: "free", duration_min: 30, total_marks: 0, instructions: "" };
+const empty = {
+  title: "",
+  description: "",
+  price: 0,
+  tier: "free",
+  test_type: "mcq",
+  duration_min: 30,
+  total_marks: 0,
+  word_limit: 500,
+  instructions: "",
+};
 
 function TestsAdmin() {
   const [tests, setTests] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
   const [form, setForm] = useState<any>(empty);
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -26,11 +37,22 @@ function TestsAdmin() {
   }
   useEffect(() => { load(); }, []);
 
-  function startNew() { setForm(empty); setEditing(null); setOpen(true); }
-  function startEdit(t: any) { setForm(t); setEditing(t.id); setOpen(true); }
+  function startNew(type: "mcq" | "written") {
+    setForm({ ...empty, test_type: type });
+    setEditing(null);
+    setChooserOpen(false);
+    setOpen(true);
+  }
+  function startEdit(t: any) { setForm({ ...empty, ...t }); setEditing(t.id); setOpen(true); }
 
   async function save() {
-    const payload = { ...form, price: Number(form.price), duration_min: Number(form.duration_min), total_marks: Number(form.total_marks) };
+    const payload = {
+      ...form,
+      price: Number(form.price),
+      duration_min: Number(form.duration_min),
+      total_marks: Number(form.total_marks),
+      word_limit: Number(form.word_limit) || 500,
+    };
     const { error } = editing
       ? await supabase.from("tests").update(payload).eq("id", editing)
       : await supabase.from("tests").insert(payload);
@@ -49,13 +71,19 @@ function TestsAdmin() {
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Tests</h1>
-        <Button onClick={startNew}><Plus className="mr-2 h-4 w-4" /> New test</Button>
+        <Button onClick={() => setChooserOpen(true)}><Plus className="mr-2 h-4 w-4" /> New test</Button>
       </div>
+
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tests.map((t) => (
           <div key={t.id} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
             <div className="flex items-center justify-between">
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase">{t.tier}</span>
+              <div className="flex gap-1.5">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase">{t.tier}</span>
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+                  {t.test_type === "written" ? "Written" : "MCQ"}
+                </span>
+              </div>
               <span className="text-sm font-semibold">{t.tier === "free" ? "Free" : `₹${t.price}`}</span>
             </div>
             <h3 className="mt-3 font-display text-lg font-semibold">{t.title}</h3>
@@ -69,10 +97,34 @@ function TestsAdmin() {
         ))}
       </div>
 
+      {/* Type chooser */}
+      <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Choose test type</DialogTitle></DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button onClick={() => startNew("mcq")} className="rounded-2xl border border-border p-5 text-left hover:border-primary hover:bg-primary/5">
+              <ListOrdered className="h-6 w-6 text-primary" />
+              <p className="mt-2 font-display font-semibold">MCQ Test</p>
+              <p className="text-xs text-muted-foreground">Multiple-choice questions auto-graded.</p>
+            </button>
+            <button onClick={() => startNew("written")} className="rounded-2xl border border-border p-5 text-left hover:border-primary hover:bg-primary/5">
+              <FileText className="h-6 w-6 text-primary" />
+              <p className="mt-2 font-display font-semibold">Written Test</p>
+              <p className="text-xs text-muted-foreground">Essay-style answers within a word limit.</p>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Form */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editing ? "Edit test" : "New test"}</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? "Edit" : "New"} {form.test_type === "written" ? "written" : "MCQ"} test
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1">
             <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div className="grid grid-cols-3 gap-3">
@@ -89,7 +141,12 @@ function TestsAdmin() {
               <div><Label>Price (₹)</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
               <div><Label>Duration (min)</Label><Input type="number" value={form.duration_min} onChange={(e) => setForm({ ...form, duration_min: e.target.value })} /></div>
             </div>
-            <div><Label>Total marks</Label><Input type="number" value={form.total_marks} onChange={(e) => setForm({ ...form, total_marks: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Total marks</Label><Input type="number" value={form.total_marks} onChange={(e) => setForm({ ...form, total_marks: e.target.value })} /></div>
+              {form.test_type === "written" && (
+                <div><Label>Default word limit</Label><Input type="number" value={form.word_limit} onChange={(e) => setForm({ ...form, word_limit: e.target.value })} /></div>
+              )}
+            </div>
             <div><Label>Instructions</Label><Textarea value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} /></div>
           </div>
           <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
