@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, X, FileText } from "lucide-react";
+import { Check, X, FileText, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_student/tests/$testId/review/$attemptId")({ component: Review });
@@ -18,28 +18,50 @@ type Attempt = { score: number; total: number; submitted_at: string };
 
 function Review() {
   const { testId, attemptId } = Route.useParams();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
-  const [test, setTest] = useState<{ test_type: "mcq" | "written" } | null>(null);
   const [questions, setQuestions] = useState<Q[]>([]);
   const [answers, setAnswers] = useState<Record<string, { selected: string | null; written: string | null }>>({});
+  const [testType, setTestType] = useState<"mcq" | "written">("mcq");
 
   useEffect(() => {
     (async () => {
+      setLoading(true);
       const { data: t } = await supabase.from("tests").select("test_type").eq("id", testId).maybeSingle();
-      setTest(t as any);
-      const { data: a } = await supabase.from("test_attempts").select("score,total,submitted_at").eq("id", attemptId).maybeSingle();
-      setAttempt(a as Attempt);
-      const { data: qs } = await supabase.from("test_questions").select("*").eq("test_id", testId).order("position");
-      setQuestions((qs as Q[]) ?? []);
-      const { data: ans } = await supabase.from("test_answers").select("question_id,selected_option,written_answer").eq("attempt_id", attemptId);
-      const m: Record<string, { selected: string | null; written: string | null }> = {};
-      (ans ?? []).forEach((r: any) => { m[r.question_id] = { selected: r.selected_option, written: r.written_answer }; });
-      setAnswers(m);
+      if (t) setTestType(t.test_type as any);
+
+      // Task 1 & 2: Use secure RPC for review data
+      const { data, error: rpcErr } = await supabase.rpc("get_test_review", { p_attempt_id: attemptId });
+      
+      if (rpcErr) {
+        setError(rpcErr.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
+        setAttempt(data.attempt);
+        setQuestions(data.questions || []);
+        setAnswers(data.answers || {});
+      }
+      setLoading(false);
     })();
   }, [testId, attemptId]);
 
-  if (!attempt || !test) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  const isWritten = test.test_type === "written";
+  if (loading) return <div className="grid h-64 place-items-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (error) return (
+    <div className="mx-auto max-w-md rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-center">
+      <AlertCircle className="mx-auto h-8 w-8 text-destructive" />
+      <h3 className="mt-4 font-display text-lg font-semibold text-destructive">Error loading review</h3>
+      <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+      <Link to="/history"><Button variant="outline" className="mt-6">Back to history</Button></Link>
+    </div>
+  );
+
+  if (!attempt) return <p className="text-sm text-muted-foreground">Attempt not found.</p>;
+  
+  const isWritten = testType === "written";
   const pct = attempt.total ? Math.round((attempt.score / attempt.total) * 100) : 0;
 
   return (
@@ -94,7 +116,7 @@ function Review() {
                   const isCorrect = k === correct;
                   const isSel = k === sel;
                   return (
-                    <div key={k} className={`rounded-xl border px-4 py-2 text-sm ${isCorrect ? "border-success bg-success/5" : isSel ? "border-destructive bg-destructive/5" : "border-border"}`}>
+                    <div key={k} className={`rounded-xl border px-4 py-2 text-sm transition-colors ${isCorrect ? "border-success bg-success/5" : isSel ? "border-destructive bg-destructive/5" : "border-border"}`}>
                       <span className="mr-2 font-semibold uppercase">{k}.</span>
                       {(q as any)["option_" + k]}
                       {isCorrect && <span className="ml-2 text-xs font-medium text-success">Correct</span>}
@@ -110,3 +132,4 @@ function Review() {
     </div>
   );
 }
+

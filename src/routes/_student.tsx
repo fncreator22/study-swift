@@ -18,7 +18,6 @@ const items = [
   { to: "/rankings", label: "Rankings", icon: Trophy },
   { to: "/courses", label: "Courses", icon: PlayCircle },
   { to: "/profile", label: "Profile", icon: User },
-  { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
 function StudentLayout() {
@@ -37,7 +36,7 @@ function StudentLayout() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        <Sidebar collapsible="icon">
+        <Sidebar collapsible="icon" className="hidden md:flex">
           <SidebarHeader>
             <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2 font-display text-base font-bold">
               <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary text-primary-foreground"><GraduationCap className="h-4 w-4" /></span>
@@ -59,19 +58,43 @@ function StudentLayout() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-          <SidebarFooter>
-            <Button variant="ghost" className="justify-start gap-2" onClick={async () => { await signOut(); nav({ to: "/" }); }}>
-              <LogOut className="h-4 w-4" /><span className="group-data-[collapsible=icon]:hidden">Log out</span>
-            </Button>
-          </SidebarFooter>
         </Sidebar>
+
+        {/* Mobile Bottom Nav */}
+        <nav className="mobile-bottom-nav px-4">
+          {[items[0], items[1], items[5], items[3], items[6]].map((it) => {
+            const active = path === it.to || path.startsWith(it.to + "/");
+            return (
+              <Link
+                key={it.to}
+                to={it.to}
+                className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${active ? "text-primary" : "text-muted-foreground"}`}
+              >
+                <it.icon className={active ? "h-6 w-6" : "h-5 w-5"} />
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${active ? "opacity-100" : "opacity-60"}`}>{it.label.split(" ")[0]}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
         <div className="flex flex-1 flex-col">
-          <header className="flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur">
-            <SidebarTrigger />
+          <header className="flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur md:h-16">
+            <div className="md:hidden">
+              <Link to="/dashboard" className="flex items-center gap-2 font-display text-sm font-bold">
+                <span className="grid h-6 w-6 place-items-center rounded-lg bg-primary text-primary-foreground"><GraduationCap className="h-3.3 w-3.3" /></span>
+                Examly
+              </Link>
+            </div>
+            <div className="hidden md:block">
+              <SidebarTrigger />
+            </div>
           </header>
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-10"><Outlet /></main>
+          <main className="flex-1 px-4 py-6 pb-24 md:px-8 md:py-10 md:pb-10">
+            <Outlet />
+          </main>
         </div>
       </div>
     </SidebarProvider>
   );
 }
+

@@ -15,7 +15,6 @@ import { Route as StudentRouteImport } from './routes/_student'
 import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
-import { Route as StudentSettingsRouteImport } from './routes/_student.settings'
 import { Route as StudentRankingsRouteImport } from './routes/_student.rankings'
 import { Route as StudentPurchasedRouteImport } from './routes/_student.purchased'
 import { Route as StudentProfileRouteImport } from './routes/_student.profile'
@@ -24,11 +23,12 @@ import { Route as StudentDashboardRouteImport } from './routes/_student.dashboar
 import { Route as StudentCoursesRouteImport } from './routes/_student.courses'
 import { Route as StudentTestsIndexRouteImport } from './routes/_student.tests.index'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin.admin.index'
+import { Route as StudentCoursesCourseIdRouteImport } from './routes/_student.courses.$courseId'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin.admin.users'
 import { Route as AdminAdminTestsRouteImport } from './routes/_admin.admin.tests'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin.admin.settings'
+import { Route as AdminAdminReviewsRouteImport } from './routes/_admin.admin.reviews'
 import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
-import { Route as AdminAdminCommentsRouteImport } from './routes/_admin.admin.comments'
 import { Route as StudentTestsTestIdIndexRouteImport } from './routes/_student.tests.$testId.index'
 import { Route as StudentTestsTestIdAttemptRouteImport } from './routes/_student.tests.$testId.attempt'
 import { Route as AdminAdminQuestionsTestIdRouteImport } from './routes/_admin.admin.questions.$testId'
@@ -61,11 +61,6 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
-} as any)
-const StudentSettingsRoute = StudentSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => StudentRoute,
 } as any)
 const StudentRankingsRoute = StudentRankingsRouteImport.update({
   id: '/rankings',
@@ -107,6 +102,11 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => AdminRoute,
 } as any)
+const StudentCoursesCourseIdRoute = StudentCoursesCourseIdRouteImport.update({
+  id: '/$courseId',
+  path: '/$courseId',
+  getParentRoute: () => StudentCoursesRoute,
+} as any)
 const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -122,14 +122,14 @@ const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
   path: '/admin/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminReviewsRoute = AdminAdminReviewsRouteImport.update({
+  id: '/admin/reviews',
+  path: '/admin/reviews',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAdminCoursesRoute = AdminAdminCoursesRouteImport.update({
   id: '/admin/courses',
   path: '/admin/courses',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminAdminCommentsRoute = AdminAdminCommentsRouteImport.update({
-  id: '/admin/comments',
-  path: '/admin/comments',
   getParentRoute: () => AdminRoute,
 } as any)
 const StudentTestsTestIdIndexRoute = StudentTestsTestIdIndexRouteImport.update({
@@ -160,19 +160,19 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/courses': typeof StudentCoursesRoute
+  '/courses': typeof StudentCoursesRouteWithChildren
   '/dashboard': typeof StudentDashboardRoute
   '/history': typeof StudentHistoryRoute
   '/profile': typeof StudentProfileRoute
   '/purchased': typeof StudentPurchasedRoute
   '/rankings': typeof StudentRankingsRoute
-  '/settings': typeof StudentSettingsRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/comments': typeof AdminAdminCommentsRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
+  '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/tests': typeof AdminAdminTestsRoute
   '/admin/users': typeof AdminAdminUsersRoute
+  '/courses/$courseId': typeof StudentCoursesCourseIdRoute
   '/admin/': typeof AdminAdminIndexRoute
   '/tests/': typeof StudentTestsIndexRoute
   '/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
@@ -184,19 +184,19 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/courses': typeof StudentCoursesRoute
+  '/courses': typeof StudentCoursesRouteWithChildren
   '/dashboard': typeof StudentDashboardRoute
   '/history': typeof StudentHistoryRoute
   '/profile': typeof StudentProfileRoute
   '/purchased': typeof StudentPurchasedRoute
   '/rankings': typeof StudentRankingsRoute
-  '/settings': typeof StudentSettingsRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/comments': typeof AdminAdminCommentsRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
+  '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/tests': typeof AdminAdminTestsRoute
   '/admin/users': typeof AdminAdminUsersRoute
+  '/courses/$courseId': typeof StudentCoursesCourseIdRoute
   '/admin': typeof AdminAdminIndexRoute
   '/tests': typeof StudentTestsIndexRoute
   '/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
@@ -211,19 +211,19 @@ export interface FileRoutesById {
   '/_student': typeof StudentRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/_student/courses': typeof StudentCoursesRoute
+  '/_student/courses': typeof StudentCoursesRouteWithChildren
   '/_student/dashboard': typeof StudentDashboardRoute
   '/_student/history': typeof StudentHistoryRoute
   '/_student/profile': typeof StudentProfileRoute
   '/_student/purchased': typeof StudentPurchasedRoute
   '/_student/rankings': typeof StudentRankingsRoute
-  '/_student/settings': typeof StudentSettingsRoute
   '/admin/login': typeof AdminLoginRoute
-  '/_admin/admin/comments': typeof AdminAdminCommentsRoute
   '/_admin/admin/courses': typeof AdminAdminCoursesRoute
+  '/_admin/admin/reviews': typeof AdminAdminReviewsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
   '/_admin/admin/tests': typeof AdminAdminTestsRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
+  '/_student/courses/$courseId': typeof StudentCoursesCourseIdRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
   '/_student/tests/': typeof StudentTestsIndexRoute
   '/_admin/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
@@ -243,13 +243,13 @@ export interface FileRouteTypes {
     | '/profile'
     | '/purchased'
     | '/rankings'
-    | '/settings'
     | '/admin/login'
-    | '/admin/comments'
     | '/admin/courses'
+    | '/admin/reviews'
     | '/admin/settings'
     | '/admin/tests'
     | '/admin/users'
+    | '/courses/$courseId'
     | '/admin/'
     | '/tests/'
     | '/admin/questions/$testId'
@@ -267,13 +267,13 @@ export interface FileRouteTypes {
     | '/profile'
     | '/purchased'
     | '/rankings'
-    | '/settings'
     | '/admin/login'
-    | '/admin/comments'
     | '/admin/courses'
+    | '/admin/reviews'
     | '/admin/settings'
     | '/admin/tests'
     | '/admin/users'
+    | '/courses/$courseId'
     | '/admin'
     | '/tests'
     | '/admin/questions/$testId'
@@ -293,13 +293,13 @@ export interface FileRouteTypes {
     | '/_student/profile'
     | '/_student/purchased'
     | '/_student/rankings'
-    | '/_student/settings'
     | '/admin/login'
-    | '/_admin/admin/comments'
     | '/_admin/admin/courses'
+    | '/_admin/admin/reviews'
     | '/_admin/admin/settings'
     | '/_admin/admin/tests'
     | '/_admin/admin/users'
+    | '/_student/courses/$courseId'
     | '/_admin/admin/'
     | '/_student/tests/'
     | '/_admin/admin/questions/$testId'
@@ -361,13 +361,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_student/settings': {
-      id: '/_student/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof StudentSettingsRouteImport
-      parentRoute: typeof StudentRoute
-    }
     '/_student/rankings': {
       id: '/_student/rankings'
       path: '/rankings'
@@ -424,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_student/courses/$courseId': {
+      id: '/_student/courses/$courseId'
+      path: '/$courseId'
+      fullPath: '/courses/$courseId'
+      preLoaderRoute: typeof StudentCoursesCourseIdRouteImport
+      parentRoute: typeof StudentCoursesRoute
+    }
     '/_admin/admin/users': {
       id: '/_admin/admin/users'
       path: '/admin/users'
@@ -445,18 +445,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/reviews': {
+      id: '/_admin/admin/reviews'
+      path: '/admin/reviews'
+      fullPath: '/admin/reviews'
+      preLoaderRoute: typeof AdminAdminReviewsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/courses': {
       id: '/_admin/admin/courses'
       path: '/admin/courses'
       fullPath: '/admin/courses'
       preLoaderRoute: typeof AdminAdminCoursesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/_admin/admin/comments': {
-      id: '/_admin/admin/comments'
-      path: '/admin/comments'
-      fullPath: '/admin/comments'
-      preLoaderRoute: typeof AdminAdminCommentsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/_student/tests/$testId/': {
@@ -491,8 +491,8 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
-  AdminAdminCommentsRoute: typeof AdminAdminCommentsRoute
   AdminAdminCoursesRoute: typeof AdminAdminCoursesRoute
+  AdminAdminReviewsRoute: typeof AdminAdminReviewsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
   AdminAdminTestsRoute: typeof AdminAdminTestsRoute
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
@@ -501,8 +501,8 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminAdminCommentsRoute: AdminAdminCommentsRoute,
   AdminAdminCoursesRoute: AdminAdminCoursesRoute,
+  AdminAdminReviewsRoute: AdminAdminReviewsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
   AdminAdminTestsRoute: AdminAdminTestsRoute,
   AdminAdminUsersRoute: AdminAdminUsersRoute,
@@ -512,14 +512,25 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface StudentCoursesRouteChildren {
+  StudentCoursesCourseIdRoute: typeof StudentCoursesCourseIdRoute
+}
+
+const StudentCoursesRouteChildren: StudentCoursesRouteChildren = {
+  StudentCoursesCourseIdRoute: StudentCoursesCourseIdRoute,
+}
+
+const StudentCoursesRouteWithChildren = StudentCoursesRoute._addFileChildren(
+  StudentCoursesRouteChildren,
+)
+
 interface StudentRouteChildren {
-  StudentCoursesRoute: typeof StudentCoursesRoute
+  StudentCoursesRoute: typeof StudentCoursesRouteWithChildren
   StudentDashboardRoute: typeof StudentDashboardRoute
   StudentHistoryRoute: typeof StudentHistoryRoute
   StudentProfileRoute: typeof StudentProfileRoute
   StudentPurchasedRoute: typeof StudentPurchasedRoute
   StudentRankingsRoute: typeof StudentRankingsRoute
-  StudentSettingsRoute: typeof StudentSettingsRoute
   StudentTestsIndexRoute: typeof StudentTestsIndexRoute
   StudentTestsTestIdAttemptRoute: typeof StudentTestsTestIdAttemptRoute
   StudentTestsTestIdIndexRoute: typeof StudentTestsTestIdIndexRoute
@@ -527,13 +538,12 @@ interface StudentRouteChildren {
 }
 
 const StudentRouteChildren: StudentRouteChildren = {
-  StudentCoursesRoute: StudentCoursesRoute,
+  StudentCoursesRoute: StudentCoursesRouteWithChildren,
   StudentDashboardRoute: StudentDashboardRoute,
   StudentHistoryRoute: StudentHistoryRoute,
   StudentProfileRoute: StudentProfileRoute,
   StudentPurchasedRoute: StudentPurchasedRoute,
   StudentRankingsRoute: StudentRankingsRoute,
-  StudentSettingsRoute: StudentSettingsRoute,
   StudentTestsIndexRoute: StudentTestsIndexRoute,
   StudentTestsTestIdAttemptRoute: StudentTestsTestIdAttemptRoute,
   StudentTestsTestIdIndexRoute: StudentTestsTestIdIndexRoute,
