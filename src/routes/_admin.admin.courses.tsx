@@ -5,33 +5,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_admin/admin/courses")({ component: CoursesAdmin });
 
-const empty = { title: "", description: "", thumbnail_url: "", video_url: "" };
+const empty = { 
+  title: "", 
+  description: "", 
+  thumbnail_url: "", 
+  tier: "free", 
+  price: 0, 
+  difficulty: "Beginner", 
+  instructor_name: "", 
+  category: "Professional" 
+};
 
 function CoursesAdmin() {
-  const [videos, setVideos] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(empty);
+  const [editing, setEditing] = useState<string | null>(null);
 
   async function load() {
-    const { data } = await supabase.from("videos").select("*").order("created_at", { ascending: false });
-    setVideos(data ?? []);
+    const { data } = await supabase.from("courses").select("*").order("created_at", { ascending: false });
+    setCourses(data ?? []);
   }
   useEffect(() => { load(); }, []);
 
-  async function save() {
-    const { error } = await supabase.from("videos").insert(form);
-    if (error) return toast.error(error.message);
-    toast.success("Added"); setOpen(false); setForm(empty); load();
+  function startEdit(c: any) {
+    setForm(c);
+    setEditing(c.id);
+    setOpen(true);
   }
+
+  async function save() {
+    const payload = { ...form, price: Number(form.price) };
+    const { error } = editing 
+      ? await supabase.from("courses").update(payload).eq("id", editing)
+      : await supabase.from("courses").insert(payload);
+    
+    if (error) return toast.error(error.message);
+    toast.success(editing ? "Updated" : "Added"); 
+    setOpen(false); 
+    setForm(empty); 
+    setEditing(null);
+    load();
+  }
+
   async function remove(id: string) {
-    if (!confirm("Delete?")) return;
-    await supabase.from("videos").delete().eq("id", id);
+    if (!confirm("Delete this course and all associated data?")) return;
+    const { error } = await supabase.from("courses").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Deleted");
     load();
   }
 
@@ -39,31 +67,73 @@ function CoursesAdmin() {
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Courses</h1>
-        <Button onClick={() => setOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add video</Button>
+        <Button onClick={() => { setForm(empty); setEditing(null); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Add course</Button>
       </div>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {videos.map((v) => (
-          <div key={v.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-            {v.thumbnail_url ? <img src={v.thumbnail_url} alt={v.title} className="aspect-video w-full object-cover" /> : <div className="aspect-video bg-muted" />}
+        {courses.map((c) => (
+          <div key={c.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+            <div className="relative aspect-video w-full bg-muted">
+              {c.thumbnail_url ? <img src={c.thumbnail_url} alt={c.title} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-primary/5 text-primary/20"><PlayCircle className="h-10 w-10" /></div>}
+              <div className="absolute top-2 left-2">
+                <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold uppercase backdrop-blur">{c.tier}</span>
+              </div>
+            </div>
             <div className="p-5">
-              <h3 className="font-display font-semibold">{v.title}</h3>
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{v.description}</p>
-              <Button size="sm" variant="ghost" className="mt-3" onClick={() => remove(v.id)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+              <h3 className="font-display font-semibold line-clamp-1">{c.title}</h3>
+              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{c.description}</p>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-sm font-bold">{c.tier === 'free' ? 'Free' : `₹${c.price}`}</span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => startEdit(c)}><Pencil className="h-3.5 w-3.5" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                </div>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>New video</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <div><Label>Thumbnail URL</Label><Input value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} /></div>
-            <div><Label>Video URL (YouTube/Vimeo)</Label><Input value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} /></div>
+        <DialogContent className="max-w-xl">
+          <DialogHeader><DialogTitle>{editing ? "Edit Course" : "New Course"}</DialogTitle></DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Category</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
+            </div>
+            <div className="space-y-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Tier</Label>
+                <Select value={form.tier} onValueChange={(v) => setForm({ ...form, tier: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
+              <div className="space-y-2">
+                <Label>Difficulty</Label>
+                <Select value={form.difficulty} onValueChange={(v) => setForm({ ...form, difficulty: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Beginner">Beginner</SelectItem>
+                    <SelectItem value="Intermediate">Intermediate</SelectItem>
+                    <SelectItem value="Advanced">Advanced</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2"><Label>Thumbnail URL</Label><Input value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Instructor Name</Label><Input value={form.instructor_name} onChange={(e) => setForm({ ...form, instructor_name: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Instructor Bio</Label><Input value={form.instructor_bio} onChange={(e) => setForm({ ...form, instructor_bio: e.target.value })} /></div>
+            </div>
           </div>
-          <DialogFooter><Button onClick={save}>Add</Button></DialogFooter>
+          <DialogFooter><Button onClick={save} className="w-full">{editing ? "Update" : "Create"} Course</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

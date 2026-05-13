@@ -18,20 +18,12 @@ function AdminLogin() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setLoading(false); return toast.error(error.message); }
-    const { data: roleRow } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.user!.id)
-      .eq("role", "admin")
-      .maybeSingle();
-    setLoading(false);
-    if (!roleRow) {
-      await supabase.auth.signOut();
-      return toast.error("This account is not an admin.");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { 
+      setLoading(false); 
+      return toast.error(error.message); 
     }
-    toast.success("Welcome, admin");
+    toast.success("Welcome back");
     nav({ to: "/admin" });
   }
 
