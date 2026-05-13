@@ -61,10 +61,18 @@ function TestsAdmin() {
   }
 
   async function remove(id: string) {
-    if (!confirm("Delete this test?")) return;
-    const { error } = await supabase.from("tests").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    load();
+    if (!confirm("Delete this test? This will remove all associated questions and student attempts.")) return;
+    try {
+      const { error } = await supabase.from("tests").delete().eq("id", id);
+      if (error) {
+        console.error("Delete error:", error);
+        return toast.error(`Failed to delete: ${error.message}`);
+      }
+      toast.success("Test deleted successfully");
+      load();
+    } catch (err: any) {
+      toast.error("An unexpected error occurred during deletion");
+    }
   }
 
   return (

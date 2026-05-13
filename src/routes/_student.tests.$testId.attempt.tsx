@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_student/tests/$testId/attempt")({ component: Attempt });
@@ -31,11 +31,13 @@ function Attempt() {
   const nav = useNavigate();
   const [test, setTest] = useState<{ test_type: "mcq" | "written"; duration_min: number } | null>(null);
   const [questions, setQuestions] = useState<Q[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({}); // mcq: a/b/c/d, written: text
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [idx, setIdx] = useState(0);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -45,22 +47,65 @@ function Attempt() {
       setTest(t as any);
       setRemaining(t.duration_min * 60);
 
-      const { data: a, error } = await supabase
+      // Check for existing unsubmitted attempt
+      const { data: existing } = await supabase
         .from("test_attempts")
-        .insert({ user_id: user.id, test_id: testId })
-        .select().single();
-      if (error) { toast.error(error.message); nav({ to: "/tests/$testId", params: { testId } }); return; }
-      setAttemptId(a.id);
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("test_id", testId)
+        .is("submitted_at", null)
+        .maybeSingle();
 
+      let aId = existing?.id;
+
+      if (!aId) {
+        const { data: a, error } = await supabase
+          .from("test_attempts")
+          .insert({ user_id: user.id, test_id: testId })
+          .select().single();
+        if (error) { toast.error(error.message); nav({ to: "/tests/$testId", params: { testId } }); return; }
+        aId = a.id;
+      }
+      setAttemptId(aId);
+
+      // Load existing answers
+      const { data: prevAns } = await supabase.from("test_answers").select("question_id,selected_option,written_answer").eq("attempt_id", aId);
+      const m: Record<string, string> = {};
+      (prevAns ?? []).forEach(r => {
+        m[r.question_id] = r.selected_option || r.written_answer || "";
+      });
+      setAnswers(m);
+
+      // Task 1: Fetch from secure view (no correct_option)
       const { data: qs } = await supabase
-        .from("test_questions")
-        .select("id,question,question_type,option_a,option_b,option_c,option_d,max_words,position")
+        .from("test_questions_secure" as any)
+        .select("*")
         .eq("test_id", testId)
         .order("position");
       setQuestions((qs as Q[]) ?? []);
     })();
-    // eslint-disable-next-line
   }, [user, testId]);
+
+  // Task 3: Progress Sync (Auto-save)
+  const syncAnswer = async (qId: string, val: string) => {
+    if (!attemptId) return;
+    setSyncing(true);
+    const q = questions.find(x => x.id === qId);
+    const payload = {
+      attempt_id: attemptId,
+      question_id: qId,
+      selected_option: q?.question_type === "mcq" ? val : null,
+      written_answer: q?.question_type === "written" ? val : null,
+    };
+    await supabase.from("test_answers").upsert(payload, { onConflict: "attempt_id,question_id" });
+    setSyncing(false);
+  };
+
+  const handleAnswerChange = (qId: string, val: string) => {
+    setAnswers(prev => ({ ...prev, [qId]: val }));
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => syncAnswer(qId, val), 1000);
+  };
 
   useEffect(() => {
     if (remaining <= 0) return;
@@ -70,7 +115,6 @@ function Attempt() {
 
   useEffect(() => {
     if (test && remaining === 0 && attemptId) submit();
-    // eslint-disable-next-line
   }, [remaining]);
 
   const answered = useMemo(
@@ -82,35 +126,29 @@ function Attempt() {
     if (!attemptId || submitting || !test) return;
     setSubmitting(true);
 
-    const rows = questions.map((q) => ({
-      attempt_id: attemptId,
-      question_id: q.id,
-      selected_option: q.question_type === "mcq" ? (answers[q.id] ?? null) : null,
-      written_answer: q.question_type === "written" ? (answers[q.id] ?? null) : null,
-    }));
-    if (rows.length) await supabase.from("test_answers").insert(rows);
-
-    let score = 0;
-    let total = questions.length;
-    if (test.test_type === "mcq") {
-      const { data: corrects } = await supabase
-        .from("test_questions")
-        .select("id,correct_option")
-        .eq("test_id", testId);
-      const map = new Map((corrects ?? []).map((c: any) => [c.id, c.correct_option]));
-      questions.forEach((q) => { if (answers[q.id] && answers[q.id] === map.get(q.id)) score++; });
+    // Final sync of any pending answers
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      const lastQId = questions[idx].id;
+      await syncAnswer(lastQId, answers[lastQId] || "");
     }
 
-    await supabase.from("test_attempts").update({
+    // Task 2: Server-side grading (DB trigger handles score/total calculation)
+    const { error } = await supabase.from("test_attempts").update({
       submitted_at: new Date().toISOString(),
-      score, total,
     }).eq("id", attemptId);
 
-    toast.success("Submitted");
+    if (error) {
+      toast.error("Failed to submit: " + error.message);
+      setSubmitting(false);
+      return;
+    }
+
+    toast.success("Submitted successfully");
     nav({ to: "/tests/$testId/review/$attemptId", params: { testId, attemptId } });
   }
 
-  if (!questions.length || !test) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (!questions.length || !test) return <div className="grid h-64 place-items-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   const m = Math.floor(remaining / 60), s = remaining % 60;
   const q = questions[idx];
@@ -120,86 +158,98 @@ function Attempt() {
   const overLimit = written && q.max_words ? wordCount > q.max_words : false;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      {/* Sticky header */}
+    <div className="mx-auto max-w-3xl pb-20">
       <div className="sticky top-14 z-10 -mx-4 mb-6 flex items-center justify-between border-b border-border bg-background/90 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
-        <div className="text-sm text-muted-foreground">{answered}/{questions.length} answered</div>
-        <div className="font-mono text-sm font-semibold">{m}:{s.toString().padStart(2, "0")}</div>
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-medium text-muted-foreground">{answered}/{questions.length} <span className="hidden sm:inline">answered</span></div>
+          {syncing && <div className="flex items-center gap-1 text-[10px] text-muted-foreground animate-pulse"><Loader2 className="h-3 w-3 animate-spin" /> Saving...</div>}
+        </div>
+        <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1 font-mono text-sm font-bold text-foreground">
+          {m}:{s.toString().padStart(2, "0")}
+        </div>
       </div>
 
-      {/* Question pager */}
-      <div className="flex flex-wrap gap-1.5">
-        {questions.map((_, i) => {
-          const isCurrent = i === idx;
-          const hasAns = !!(answers[questions[i].id] && answers[questions[i].id].toString().trim());
-          return (
-            <button
-              key={i}
-              onClick={() => setIdx(i)}
-              className={`h-8 w-8 rounded-md border text-xs font-semibold transition ${
-                isCurrent ? "border-primary bg-primary text-primary-foreground"
-                : hasAns ? "border-success bg-success/10 text-success"
-                : "border-border text-muted-foreground hover:border-primary/40"
-              }`}
-            >
-              {i + 1}
-            </button>
-          );
-        })}
+      {/* Scrollable Question Pager */}
+      <div className="responsive-table-container pb-2">
+        <div className="flex w-max gap-1.5 px-0.5">
+          {questions.map((_, i) => {
+            const isCurrent = i === idx;
+            const hasAns = !!(answers[questions[i].id] && answers[questions[i].id].toString().trim());
+            return (
+              <button
+                key={i}
+                onClick={() => setIdx(i)}
+                className={`h-9 w-9 shrink-0 rounded-xl border text-xs font-bold transition-all active:scale-95 ${
+                  isCurrent ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : hasAns ? "border-success bg-success/10 text-success"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                {i + 1}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="mt-5 rounded-2xl border border-border bg-card p-6 shadow-soft">
-        <p className="text-xs text-muted-foreground">Question {idx + 1} of {questions.length}</p>
-        <h3 className="mt-1 font-display text-lg font-semibold">{q.question}</h3>
+      <div className="mt-5 rounded-3xl border border-border bg-card p-6 shadow-soft md:p-8">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Question {idx + 1} of {questions.length}</p>
+        <h3 className="mt-2 font-display text-lg font-semibold leading-snug md:text-xl">{q.question}</h3>
 
         {written ? (
-          <div className="mt-4">
+          <div className="mt-6">
             <Textarea
               rows={Math.min(20, Math.max(8, Math.ceil((q.max_words ?? 200) / 25)))}
               value={answers[q.id] ?? ""}
-              onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+              onChange={(e) => handleAnswerChange(q.id, e.target.value)}
               placeholder="Write your answer here…"
-              className="min-h-[240px]"
+              className="min-h-[280px] rounded-2xl bg-muted/50 focus:bg-card transition-colors"
             />
-            <div className="mt-2 flex items-center justify-between text-xs">
+            <div className="mt-3 flex items-center justify-between text-xs font-medium">
               <span className={overLimit ? "text-destructive" : "text-muted-foreground"}>
                 {wordCount} / {q.max_words ?? "—"} words
               </span>
-              {overLimit && <span className="text-destructive">Over the word limit</span>}
+              {overLimit && <span className="flex items-center gap-1 text-destructive animate-pulse"><Loader2 className="h-3 w-3" /> Over limit</span>}
             </div>
           </div>
         ) : (
-          <div className="mt-4 grid gap-2">
+          <div className="mt-6 grid gap-3">
             {(["a", "b", "c", "d"] as const).map((k) => (
               <button
                 key={k}
                 type="button"
-                onClick={() => setAnswers({ ...answers, [q.id]: k })}
-                className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
-                  answers[q.id] === k ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                onClick={() => handleAnswerChange(q.id, k)}
+                className={`flex items-center gap-4 rounded-2xl border px-5 py-4 text-left text-sm transition-all active:scale-[0.98] ${
+                  answers[q.id] === k ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card hover:border-primary/40"
                 }`}
               >
-                <span className="mr-2 font-semibold uppercase">{k}.</span>
-                {(q as any)["option_" + k]}
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-xs font-bold uppercase transition-colors ${answers[q.id] === k ? "border-primary bg-primary text-primary-foreground" : "border-border bg-muted text-muted-foreground"}`}>{k}</span>
+                <span className="font-medium leading-tight">{(q as any)["option_" + k]}</span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Nav buttons */}
-      <div className="mt-6 flex items-center justify-between">
-        <Button variant="outline" onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}>
-          <ChevronLeft className="mr-1 h-4 w-4" /> Previous
-        </Button>
-        {isLast ? (
-          <Button onClick={submit} disabled={submitting}>{submitting ? "Submitting…" : "Submit test"}</Button>
-        ) : (
-          <Button onClick={() => setIdx((i) => Math.min(questions.length - 1, i + 1))}>
-            Next <ChevronRight className="ml-1 h-4 w-4" />
+      {/* Sticky Bottom Actions on Mobile */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/80 p-4 backdrop-blur md:static md:mt-8 md:border-none md:bg-transparent md:p-0">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+          <Button variant="outline" size="lg" className="flex-1 rounded-2xl md:flex-initial" onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}>
+            <ChevronLeft className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Previous</span><span className="sm:hidden">Prev</span>
           </Button>
-        )}
+          {isLast ? (
+            <Button onClick={submit} size="lg" disabled={submitting || syncing} className="flex-1 rounded-2xl shadow-lg shadow-primary/20 md:flex-initial md:min-w-[160px]">
+              {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Submit test"}
+            </Button>
+          ) : (
+            <Button onClick={() => setIdx((i) => Math.min(questions.length - 1, i + 1))} size="lg" className="flex-1 rounded-2xl md:flex-initial md:min-w-[120px]">
+              <span className="hidden sm:inline">Next question</span><span className="sm:hidden">Next</span> <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+
+

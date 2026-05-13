@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -6,14 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { LogOut, ShieldAlert, User, Key, BarChart3 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_student/profile")({ component: Profile });
 
 function Profile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const nav = useNavigate();
   const [name, setName] = useState("");
   const [college, setCollege] = useState("");
+  const [pwd, setPwd] = useState("");
   const [stats, setStats] = useState({ attempts: 0, purchases: 0, score: 0, avg: 0 });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -33,35 +41,107 @@ function Profile() {
 
   async function save() {
     if (!user) return;
+    setLoading(true);
     const { error } = await supabase.from("profiles").update({ full_name: name, college }).eq("id", user.id);
+    setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Profile updated");
   }
 
+  async function changePwd() {
+    if (pwd.length < 6) return toast.error("Password must be 6+ chars");
+    const { error } = await supabase.auth.updateUser({ password: pwd });
+    if (error) return toast.error(error.message);
+    toast.success("Password updated");
+    setPwd("");
+  }
+
+  async function deleteAccount() {
+    if (!user) return;
+    await supabase.from("profiles").delete().eq("id", user.id);
+    await signOut();
+    toast.success("Account deleted");
+    nav({ to: "/" });
+  }
+
+  async function handleLogout() {
+    await signOut();
+    toast.success("Logged out");
+    nav({ to: "/" });
+  }
+
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="font-display text-3xl font-bold">Profile</h1>
+    <div className="mx-auto max-w-4xl pb-10">
+      <div className="flex items-center justify-between">
+        <h1 className="font-display text-3xl font-bold tracking-tight">Profile & Settings</h1>
+        <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl border-destructive/20 text-destructive hover:bg-destructive/5 hover:text-destructive">
+          <LogOut className="mr-2 h-4 w-4" /> Log out
+        </Button>
+      </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-4">
         {[
-          { l: "Attempts", v: stats.attempts }, { l: "Purchases", v: stats.purchases },
-          { l: "Total score", v: stats.score }, { l: "Avg %", v: `${stats.avg}%` },
+          { l: "Attempts", v: stats.attempts, icon: BarChart3 }, 
+          { l: "Purchases", v: stats.purchases, icon: User },
+          { l: "Total score", v: stats.score, icon: BarChart3 }, 
+          { l: "Avg %", v: `${stats.avg}%`, icon: BarChart3 },
         ].map((s) => (
           <div key={s.l} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-            <p className="text-xs text-muted-foreground">{s.l}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{s.l}</p>
             <p className="mt-1 font-display text-2xl font-bold">{s.v}</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-soft">
-        <h2 className="font-display text-lg font-semibold">Personal info</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div><Label>Email</Label><Input value={user?.email ?? ""} disabled /></div>
-          <div><Label>Full name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="sm:col-span-2"><Label>College / University</Label><Input value={college} onChange={(e) => setCollege(e.target.value)} /></div>
+      <div className="mt-8 grid gap-6 md:grid-cols-2">
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
+          <div className="flex items-center gap-2 mb-6">
+            <User className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-lg font-bold">Personal info</h2>
+          </div>
+          <div className="grid gap-4">
+            <div className="space-y-2"><Label>Email address</Label><Input value={user?.email ?? ""} disabled className="bg-muted/50" /></div>
+            <div className="space-y-2"><Label>Full name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your Name" /></div>
+            <div className="space-y-2"><Label>College / University</Label><Input value={college} onChange={(e) => setCollege(e.target.value)} placeholder="University Name" /></div>
+            <Button onClick={save} disabled={loading} className="mt-2 w-full rounded-xl">{loading ? "Saving..." : "Save profile"}</Button>
+          </div>
         </div>
-        <div className="mt-5"><Button onClick={save}>Save changes</Button></div>
+
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
+            <div className="flex items-center gap-2 mb-6">
+              <Key className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-lg font-bold">Security</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2"><Label>Update password</Label><Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="New password" /></div>
+              <Button onClick={changePwd} variant="outline" className="w-full rounded-xl">Update password</Button>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-destructive/20 bg-destructive/5 p-6">
+            <div className="flex items-center gap-2 mb-2 text-destructive">
+              <ShieldAlert className="h-5 w-5" />
+              <h2 className="font-display text-lg font-bold">Danger zone</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">This will permanently delete your account and all progress.</p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" className="mt-4 w-full rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive border border-destructive/10">Delete my account</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="rounded-3xl border-destructive/20">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>This action cannot be undone. All your test attempts, scores, and purchases will be permanently removed.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deleteAccount} className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete everything</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
       </div>
     </div>
   );
