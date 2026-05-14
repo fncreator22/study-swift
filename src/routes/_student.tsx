@@ -8,6 +8,7 @@ import {
 import { LayoutDashboard, BookOpen, ShoppingBag, History, Trophy, PlayCircle, User, Settings, LogOut, GraduationCap, Coins, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_student")({ component: StudentLayout });
 
@@ -20,13 +21,13 @@ const items = [
   { to: "/wallet", label: "Wallet", icon: Coins },
   { to: "/courses", label: "Courses", icon: PlayCircle },
   { to: "/profile", label: "Profile", icon: User },
-  { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
 function StudentLayout() {
   const { user, loading, signOut, tokens } = useAuth();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const isExamMode = path.includes("/attempt");
   const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   useEffect(() => {
@@ -38,55 +39,56 @@ function StudentLayout() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={!isExamMode}>
       <div className="flex min-h-screen w-full bg-background">
-        <Sidebar collapsible="icon">
-          <SidebarHeader>
-            <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2 font-display text-base font-bold">
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary text-primary-foreground"><GraduationCap className="h-4 w-4" /></span>
-              <span className="group-data-[collapsible=icon]:hidden">Examly</span>
-            </Link>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {items.map((it) => (
-                    <SidebarMenuItem key={it.to}>
-                      <SidebarMenuButton asChild isActive={path === it.to || path.startsWith(it.to + "/")}>
-                        <Link to={it.to}><it.icon className="h-4 w-4" /><span>{it.label}</span></Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter>
-            <Button variant="ghost" className="justify-start gap-2" onClick={async () => { await signOut(); nav({ to: "/" }); }}>
-              <LogOut className="h-4 w-4" /><span className="group-data-[collapsible=icon]:hidden">Log out</span>
-            </Button>
-          </SidebarFooter>
-        </Sidebar>
+        {!isExamMode && (
+          <Sidebar collapsible="icon">
+            <SidebarHeader>
+              <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2 font-display text-base font-bold">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary text-primary-foreground"><GraduationCap className="h-4 w-4" /></span>
+                <span className="group-data-[collapsible=icon]:hidden">Examly</span>
+              </Link>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {items.map((it) => (
+                      <SidebarMenuItem key={it.to}>
+                        <SidebarMenuButton asChild isActive={path === it.to || path.startsWith(it.to + "/")}>
+                          <Link to={it.to}><it.icon className="h-4 w-4" /><span>{it.label}</span></Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
+        )}
         <div className="flex flex-1 flex-col">
-          <header className="flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger />
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 rounded-full bg-primary/5 px-3 py-1 text-sm font-semibold text-primary border border-primary/10">
-                <Coins className="h-4 w-4" />
-                <span>{tokens} Tokens</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-primary/10 hover:text-primary" onClick={() => setPurchaseOpen(true)}>
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
+          {!isExamMode && (
+            <header className="flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger />
               </div>
-            </div>
-          </header>
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-10"><Outlet /></main>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 rounded-full bg-primary/5 px-3 py-1 text-sm font-semibold text-primary border border-primary/10">
+                  <Coins className="h-4 w-4" />
+                  <span>{tokens} Tokens</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-primary/10 hover:text-primary" onClick={() => setPurchaseOpen(true)}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </header>
+          )}
+          <main className={cn("flex-1 px-4 py-6 md:px-8 md:py-10", isExamMode && "px-0 py-0 md:px-0 md:py-0")}>
+            <Outlet />
+          </main>
         </div>
       </div>
-      <TokenRequestModal open={purchaseOpen} onOpenChange={setPurchaseOpen} />
+      {!isExamMode && <TokenRequestModal open={purchaseOpen} onOpenChange={setPurchaseOpen} />}
     </SidebarProvider>
   );
 }

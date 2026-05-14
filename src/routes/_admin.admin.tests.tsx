@@ -30,10 +30,13 @@ function TestsAdmin() {
   const [chooserOpen, setChooserOpen] = useState(false);
   const [form, setForm] = useState<any>(empty);
   const [editing, setEditing] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
+    setLoading(true);
     const { data } = await supabase.from("tests").select("*").order("created_at", { ascending: false });
     setTests(data ?? []);
+    setLoading(false);
   }
   useEffect(() => { load(); }, []);
 
@@ -74,7 +77,12 @@ function TestsAdmin() {
         <Button onClick={() => setChooserOpen(true)}><Plus className="mr-2 h-4 w-4" /> New test</Button>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {loading ? (
+        <div className="mt-20 flex justify-center"><p className="text-sm text-muted-foreground animate-pulse">Loading tests...</p></div>
+      ) : tests.length === 0 ? (
+        <div className="mt-20 text-center"><p className="text-sm text-muted-foreground">No tests found. Create one to get started.</p></div>
+      ) : (
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tests.map((t) => (
           <div key={t.id} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
             <div className="flex items-center justify-between">
@@ -95,7 +103,8 @@ function TestsAdmin() {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Type chooser */}
       <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
