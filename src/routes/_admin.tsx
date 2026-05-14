@@ -5,7 +5,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_admin")({ component: AdminLayout });
@@ -15,6 +15,7 @@ const items: { to: string; label: string; icon: typeof LayoutDashboard; exact?: 
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/tests", label: "Tests", icon: BookOpen },
   { to: "/admin/courses", label: "Courses", icon: PlayCircle },
+  { to: "/admin/tokens", label: "Token Requests", icon: Coins },
   { to: "/admin/comments", label: "Comments", icon: MessageSquare },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];

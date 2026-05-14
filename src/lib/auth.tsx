@@ -7,46 +7,49 @@ type AuthCtx = {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  tokens: number;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx>({
-  user: null, session: null, loading: true, isAdmin: false,
-  signOut: async () => {},
+  user: null, session: null, loading: true, isAdmin: false, tokens: 0,
+  signOut: async () => {}, refreshProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [tokens, setTokens] = useState(0);
+
+  async function fetchProfile(uid: string) {
+    const { data: prof } = await supabase.from("profiles").select("tokens").eq("id", uid).maybeSingle();
+    if (prof) setTokens(prof.tokens);
+
+    const { data: role } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", uid)
+      .eq("role", "admin")
+      .maybeSingle();
+    setIsAdmin(!!role);
+  }
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       if (s?.user) {
-        setTimeout(async () => {
-          const { data } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", s.user.id)
-            .eq("role", "admin")
-            .maybeSingle();
-          setIsAdmin(!!data);
-        }, 0);
+        fetchProfile(s.user.id);
       } else {
         setIsAdmin(false);
+        setTokens(0);
       }
     });
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
       if (data.session?.user) {
-        const { data: r } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.session.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        setIsAdmin(!!r);
+        await fetchProfile(data.session.user.id);
       }
       setLoading(false);
     });
@@ -60,7 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         loading,
         isAdmin,
+        tokens,
         signOut: async () => { await supabase.auth.signOut(); },
+        refreshProfile: async () => { if (session?.user) await fetchProfile(session.user.id); },
       }}
     >
       {children}

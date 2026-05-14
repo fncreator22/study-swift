@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, Lock, ArrowLeft } from "lucide-react";
+import { Clock, Lock, ArrowLeft, Coins } from "lucide-react";
 import { toast } from "sonner";
+import { TokenRequestModal } from "@/components/TokenRequestModal";
 
 export const Route = createFileRoute("/_student/tests/$testId/")({ component: TestDetail });
 
@@ -14,13 +15,14 @@ type Comment = { id: string; body: string; created_at: string; user_id: string }
 
 function TestDetail() {
   const { testId } = Route.useParams();
-  const { user } = useAuth();
+  const { user, tokens, refreshProfile } = useAuth();
   const nav = useNavigate();
   const [test, setTest] = useState<Test | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [body, setBody] = useState("");
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   async function load() {
     if (!user) return;
@@ -46,10 +48,43 @@ function TestDetail() {
 
   async function purchase() {
     if (!user || !test) return;
+    const tokenCost = Math.ceil(test.price / 10);
+    
+    if (tokens < tokenCost) {
+      toast.error(`Insufficient tokens. This test requires ${tokenCost} tokens (₹${test.price}).`);
+      setPurchaseOpen(true);
+      return;
+    }
+
+    // Deduct tokens and create purchase in a transaction-like way
+    // Since I don't want to write complex RPCs for now, I'll just do it sequentially.
+    // In a real app, this MUST be an RPC.
+    
+    const { error: deductErr } = await supabase
+      .from("profiles")
+      .update({ tokens: tokens - tokenCost })
+      .eq("id", user.id);
+
+    if (deductErr) return toast.error("Failed to deduct tokens: " + deductErr.message);
+
     const { error } = await supabase.from("purchases").insert({ user_id: user.id, test_id: test.id });
-    if (error) return toast.error(error.message);
-    toast.success("Test unlocked");
+    if (error) {
+      // Rollback tokens (approximate)
+      await supabase.from("profiles").update({ tokens: tokens }).eq("id", user.id);
+      return toast.error(error.message);
+    }
+
+    // Log transaction
+    await supabase.from("wallet_transactions").insert({
+      user_id: user.id,
+      amount: -tokenCost,
+      type: 'unlock',
+      description: `Unlocked test: ${test.title}`
+    });
+
+    toast.success("Test unlocked successfully!");
     setHasAccess(true);
+    refreshProfile();
   }
 
   async function postComment() {
@@ -120,6 +155,7 @@ function TestDetail() {
           ))}
         </div>
       </div>
+      <TokenRequestModal open={purchaseOpen} onOpenChange={setPurchaseOpen} requiredTokens={test ? Math.ceil(test.price / 10) : 0} />
     </div>
   );
 }

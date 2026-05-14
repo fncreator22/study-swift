@@ -12,6 +12,7 @@ type Q = {
   question_type: "mcq" | "written";
   option_a: string | null; option_b: string | null; option_c: string | null; option_d: string | null;
   correct_option: string | null;
+  explanation: string | null;
   max_words: number | null;
 };
 type Attempt = { score: number; total: number; submitted_at: string };
@@ -103,6 +104,14 @@ function Review() {
                   );
                 })}
               </div>
+              {q.explanation && (
+                <div className="mt-4 rounded-xl border border-success/30 bg-success/5 p-4 text-sm">
+                  <div className="flex items-center gap-2 font-semibold text-success mb-1">
+                    <FileText className="h-3.5 w-3.5" /> Explanation
+                  </div>
+                  <p className="text-muted-foreground leading-relaxed">{q.explanation}</p>
+                </div>
+              )}
             </div>
           );
         })}
