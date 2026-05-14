@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_admin/admin/questions/$testId")({ component: QuestionsAdmin });
 
 const MAX_QUESTIONS = 100;
-const emptyMcq = { question: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_option: "a" };
+const emptyMcq = { question: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_option: "a", explanation: "" };
 const emptyWritten = { question: "", max_words: 500 };
 
 function QuestionsAdmin() {
@@ -56,6 +56,7 @@ function QuestionsAdmin() {
       Object.assign(base, {
         option_a: form.option_a, option_b: form.option_b, option_c: form.option_c, option_d: form.option_d,
         correct_option: form.correct_option,
+        explanation: form.explanation,
       });
     }
     const { error } = await supabase.from("test_questions").insert(base);
@@ -138,6 +139,15 @@ function QuestionsAdmin() {
                       {(["a", "b", "c", "d"] as const).map((k) => <SelectItem key={k} value={k}>{k.toUpperCase()}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>Explanation (for correct answer)</Label>
+                  <Textarea
+                    rows={3}
+                    value={form.explanation}
+                    onChange={(e) => setForm({ ...form, explanation: e.target.value })}
+                    placeholder="Why is the answer correct?"
+                  />
                 </div>
               </>
             )}

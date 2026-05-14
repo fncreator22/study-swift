@@ -36,28 +36,93 @@ function Attempt() {
   const [remaining, setRemaining] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [idx, setIdx] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: t } = await supabase.from("tests").select("test_type,duration_min").eq("id", testId).maybeSingle();
-      if (!t) return;
-      setTest(t as any);
-      setRemaining(t.duration_min * 60);
+      try {
+        const { data: t, error: tErr } = await supabase.from("tests").select("test_type,duration_min").eq("id", testId).maybeSingle();
+        if (tErr) throw tErr;
+        if (!t) {
+          toast.error("Test not found");
+          nav({ to: "/tests" });
+          return;
+        }
+        setTest(t as any);
 
-      const { data: a, error } = await supabase
-        .from("test_attempts")
-        .insert({ user_id: user.id, test_id: testId })
-        .select().single();
-      if (error) { toast.error(error.message); nav({ to: "/tests/$testId", params: { testId } }); return; }
-      setAttemptId(a.id);
+        // Check for existing unsubmitted attempt
+        const { data: existing } = await supabase
+          .from("test_attempts")
+          .select("id, started_at")
+          .eq("user_id", user.id)
+          .eq("test_id", testId)
+          .is("submitted_at", null)
+          .order("started_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      const { data: qs } = await supabase
-        .from("test_questions")
-        .select("id,question,question_type,option_a,option_b,option_c,option_d,max_words,position")
-        .eq("test_id", testId)
-        .order("position");
-      setQuestions((qs as Q[]) ?? []);
+        let aId = existing?.id;
+        let startedAt = existing?.started_at ? new Date(existing.started_at).getTime() : null;
+
+        if (!aId) {
+          const { data: a, error: aErr } = await supabase
+            .from("test_attempts")
+            .insert({ user_id: user.id, test_id: testId })
+            .select().single();
+          if (aErr) throw aErr;
+          aId = a.id;
+          startedAt = new Date(a.started_at).getTime();
+        }
+
+        setAttemptId(aId);
+
+        // Calculate remaining time based on started_at
+        if (startedAt) {
+          const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+          const rem = Math.max(0, t.duration_min * 60 - elapsed);
+          setRemaining(rem);
+        } else {
+          setRemaining(t.duration_min * 60);
+        }
+
+        const { data: qs, error: qErr } = await supabase
+          .from("test_questions")
+          .select("id,question,question_type,option_a,option_b,option_c,option_d,max_words,position")
+          .eq("test_id", testId)
+          .order("position");
+        if (qErr) throw qErr;
+        
+        const questionsList = (qs as Q[]) ?? [];
+        setQuestions(questionsList);
+
+        if (questionsList.length === 0) {
+          toast.error("This test has no questions yet.");
+          nav({ to: "/tests/$testId", params: { testId } });
+          return;
+        }
+
+        // Load existing answers if resuming
+        if (existing) {
+          const { data: ans } = await supabase
+            .from("test_answers")
+            .select("question_id, selected_option, written_answer")
+            .eq("attempt_id", aId);
+          
+          const ansMap: Record<string, string> = {};
+          (ans ?? []).forEach(a => {
+            if (a.selected_option) ansMap[a.question_id] = a.selected_option;
+            else if (a.written_answer) ansMap[a.question_id] = a.written_answer;
+          });
+          setAnswers(ansMap);
+        }
+
+      } catch (e: any) {
+        toast.error(e.message || "Failed to load test");
+        nav({ to: "/tests" });
+      } finally {
+        setLoading(false);
+      }
     })();
     // eslint-disable-next-line
   }, [user, testId]);
@@ -77,6 +142,21 @@ function Attempt() {
     () => Object.values(answers).filter((v) => v && v.toString().trim().length > 0).length,
     [answers],
   );
+
+  async function saveAnswer(qId: string, val: string) {
+    if (!attemptId) return;
+    const q = questions.find(x => x.id === qId);
+    if (!q) return;
+
+    const row = {
+      attempt_id: attemptId,
+      question_id: qId,
+      selected_option: q.question_type === "mcq" ? val : null,
+      written_answer: q.question_type === "written" ? val : null,
+    };
+
+    await supabase.from("test_answers").upsert(row, { onConflict: "attempt_id,question_id" });
+  }
 
   async function submit() {
     if (!attemptId || submitting || !test) return;
@@ -110,7 +190,7 @@ function Attempt() {
     nav({ to: "/tests/$testId/review/$attemptId", params: { testId, attemptId } });
   }
 
-  if (!questions.length || !test) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (loading || !test) return <p className="text-sm text-muted-foreground">Loading…</p>;
 
   const m = Math.floor(remaining / 60), s = remaining % 60;
   const q = questions[idx];
@@ -158,6 +238,7 @@ function Attempt() {
               rows={Math.min(20, Math.max(8, Math.ceil((q.max_words ?? 200) / 25)))}
               value={answers[q.id] ?? ""}
               onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+              onBlur={(e) => saveAnswer(q.id, e.target.value)}
               placeholder="Write your answer here…"
               className="min-h-[240px]"
             />
@@ -174,7 +255,10 @@ function Attempt() {
               <button
                 key={k}
                 type="button"
-                onClick={() => setAnswers({ ...answers, [q.id]: k })}
+                onClick={() => {
+                  setAnswers({ ...answers, [q.id]: k });
+                  saveAnswer(q.id, k);
+                }}
                 className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                   answers[q.id] === k ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
                 }`}

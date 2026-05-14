@@ -15,6 +15,7 @@ import { Route as StudentRouteImport } from './routes/_student'
 import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as StudentWalletRouteImport } from './routes/_student.wallet'
 import { Route as StudentSettingsRouteImport } from './routes/_student.settings'
 import { Route as StudentRankingsRouteImport } from './routes/_student.rankings'
 import { Route as StudentPurchasedRouteImport } from './routes/_student.purchased'
@@ -25,6 +26,7 @@ import { Route as StudentCoursesRouteImport } from './routes/_student.courses'
 import { Route as StudentTestsIndexRouteImport } from './routes/_student.tests.index'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin.admin.index'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin.admin.users'
+import { Route as AdminAdminTokensRouteImport } from './routes/_admin.admin.tokens'
 import { Route as AdminAdminTestsRouteImport } from './routes/_admin.admin.tests'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin.admin.settings'
 import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
@@ -61,6 +63,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const StudentWalletRoute = StudentWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => StudentRoute,
 } as any)
 const StudentSettingsRoute = StudentSettingsRouteImport.update({
   id: '/settings',
@@ -110,6 +117,11 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
 const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminTokensRoute = AdminAdminTokensRouteImport.update({
+  id: '/admin/tokens',
+  path: '/admin/tokens',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAdminTestsRoute = AdminAdminTestsRouteImport.update({
@@ -167,11 +179,13 @@ export interface FileRoutesByFullPath {
   '/purchased': typeof StudentPurchasedRoute
   '/rankings': typeof StudentRankingsRoute
   '/settings': typeof StudentSettingsRoute
+  '/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/comments': typeof AdminAdminCommentsRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/tests': typeof AdminAdminTestsRoute
+  '/admin/tokens': typeof AdminAdminTokensRoute
   '/admin/users': typeof AdminAdminUsersRoute
   '/admin/': typeof AdminAdminIndexRoute
   '/tests/': typeof StudentTestsIndexRoute
@@ -191,11 +205,13 @@ export interface FileRoutesByTo {
   '/purchased': typeof StudentPurchasedRoute
   '/rankings': typeof StudentRankingsRoute
   '/settings': typeof StudentSettingsRoute
+  '/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/comments': typeof AdminAdminCommentsRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/tests': typeof AdminAdminTestsRoute
+  '/admin/tokens': typeof AdminAdminTokensRoute
   '/admin/users': typeof AdminAdminUsersRoute
   '/admin': typeof AdminAdminIndexRoute
   '/tests': typeof StudentTestsIndexRoute
@@ -218,11 +234,13 @@ export interface FileRoutesById {
   '/_student/purchased': typeof StudentPurchasedRoute
   '/_student/rankings': typeof StudentRankingsRoute
   '/_student/settings': typeof StudentSettingsRoute
+  '/_student/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/_admin/admin/comments': typeof AdminAdminCommentsRoute
   '/_admin/admin/courses': typeof AdminAdminCoursesRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
   '/_admin/admin/tests': typeof AdminAdminTestsRoute
+  '/_admin/admin/tokens': typeof AdminAdminTokensRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
   '/_admin/admin/': typeof AdminAdminIndexRoute
   '/_student/tests/': typeof StudentTestsIndexRoute
@@ -244,11 +262,13 @@ export interface FileRouteTypes {
     | '/purchased'
     | '/rankings'
     | '/settings'
+    | '/wallet'
     | '/admin/login'
     | '/admin/comments'
     | '/admin/courses'
     | '/admin/settings'
     | '/admin/tests'
+    | '/admin/tokens'
     | '/admin/users'
     | '/admin/'
     | '/tests/'
@@ -268,11 +288,13 @@ export interface FileRouteTypes {
     | '/purchased'
     | '/rankings'
     | '/settings'
+    | '/wallet'
     | '/admin/login'
     | '/admin/comments'
     | '/admin/courses'
     | '/admin/settings'
     | '/admin/tests'
+    | '/admin/tokens'
     | '/admin/users'
     | '/admin'
     | '/tests'
@@ -294,11 +316,13 @@ export interface FileRouteTypes {
     | '/_student/purchased'
     | '/_student/rankings'
     | '/_student/settings'
+    | '/_student/wallet'
     | '/admin/login'
     | '/_admin/admin/comments'
     | '/_admin/admin/courses'
     | '/_admin/admin/settings'
     | '/_admin/admin/tests'
+    | '/_admin/admin/tokens'
     | '/_admin/admin/users'
     | '/_admin/admin/'
     | '/_student/tests/'
@@ -360,6 +384,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_student/wallet': {
+      id: '/_student/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof StudentWalletRouteImport
+      parentRoute: typeof StudentRoute
     }
     '/_student/settings': {
       id: '/_student/settings'
@@ -431,6 +462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/tokens': {
+      id: '/_admin/admin/tokens'
+      path: '/admin/tokens'
+      fullPath: '/admin/tokens'
+      preLoaderRoute: typeof AdminAdminTokensRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/tests': {
       id: '/_admin/admin/tests'
       path: '/admin/tests'
@@ -495,6 +533,7 @@ interface AdminRouteChildren {
   AdminAdminCoursesRoute: typeof AdminAdminCoursesRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
   AdminAdminTestsRoute: typeof AdminAdminTestsRoute
+  AdminAdminTokensRoute: typeof AdminAdminTokensRoute
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
   AdminAdminQuestionsTestIdRoute: typeof AdminAdminQuestionsTestIdRoute
@@ -505,6 +544,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminCoursesRoute: AdminAdminCoursesRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
   AdminAdminTestsRoute: AdminAdminTestsRoute,
+  AdminAdminTokensRoute: AdminAdminTokensRoute,
   AdminAdminUsersRoute: AdminAdminUsersRoute,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
   AdminAdminQuestionsTestIdRoute: AdminAdminQuestionsTestIdRoute,
@@ -520,6 +560,7 @@ interface StudentRouteChildren {
   StudentPurchasedRoute: typeof StudentPurchasedRoute
   StudentRankingsRoute: typeof StudentRankingsRoute
   StudentSettingsRoute: typeof StudentSettingsRoute
+  StudentWalletRoute: typeof StudentWalletRoute
   StudentTestsIndexRoute: typeof StudentTestsIndexRoute
   StudentTestsTestIdAttemptRoute: typeof StudentTestsTestIdAttemptRoute
   StudentTestsTestIdIndexRoute: typeof StudentTestsTestIdIndexRoute
@@ -534,6 +575,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentPurchasedRoute: StudentPurchasedRoute,
   StudentRankingsRoute: StudentRankingsRoute,
   StudentSettingsRoute: StudentSettingsRoute,
+  StudentWalletRoute: StudentWalletRoute,
   StudentTestsIndexRoute: StudentTestsIndexRoute,
   StudentTestsTestIdAttemptRoute: StudentTestsTestIdAttemptRoute,
   StudentTestsTestIdIndexRoute: StudentTestsTestIdIndexRoute,
