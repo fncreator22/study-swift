@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_student/tests/$testId/review/$attemptId")({ component: Review });
 
@@ -84,32 +85,54 @@ function Review() {
           const sel = a?.selected ?? null;
           const correct = q.correct_option;
           return (
-            <div key={q.id} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <div key={q.id} className="rounded-2xl border border-border bg-card p-5 md:p-6 shadow-soft transition-all hover:shadow-md">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">Question {i + 1}</p>
-                {sel === correct ? <Check className="h-4 w-4 text-success" /> : <X className="h-4 w-4 text-destructive" />}
+                <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Question {i + 1}</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background shadow-sm">
+                  {sel === correct ? <Check className="h-5 w-5 text-success" /> : <X className="h-5 w-5 text-destructive" />}
+                </div>
               </div>
-              <h3 className="mt-1 font-display font-semibold">{q.question}</h3>
-              <div className="mt-3 grid gap-2">
+              <h3 className="mt-4 font-display text-base font-semibold leading-snug md:text-lg">{q.question}</h3>
+              
+              <div className="mt-5 grid gap-3">
                 {(["a", "b", "c", "d"] as const).map((k) => {
                   const isCorrect = k === correct;
                   const isSel = k === sel;
+                  const optText = (q as any)["option_" + k];
+                  if (!optText) return null;
+
                   return (
-                    <div key={k} className={`rounded-xl border px-4 py-2 text-sm ${isCorrect ? "border-success bg-success/5" : isSel ? "border-destructive bg-destructive/5" : "border-border"}`}>
-                      <span className="mr-2 font-semibold uppercase">{k}.</span>
-                      {(q as any)["option_" + k]}
-                      {isCorrect && <span className="ml-2 text-xs font-medium text-success">Correct</span>}
-                      {isSel && !isCorrect && <span className="ml-2 text-xs font-medium text-destructive">Your answer</span>}
+                    <div key={k} className={cn(
+                      "relative flex items-center gap-3 rounded-xl border p-4 text-sm transition-all md:text-base",
+                      isCorrect ? "border-success/50 bg-success/5 ring-1 ring-success/20" : 
+                      isSel ? "border-destructive/50 bg-destructive/5 ring-1 ring-destructive/20" : 
+                      "border-border bg-background"
+                    )}>
+                      <span className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs font-bold uppercase",
+                        isCorrect ? "bg-success text-success-foreground" : 
+                        isSel ? "bg-destructive text-destructive-foreground" : 
+                        "bg-muted text-muted-foreground"
+                      )}>{k}</span>
+                      <span className="flex-1 font-medium">{optText}</span>
+                      {isCorrect && <Check className="h-4 w-4 shrink-0 text-success" />}
+                      {isSel && !isCorrect && <X className="h-4 w-4 shrink-0 text-destructive" />}
                     </div>
                   );
                 })}
               </div>
+
               {q.explanation && (
-                <div className="mt-4 rounded-xl border border-success/30 bg-success/5 p-4 text-sm">
-                  <div className="flex items-center gap-2 font-semibold text-success mb-1">
-                    <FileText className="h-3.5 w-3.5" /> Explanation
+                <div className="mt-6 rounded-2xl border-2 border-success/20 bg-success/[0.02] p-5">
+                  <div className="flex items-center gap-2 font-display text-sm font-bold text-success">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-success/10">
+                      <FileText className="h-3.5 w-3.5" />
+                    </div>
+                    Concept Explanation
                   </div>
-                  <p className="text-muted-foreground leading-relaxed">{q.explanation}</p>
+                  <div className="mt-3 text-sm leading-relaxed text-muted-foreground/90 md:text-base">
+                    {q.explanation}
+                  </div>
                 </div>
               )}
             </div>

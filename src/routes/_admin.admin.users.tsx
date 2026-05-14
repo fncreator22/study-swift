@@ -17,6 +17,7 @@ function UsersAdmin() {
   }
   const [tokenUser, setTokenUser] = useState<any>(null);
   const [tokenAmt, setTokenAmt] = useState("0");
+  const [tokenMsg, setTokenMsg] = useState("Admin adjustment");
   const [tokenSubmitting, setTokenSubmitting] = useState(false);
 
   useEffect(() => { load(); }, []);
@@ -45,7 +46,7 @@ function UsersAdmin() {
                 <td className="p-4 text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
                 <td className="p-4">{u.blocked ? <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">Blocked</span> : <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">Active</span>}</td>
                 <td className="p-4 text-right flex justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setTokenUser(u)}>± Tokens</Button>
+                  <Button size="sm" variant="outline" disabled={u.blocked} onClick={() => { setTokenUser(u); setTokenAmt("0"); setTokenMsg("Admin adjustment"); }}>± Tokens</Button>
                   <Button size="sm" variant="outline" onClick={() => toggleBlock(u.id, u.blocked)}>{u.blocked ? "Unblock" : "Block"}</Button>
                 </td>
               </tr>
@@ -64,20 +65,24 @@ function UsersAdmin() {
               <Label htmlFor="tokens">Token Amount (e.g. 100 or -100)</Label>
               <Input id="tokens" type="number" value={tokenAmt} onChange={(e) => setTokenAmt(e.target.value)} />
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="message">Message / Reason</Label>
+              <Input id="message" value={tokenMsg} onChange={(e) => setTokenMsg(e.target.value)} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTokenUser(null)}>Cancel</Button>
             <Button disabled={tokenSubmitting} onClick={async () => {
               const val = parseInt(tokenAmt);
               if (isNaN(val)) return toast.error("Invalid amount");
+              if (tokenUser.blocked) return toast.error("User is blocked");
               setTokenSubmitting(true);
               const { error } = await supabase.from("profiles").update({ tokens: (tokenUser.tokens || 0) + val }).eq("id", tokenUser.id);
               if (error) toast.error(error.message);
               else {
-                await supabase.from("wallet_transactions").insert({ user_id: tokenUser.id, amount: val, type: 'admin_adj', description: 'Admin adjustment' });
+                await supabase.from("wallet_transactions").insert({ user_id: tokenUser.id, amount: val, type: 'admin_adj', description: tokenMsg });
                 toast.success("Tokens updated");
                 setTokenUser(null);
-                setTokenAmt("0");
                 load();
               }
               setTokenSubmitting(false);
