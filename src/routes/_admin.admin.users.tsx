@@ -32,22 +32,39 @@ function UsersAdmin() {
   return (
     <div className="mx-auto max-w-6xl">
       <h1 className="font-display text-3xl font-bold">Users</h1>
-      <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="mt-8 responsive-table-container rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
-          <thead className="bg-muted text-left text-xs uppercase tracking-wider text-muted-foreground">
-            <tr><th className="p-4">Name</th><th className="p-4">College</th><th className="p-4">Tokens</th><th className="p-4">Joined</th><th className="p-4">Status</th><th className="p-4 text-right">Actions</th></tr>
+          <thead className="bg-muted/50 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-6 py-4">Name</th>
+              <th className="px-6 py-4">College</th>
+              <th className="px-6 py-4">Tokens</th>
+              <th className="px-6 py-4">Joined</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4 text-right">Actions</th>
+            </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border">
             {users.map((u) => (
-              <tr key={u.id} className="border-t border-border">
-                <td className="p-4 font-medium">{u.full_name || "—"}</td>
-                <td className="p-4 text-muted-foreground">{u.college || "—"}</td>
-                <td className="p-4 font-mono text-primary">{u.tokens ?? 0}</td>
-                <td className="p-4 text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
-                <td className="p-4">{u.blocked ? <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">Blocked</span> : <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">Active</span>}</td>
-                <td className="p-4 text-right flex justify-end gap-2">
-                  <Button size="sm" variant="outline" disabled={u.blocked} onClick={() => { setTokenUser(u); setTokenAmt("0"); setTokenMsg("Admin adjustment"); }}>± Tokens</Button>
-                  <Button size="sm" variant="outline" onClick={() => toggleBlock(u.id, u.blocked)}>{u.blocked ? "Unblock" : "Block"}</Button>
+              <tr key={u.id} className="transition-colors hover:bg-muted/30">
+                <td className="px-6 py-4 font-medium whitespace-nowrap">{u.full_name || "—"}</td>
+                <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">{u.college || "—"}</td>
+                <td className="px-6 py-4 font-mono text-primary whitespace-nowrap">{u.tokens ?? 0}</td>
+                <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">{new Date(u.created_at).toLocaleDateString()}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {u.blocked ? (
+                    <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-0.5 text-[10px] font-bold text-destructive">Blocked</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-0.5 text-[10px] font-bold text-success">Active</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-right whitespace-nowrap">
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" disabled={u.blocked} className="h-8 rounded-lg border border-border/50 bg-background hover:bg-muted" onClick={() => { setTokenUser(u); setTokenAmt("0"); setTokenMsg("Admin adjustment"); }}>± Tokens</Button>
+                    <Button size="sm" variant="ghost" className="h-8 rounded-lg border border-border/50 bg-background hover:bg-muted" onClick={() => toggleBlock(u.id, u.blocked)}>
+                      {u.blocked ? "Unblock" : "Block"}
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
