@@ -26,10 +26,13 @@ The platform bridges the gap between content delivery and performance evaluation
 *   **Tiered Content Access**: Granular control over test availability based on user subscription (Free, Paid, Premium).
 
 ### Content Delivery System
-*   **Video-Based Learning**: Integrated course module for high-quality video content delivery.
-*   **Progress Tracking**: Centralized dashboard to monitor video consumption and course completion.
+*   **Integrated LMS Course Hub**: Feature-rich course modules supporting structured learning materials, curriculum trees, and interactive video lecture delivery.
+*   **Progress Tracking**: Detailed progress visualizers to monitor course, module, and lesson-level completion.
 
-### Performance Analytics
+### Token Wallet & Request System
+*   **Virtual Coin Economy**: Self-contained token wallet system enabling students to accumulate credit and acquire test attempts.
+*   **Request Pipeline**: Student-facing interface to request additional tokens directly from platform administrators.
+*   **Administrative Ledger**: Dedicated management suite for administrative adjustments (credit/debit adjustments) and transaction logging.
 *   **Global Rankings**: View-based leaderboard system calculating averages, attempt counts, and college-level performance.
 *   **Historical Traceability**: Detailed attempt history for students to review past performance and progress.
 *   **KPI Dashboards**: High-level statistical overviews for both students (learning progress) and admins (platform health).
