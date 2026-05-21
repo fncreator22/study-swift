@@ -19,22 +19,22 @@ The platform bridges the gap between content delivery and performance evaluation
 
 ## Core Features
 
-### 🎓 Assessment Engine
+### Assessment Engine
 *   **Dynamic Test Execution**: Support for timed examinations with automated session management.
 *   **Multi-Type Question Support**: Handles Multiple Choice (MCQ) and written descriptive answers.
 *   **Automated Grading**: Instant score calculation for objective questions and structured tracking for subjective content.
 *   **Tiered Content Access**: Granular control over test availability based on user subscription (Free, Paid, Premium).
 
-### 📹 Content Delivery System
+### Content Delivery System
 *   **Video-Based Learning**: Integrated course module for high-quality video content delivery.
 *   **Progress Tracking**: Centralized dashboard to monitor video consumption and course completion.
 
-### 📊 Performance Analytics
+### Performance Analytics
 *   **Global Rankings**: View-based leaderboard system calculating averages, attempt counts, and college-level performance.
 *   **Historical Traceability**: Detailed attempt history for students to review past performance and progress.
 *   **KPI Dashboards**: High-level statistical overviews for both students (learning progress) and admins (platform health).
 
-### 🛡️ Administrative Operations
+### Administrative Operations
 *   **User Management**: Complete control over student profiles, including account blocking and profile auditing.
 *   **Content Orchestration**: Centralized management of tests, questions, and course materials.
 *   **Moderation System**: Integrated comment and feedback management for community interaction.

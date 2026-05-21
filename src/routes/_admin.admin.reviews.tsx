@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, User, BookOpen, ExternalLink, Send } from "lucide-react";
+import { CheckCircle2, Clock, User, BookOpen, ExternalLink, Send, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,8 +22,8 @@ type Attempt = {
   submitted_at: string;
   is_reviewed: boolean;
   feedback: string | null;
-  profiles: { full_name: string; college: string };
-  tests: { title: string; test_type: string };
+  profiles: { full_name: string; college?: string };
+  tests: { title: string; test_type: string; total_marks: number };
 };
 
 function AdminReviews() {
@@ -31,8 +31,8 @@ function AdminReviews() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Attempt | null>(null);
   const [answers, setAnswers] = useState<any[]>([]);
-  const [questions, setQuestions] = useState<any[]>([]);
   const [score, setScore] = useState("0");
+  const [total, setTotal] = useState("0");
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -40,29 +40,42 @@ function AdminReviews() {
     setLoading(true);
     const { data, error } = await supabase
       .from("test_attempts")
-      .select("*, profiles(full_name, college), tests(title, test_type)")
+      .select("*, profiles(full_name, college), tests(title, test_type, total_marks)")
       .not("submitted_at", "is", null)
       .eq("tests.test_type", "written")
       .order("submitted_at", { ascending: false });
 
-    if (error) toast.error(error.message);
-    else setAttempts(data as any);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      // Supabase inner-join filtering fallback
+      const filtered = (data ?? []).filter((a: any) => a.tests?.test_type === "written");
+      setAttempts(filtered as any);
+    }
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   async function openReview(a: Attempt) {
     setSelected(a);
-    setScore(a.score.toString());
+    setScore((a.score || 0).toString());
+    setTotal((a.total || a.tests?.total_marks || 0).toString());
     setFeedback(a.feedback || "");
     
-    // Load questions and answers
-    const { data: qs } = await supabase.from("test_questions").select("*").eq("test_id", a.test_id).order("position");
-    const { data: ans } = await supabase.from("test_answers").select("*").eq("attempt_id", a.id);
-    
-    setQuestions(qs ?? []);
-    setAnswers(ans ?? []);
+    // Load answers with question text
+    const { data, error } = await supabase
+      .from("test_answers")
+      .select("*, test_questions(question, max_words)")
+      .eq("attempt_id", a.id);
+      
+    if (error) {
+      toast.error("Failed to load responses: " + error.message);
+    } else {
+      setAnswers(data ?? []);
+    }
   }
 
   async function finalize() {
@@ -71,15 +84,17 @@ function AdminReviews() {
     const { error } = await supabase
       .from("test_attempts")
       .update({
-        score: parseInt(score),
+        score: parseInt(score) || 0,
+        total: parseInt(total) || 0,
         feedback: feedback,
         is_reviewed: true
       })
       .eq("id", selected.id);
 
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Result finalized");
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Result finalized and published!");
       setSelected(null);
       load();
     }
@@ -115,7 +130,7 @@ function AdminReviews() {
                 <TableCell>
                   <div className="flex flex-col">
                     <span className="font-medium">{a.profiles?.full_name || "Unknown"}</span>
-                    <span className="text-xs text-muted-foreground">{a.profiles?.college}</span>
+                    <span className="text-xs text-muted-foreground">{a.profiles?.college || "—"}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -128,16 +143,16 @@ function AdminReviews() {
                   {new Date(a.submitted_at).toLocaleString()}
                 </TableCell>
                 <TableCell>
-                  {a.is_reviewed ? (
+                  {a.is_reviewed || a.score > 0 ? (
                     <Badge variant="success" className="gap-1"><CheckCircle2 className="h-3 w-3" /> Reviewed</Badge>
                   ) : (
                     <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" /> Pending</Badge>
                   )}
                 </TableCell>
-                <TableCell className="font-mono">{a.score}/{a.total}</TableCell>
+                <TableCell className="font-mono">{a.score}/{a.total || a.tests?.total_marks}</TableCell>
                 <TableCell className="text-right">
                   <Button size="sm" variant="outline" onClick={() => openReview(a)}>
-                    <ExternalLink className="mr-2 h-3 w-3" /> {a.is_reviewed ? "Edit" : "Review"}
+                    <ExternalLink className="mr-2 h-3 w-3" /> Review
                   </Button>
                 </TableCell>
               </TableRow>
@@ -157,7 +172,7 @@ function AdminReviews() {
               <div className="rounded-xl border border-border p-4 bg-muted/30">
                 <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Test Details</p>
                 <p className="mt-1 font-semibold">{selected?.tests?.title}</p>
-                <p className="text-xs text-muted-foreground">Total Marks: {selected?.total}</p>
+                <p className="text-xs text-muted-foreground">Total Marks: {selected?.tests?.total_marks}</p>
               </div>
               <div className="rounded-xl border border-border p-4 bg-muted/30">
                 <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Submission Info</p>
@@ -170,18 +185,16 @@ function AdminReviews() {
               <h3 className="font-display font-bold text-lg flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" /> Student Responses
               </h3>
-              {questions.map((q, i) => {
-                const ans = answers.find(a => a.question_id === q.id);
-                return (
-                  <div key={q.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-                    <p className="text-xs text-muted-foreground">Q{i + 1} · {q.question_type}</p>
-                    <p className="mt-1 font-semibold">{q.question}</p>
-                    <div className="mt-4 rounded-xl bg-muted p-4 text-sm whitespace-pre-wrap border border-border/50 italic">
-                      {ans?.written_answer || "No answer submitted."}
-                    </div>
+              {answers.map((ans, i) => (
+                <div key={ans.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Question {i + 1}</p>
+                  <p className="mt-1 font-semibold">{ans.test_questions?.question}</p>
+                  <div className="mt-4 rounded-xl bg-muted p-4 text-sm whitespace-pre-wrap border border-border/50 italic">
+                    {ans.written_answer || "No answer submitted."}
                   </div>
-                );
-              })}
+                  <p className="mt-2 text-right text-[10px] text-muted-foreground">Word limit: {ans.test_questions?.max_words || "—"}</p>
+                </div>
+              ))}
             </div>
 
             <div className="space-y-4 pt-4 border-t border-border">
@@ -190,11 +203,15 @@ function AdminReviews() {
               </h3>
               <div className="grid gap-4 sm:grid-cols-4">
                 <div className="sm:col-span-1">
-                  <Label>Total Score</Label>
-                  <Input type="number" value={score} onChange={(e) => setScore(e.target.value)} max={selected?.total} />
-                  <p className="text-[10px] text-muted-foreground mt-1">Out of {selected?.total}</p>
+                  <Label>Score</Label>
+                  <Input type="number" value={score} onChange={(e) => setScore(e.target.value)} max={total} />
+                  <p className="text-[10px] text-muted-foreground mt-1">Out of {total}</p>
                 </div>
-                <div className="sm:col-span-3">
+                <div className="sm:col-span-1">
+                  <Label>Total Marks</Label>
+                  <Input type="number" value={total} onChange={(e) => setTotal(e.target.value)} />
+                </div>
+                <div className="sm:col-span-2">
                   <Label>Overall Feedback</Label>
                   <Textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} placeholder="Provide constructive feedback..." />
                 </div>
@@ -205,7 +222,7 @@ function AdminReviews() {
           <DialogFooter className="pt-4 border-t border-border">
             <Button variant="outline" onClick={() => setSelected(null)}>Cancel</Button>
             <Button disabled={submitting} onClick={finalize}>
-              {selected?.is_reviewed ? "Update Result" : "Finalize & Notify"}
+              {submitting ? "Publishing..." : selected?.is_reviewed ? "Update Result" : "Finalize & Publish"}
             </Button>
           </DialogFooter>
         </DialogContent>

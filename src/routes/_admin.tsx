@@ -17,7 +17,6 @@ const items: { to: string; label: string; icon: typeof LayoutDashboard; exact?: 
   { to: "/admin/reviews", label: "Review Tests", icon: FileText },
   { to: "/admin/courses", label: "Courses", icon: PlayCircle },
   { to: "/admin/tokens", label: "Token Requests", icon: Coins },
-  { to: "/admin/comments", label: "Comments", icon: MessageSquare },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -28,10 +27,36 @@ function AdminLayout() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user || !isAdmin) nav({ to: "/admin/login" });
+    // If we have a user but isAdmin is false, wait a moment to see if it updates
+    // (AuthProvider might be in the middle of a role check)
+    if (!user) {
+      nav({ to: "/admin/login" });
+    } else if (!isAdmin) {
+      // Allow more time for role verification (3s) to prevent race conditions on login
+      const timer = setTimeout(() => {
+        if (!isAdmin) {
+          console.warn("[AdminGuard] Authority verification failed. Access denied.");
+          nav({ to: "/admin/login" });
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
   }, [user, isAdmin, loading, nav]);
 
-  if (loading || !user || !isAdmin) return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;
+  if (loading || (user && !isAdmin)) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background px-4">
+        <div className="text-center">
+          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+            <Lock className="h-6 w-6 text-primary animate-pulse" />
+          </div>
+          <h2 className="font-display text-xl font-bold">Verifying authority</h2>
+          <p className="mt-2 text-sm text-muted-foreground italic">Establishing secure administrative session...</p>
+        </div>
+      </div>
+    );
+  }
+  if (!user || !isAdmin) return null; // Should be handled by redirect
 
   return (
     <SidebarProvider>
@@ -61,11 +86,6 @@ function AdminLayout() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
-          <SidebarFooter>
-            <Button variant="ghost" className="justify-start gap-2" onClick={async () => { await signOut(); nav({ to: "/" }); }}>
-              <LogOut className="h-4 w-4" /><span className="group-data-[collapsible=icon]:hidden">Log out</span>
-            </Button>
-          </SidebarFooter>
         </Sidebar>
         <div className="flex flex-1 flex-col">
           <header className="flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur">

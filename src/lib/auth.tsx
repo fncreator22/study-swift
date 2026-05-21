@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTokens(0);
       }
     });
+
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
       if (data.session?.user) {
@@ -53,8 +54,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
+
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .maybeSingle()
+        .then(({ data }) => setIsAdmin(!!data));
+    } else {
+      setIsAdmin(false);
+    }
+  }, [session]);
 
   return (
     <Ctx.Provider
