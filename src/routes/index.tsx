@@ -52,17 +52,17 @@ function Landing() {
               <Zap className="h-3 w-3" /> Next-Gen Learning Platform
             </div>
             <h1 className="mt-6 font-display text-5xl font-black leading-[1.1] tracking-tight md:text-7xl animate-in fade-in slide-in-from-bottom-8 duration-700">
-              Master your <span className="text-primary">exams</span> with confidence.
+              Master your <span className="gradient-text font-black">exams</span> with confidence.
             </h1>
             <p className="mt-8 text-lg text-muted-foreground md:text-xl animate-in fade-in slide-in-from-bottom-12 duration-700 max-w-2xl">
               The most advanced LMS for professional certifications and academic excellence. 
               Real-time practice, expert-curated courses, and detailed analytics.
             </p>
             <div className="mt-10 flex flex-wrap gap-4 animate-in fade-in slide-in-from-bottom-16 duration-700">
-              <Button size="lg" className="rounded-2xl h-14 px-8 text-base shadow-lg shadow-primary/20" asChild>
+              <Button size="lg" className="rounded-2xl h-14 px-8 text-base shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] glow-effect" asChild>
                 <Link to="/login">Get Started Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
-              <Button variant="outline" size="lg" className="rounded-2xl h-14 px-8 text-base" asChild>
+              <Button variant="outline" size="lg" className="rounded-2xl h-14 px-8 text-base transition-all duration-300 hover:bg-primary/5 hover:scale-[1.02] active:scale-[0.98]" asChild>
                 <Link to="/courses">Explore Courses</Link>
               </Button>
             </div>
@@ -70,8 +70,9 @@ function Landing() {
         </div>
         
         {/* Decorative background elements */}
-        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary/5 blur-3xl animate-pulse" />
-        <div className="absolute top-1/2 -left-24 h-64 w-64 rounded-full bg-accent/5 blur-3xl" />
+        <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl animate-pulse duration-[8000ms]" />
+        <div className="absolute top-1/2 -left-24 h-64 w-64 rounded-full bg-accent/8 blur-3xl" />
+        <div className="absolute bottom-12 right-1/4 h-80 w-80 rounded-full bg-primary/5 blur-3xl animate-pulse duration-[12000ms]" />
       </section>
 
       <MarqueeRow title="Popular Courses" items={courses} type="course" />
