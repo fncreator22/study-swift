@@ -17,26 +17,36 @@ export type Database = {
       comments: {
         Row: {
           body: string
+          course_id: string | null
           created_at: string
           id: string
-          test_id: string
+          test_id: string | null
           user_id: string
         }
         Insert: {
           body: string
+          course_id?: string | null
           created_at?: string
           id?: string
-          test_id: string
+          test_id?: string | null
           user_id: string
         }
         Update: {
           body?: string
+          course_id?: string | null
           created_at?: string
           id?: string
-          test_id?: string
+          test_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "comments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "comments_test_id_fkey"
             columns: ["test_id"]
@@ -46,6 +56,72 @@ export type Database = {
           },
         ]
       }
+      courses: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          difficulty: string
+          id: string
+          instructor_bio: string
+          instructor_name: string
+          price: number
+          thumbnail_url: string
+          tier: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          difficulty?: string
+          id?: string
+          instructor_bio?: string
+          instructor_name?: string
+          price?: number
+          thumbnail_url?: string
+          tier?: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          difficulty?: string
+          id?: string
+          instructor_bio?: string
+          instructor_name?: string
+          price?: number
+          thumbnail_url?: string
+          tier?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      memberships: {
+        Row: {
+          created_at: string
+          id: string
+          plan: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plan?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plan?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           blocked: boolean
@@ -53,6 +129,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          tokens: number
         }
         Insert: {
           blocked?: boolean
@@ -60,6 +137,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id: string
+          tokens?: number
         }
         Update: {
           blocked?: boolean
@@ -67,29 +145,40 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          tokens?: number
         }
         Relationships: []
       }
       purchases: {
         Row: {
+          course_id: string | null
           created_at: string
           id: string
-          test_id: string
+          test_id: string | null
           user_id: string
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           id?: string
-          test_id: string
+          test_id?: string | null
           user_id: string
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           id?: string
-          test_id?: string
+          test_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "purchases_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchases_test_id_fkey"
             columns: ["test_id"]
@@ -98,6 +187,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
       }
       test_answers: {
         Row: {
@@ -140,7 +247,9 @@ export type Database = {
       }
       test_attempts: {
         Row: {
+          feedback: string | null
           id: string
+          is_reviewed: boolean
           score: number
           started_at: string
           submitted_at: string | null
@@ -149,7 +258,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          feedback?: string | null
           id?: string
+          is_reviewed?: boolean
           score?: number
           started_at?: string
           submitted_at?: string | null
@@ -158,7 +269,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          feedback?: string | null
           id?: string
+          is_reviewed?: boolean
           score?: number
           started_at?: string
           submitted_at?: string | null
@@ -229,8 +342,54 @@ export type Database = {
           },
         ]
       }
+      test_reviews: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          id: string
+          notes: string
+          question_id: string | null
+          reviewer_id: string
+          score: number
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          id?: string
+          notes?: string
+          question_id?: string | null
+          reviewer_id: string
+          score?: number
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          id?: string
+          notes?: string
+          question_id?: string | null
+          reviewer_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_reviews_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "test_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_reviews_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "test_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tests: {
         Row: {
+          category: string
           created_at: string
           description: string
           duration_min: number
@@ -244,6 +403,7 @@ export type Database = {
           word_limit: number
         }
         Insert: {
+          category?: string
           created_at?: string
           description?: string
           duration_min?: number
@@ -257,6 +417,7 @@ export type Database = {
           word_limit?: number
         }
         Update: {
+          category?: string
           created_at?: string
           description?: string
           duration_min?: number
@@ -268,6 +429,39 @@ export type Database = {
           title?: string
           total_marks?: number
           word_limit?: number
+        }
+        Relationships: []
+      }
+      token_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          message: string
+          screenshot_url: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          message?: string
+          screenshot_url?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          message?: string
+          screenshot_url?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -291,6 +485,7 @@ export type Database = {
       }
       videos: {
         Row: {
+          course_id: string | null
           created_at: string
           description: string
           id: string
@@ -299,6 +494,7 @@ export type Database = {
           video_url: string
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -307,6 +503,7 @@ export type Database = {
           video_url: string
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -314,16 +511,50 @@ export type Database = {
           title?: string
           video_url?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "videos_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string
+          id?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          type?: string
+          user_id?: string
+        }
         Relationships: []
       }
     }
     Views: {
       rankings_view: {
         Row: {
-          attempts_count: number | null
-          avg_percentage: number | null
           college: string | null
           full_name: string | null
+          tests_taken: number | null
           total_score: number | null
           user_id: string | null
         }
