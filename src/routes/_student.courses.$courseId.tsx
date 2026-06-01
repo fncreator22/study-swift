@@ -52,12 +52,12 @@ function CourseDetail() {
     if (!user) return;
     setLoading(true);
     
-    const { data: c } = await supabase.from("courses" as any).select("*").eq("id", courseId).maybeSingle();
+    const { data: c } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle();
     if (!c) {
       setLoading(false);
       return;
     }
-    setCourse(c as Course);
+    setCourse(c as unknown as Course);
 
     // Access Check (Reused Logic)
     if (c.tier === "free") {
