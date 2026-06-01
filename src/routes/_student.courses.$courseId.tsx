@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2 } from "lucide-react";
+import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_student/courses/$courseId")({ component: CourseDetail });
@@ -52,12 +52,12 @@ function CourseDetail() {
     if (!user) return;
     setLoading(true);
     
-    const { data: c } = await supabase.from("courses" as any).select("*").eq("id", courseId).maybeSingle();
+    const { data: c } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle();
     if (!c) {
       setLoading(false);
       return;
     }
-    setCourse(c as Course);
+    setCourse(c as unknown as Course);
 
     // Access Check (Reused Logic)
     if (c.tier === "free") {
