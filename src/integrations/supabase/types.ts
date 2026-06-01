@@ -552,6 +552,8 @@ export type Database = {
     Views: {
       rankings_view: {
         Row: {
+          attempts_count: number | null
+          avg_percentage: number | null
           college: string | null
           full_name: string | null
           tests_taken: number | null
@@ -562,6 +564,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_test_review: { Args: { _attempt_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
