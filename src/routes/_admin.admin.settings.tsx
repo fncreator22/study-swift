@@ -41,7 +41,7 @@ function AdminSettings() {
     const data: Record<string, any> = {};
     try {
       for (const table of TABLES) {
-        const { data: rows, error } = await supabase.from(table).select("*");
+        const { data: rows, error } = await (supabase as any).from(table).select("*");
         if (error) throw error;
         data[table] = rows;
       }
