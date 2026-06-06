@@ -34,7 +34,7 @@ function Review() {
       if (t) setTestType(t.test_type as any);
 
       // Task 1 & 2: Use secure RPC for review data
-      const { data, error: rpcErr } = await supabase.rpc("get_test_review", { p_attempt_id: attemptId });
+      const { data, error: rpcErr } = await supabase.rpc("get_test_review", { _attempt_id: attemptId });
       
       if (rpcErr) {
         setError(rpcErr.message);
@@ -43,9 +43,14 @@ function Review() {
       }
 
       if (data) {
-        setAttempt(data.attempt);
-        setQuestions(data.questions || []);
-        setAnswers(data.answers || {});
+        const payload = data as any;
+        setAttempt(payload.attempt);
+        setQuestions(payload.questions || []);
+        const ansMap: Record<string, { selected: string | null; written: string | null }> = {};
+        (payload.answers || []).forEach((a: any) => {
+          ansMap[a.question_id] = { selected: a.selected_option ?? null, written: a.written_answer ?? null };
+        });
+        setAnswers(ansMap);
       }
       setLoading(false);
     })();
