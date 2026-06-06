@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2 } from "lucide-react";
+import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_student/courses/$courseId")({ component: CourseDetail });
@@ -57,10 +57,11 @@ function CourseDetail() {
       setLoading(false);
       return;
     }
-    setCourse(c as Course);
+    const course = c as unknown as Course;
+    setCourse(course);
 
     // Access Check (Reused Logic)
-    if (c.tier === "free") {
+    if (course.tier === "free") {
       setHasAccess(true);
     } else {
       const { data: p } = await supabase.from("purchases").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
@@ -88,7 +89,10 @@ function CourseDetail() {
 
   async function purchase() {
     if (!user || !course) return;
-    const { error } = await supabase.from("purchases").insert({ user_id: user.id, course_id: course.id });
+    const { error } = await supabase.rpc("purchase_with_tokens" as any, {
+      _test_id: null,
+      _course_id: course.id,
+    });
     if (error) return toast.error(error.message);
     toast.success("Course unlocked successfully");
     setHasAccess(true);
