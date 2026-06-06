@@ -5,7 +5,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, BookOpen, ShoppingBag, History, Trophy, PlayCircle, User, Settings, LogOut, GraduationCap, Coins, Plus } from "lucide-react";
+import { LayoutDashboard, BookOpen, ShoppingBag, History, Trophy, PlayCircle, User, Settings, LogOut, GraduationCap, Coins, Plus, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
 import { cn } from "@/lib/utils";
