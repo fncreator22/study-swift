@@ -243,6 +243,13 @@ export type Database = {
             referencedRelation: "test_questions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "test_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "test_questions_secure"
+            referencedColumns: ["id"]
+          },
         ]
       }
       test_attempts: {
@@ -383,6 +390,13 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "test_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_reviews_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "test_questions_secure"
             referencedColumns: ["id"]
           },
         ]
@@ -562,9 +576,63 @@ export type Database = {
         }
         Relationships: []
       }
+      test_questions_secure: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          max_words: number | null
+          option_a: string | null
+          option_b: string | null
+          option_c: string | null
+          option_d: string | null
+          position: number | null
+          question: string | null
+          question_type: string | null
+          test_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          max_words?: number | null
+          option_a?: string | null
+          option_b?: string | null
+          option_c?: string | null
+          option_d?: string | null
+          position?: number | null
+          question?: string | null
+          question_type?: string | null
+          test_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          max_words?: number | null
+          option_a?: string | null
+          option_b?: string | null
+          option_c?: string | null
+          option_d?: string | null
+          position?: number | null
+          question?: string | null
+          question_type?: string | null
+          test_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_questions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_test_review: { Args: { _attempt_id: string }; Returns: Json }
+      has_course_access: {
+        Args: { _course_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -575,6 +643,10 @@ export type Database = {
       has_test_access: {
         Args: { _test_id: string; _user_id: string }
         Returns: boolean
+      }
+      purchase_with_tokens: {
+        Args: { _course_id: string; _test_id: string }
+        Returns: Json
       }
     }
     Enums: {
