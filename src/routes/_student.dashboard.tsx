@@ -37,6 +37,7 @@ function Dashboard() {
         courses: courses ?? 0,
       });
       setName(prof?.full_name ?? "");
+      setMembership({ status: (prof as any)?.membership_status ?? "free", expiry: (prof as any)?.subscription_expiry ?? null });
       setRecent(atts ?? []);
       setLatestTests(lt ?? []);
       setLatestCourses(lc ?? []);
