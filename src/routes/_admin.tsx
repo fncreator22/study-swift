@@ -5,7 +5,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins, FileText } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins, FileText, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_admin")({ component: AdminLayout });
