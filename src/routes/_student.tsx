@@ -20,6 +20,7 @@ const items = [
   { to: "/rankings", label: "Rankings", icon: Trophy },
   { to: "/wallet", label: "Wallet", icon: Coins },
   { to: "/courses", label: "Courses", icon: PlayCircle },
+  { to: "/subscriptions", label: "Subscriptions", icon: Crown },
   { to: "/profile", label: "Profile", icon: User },
 ] as const;
 
