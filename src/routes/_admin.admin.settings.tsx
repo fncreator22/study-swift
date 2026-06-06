@@ -68,7 +68,7 @@ function AdminSettings() {
         const data = JSON.parse(event.target?.result as string);
         for (const table of TABLES) {
           if (data[table] && Array.isArray(data[table])) {
-            const { error } = await supabase.from(table).upsert(data[table]);
+            const { error } = await supabase.from(table as any).upsert(data[table]);
             if (error) toast.error(`Error importing ${table}: ${error.message}`);
           }
         }
