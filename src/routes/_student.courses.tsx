@@ -24,7 +24,7 @@ function Courses() {
   useEffect(() => {
     supabase.from("courses" as any).select("*").order("created_at", { ascending: false })
       .then(({ data }) => {
-        setCourses(data ?? []);
+        setCourses((data as unknown as Course[]) ?? []);
         setLoading(false);
       });
   }, []);
