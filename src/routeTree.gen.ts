@@ -29,6 +29,7 @@ import { Route as StudentCoursesCourseIdRouteImport } from './routes/_student.co
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin.admin.users'
 import { Route as AdminAdminTokensRouteImport } from './routes/_admin.admin.tokens'
 import { Route as AdminAdminTestsRouteImport } from './routes/_admin.admin.tests'
+import { Route as AdminAdminSubscriptionsRouteImport } from './routes/_admin.admin.subscriptions'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin.admin.settings'
 import { Route as AdminAdminReviewsRouteImport } from './routes/_admin.admin.reviews'
 import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
@@ -135,6 +136,11 @@ const AdminAdminTestsRoute = AdminAdminTestsRouteImport.update({
   path: '/admin/tests',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminSubscriptionsRoute = AdminAdminSubscriptionsRouteImport.update({
+  id: '/admin/subscriptions',
+  path: '/admin/subscriptions',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
   id: '/admin/settings',
   path: '/admin/settings',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
   '/admin/tests': typeof AdminAdminTestsRoute
   '/admin/tokens': typeof AdminAdminTokensRoute
   '/admin/users': typeof AdminAdminUsersRoute
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
   '/admin/tests': typeof AdminAdminTestsRoute
   '/admin/tokens': typeof AdminAdminTokensRoute
   '/admin/users': typeof AdminAdminUsersRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/_admin/admin/courses': typeof AdminAdminCoursesRoute
   '/_admin/admin/reviews': typeof AdminAdminReviewsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
+  '/_admin/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
   '/_admin/admin/tests': typeof AdminAdminTestsRoute
   '/_admin/admin/tokens': typeof AdminAdminTokensRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/admin/courses'
     | '/admin/reviews'
     | '/admin/settings'
+    | '/admin/subscriptions'
     | '/admin/tests'
     | '/admin/tokens'
     | '/admin/users'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/admin/courses'
     | '/admin/reviews'
     | '/admin/settings'
+    | '/admin/subscriptions'
     | '/admin/tests'
     | '/admin/tokens'
     | '/admin/users'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/courses'
     | '/_admin/admin/reviews'
     | '/_admin/admin/settings'
+    | '/_admin/admin/subscriptions'
     | '/_admin/admin/tests'
     | '/_admin/admin/tokens'
     | '/_admin/admin/users'
@@ -495,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminTestsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/subscriptions': {
+      id: '/_admin/admin/subscriptions'
+      path: '/admin/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AdminAdminSubscriptionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/settings': {
       id: '/_admin/admin/settings'
       path: '/admin/settings'
@@ -551,6 +570,7 @@ interface AdminRouteChildren {
   AdminAdminCoursesRoute: typeof AdminAdminCoursesRoute
   AdminAdminReviewsRoute: typeof AdminAdminReviewsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
+  AdminAdminSubscriptionsRoute: typeof AdminAdminSubscriptionsRoute
   AdminAdminTestsRoute: typeof AdminAdminTestsRoute
   AdminAdminTokensRoute: typeof AdminAdminTokensRoute
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
@@ -562,6 +582,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminCoursesRoute: AdminAdminCoursesRoute,
   AdminAdminReviewsRoute: AdminAdminReviewsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
+  AdminAdminSubscriptionsRoute: AdminAdminSubscriptionsRoute,
   AdminAdminTestsRoute: AdminAdminTestsRoute,
   AdminAdminTokensRoute: AdminAdminTokensRoute,
   AdminAdminUsersRoute: AdminAdminUsersRoute,
