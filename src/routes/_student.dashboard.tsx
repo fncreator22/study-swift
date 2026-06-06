@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { BookOpen, Trophy, History, PlayCircle, ChevronRight } from "lucide-react";
+import { BookOpen, Trophy, History, PlayCircle, ChevronRight, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_student/dashboard")({ component: Dashboard });
