@@ -89,7 +89,10 @@ function CourseDetail() {
 
   async function purchase() {
     if (!user || !course) return;
-    const { error } = await supabase.from("purchases").insert({ user_id: user.id, course_id: course.id });
+    const { error } = await supabase.rpc("purchase_with_tokens" as any, {
+      _test_id: null,
+      _course_id: course.id,
+    });
     if (error) return toast.error(error.message);
     toast.success("Course unlocked successfully");
     setHasAccess(true);
