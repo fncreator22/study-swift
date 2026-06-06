@@ -16,6 +16,7 @@ import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as StudentWalletRouteImport } from './routes/_student.wallet'
+import { Route as StudentSubscriptionsRouteImport } from './routes/_student.subscriptions'
 import { Route as StudentRankingsRouteImport } from './routes/_student.rankings'
 import { Route as StudentPurchasedRouteImport } from './routes/_student.purchased'
 import { Route as StudentProfileRouteImport } from './routes/_student.profile'
@@ -67,6 +68,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const StudentWalletRoute = StudentWalletRouteImport.update({
   id: '/wallet',
   path: '/wallet',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentSubscriptionsRoute = StudentSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
   getParentRoute: () => StudentRoute,
 } as any)
 const StudentRankingsRoute = StudentRankingsRouteImport.update({
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof StudentProfileRoute
   '/purchased': typeof StudentPurchasedRoute
   '/rankings': typeof StudentRankingsRoute
+  '/subscriptions': typeof StudentSubscriptionsRoute
   '/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/profile': typeof StudentProfileRoute
   '/purchased': typeof StudentPurchasedRoute
   '/rankings': typeof StudentRankingsRoute
+  '/subscriptions': typeof StudentSubscriptionsRoute
   '/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/_student/profile': typeof StudentProfileRoute
   '/_student/purchased': typeof StudentPurchasedRoute
   '/_student/rankings': typeof StudentRankingsRoute
+  '/_student/subscriptions': typeof StudentSubscriptionsRoute
   '/_student/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/_admin/admin/courses': typeof AdminAdminCoursesRoute
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/purchased'
     | '/rankings'
+    | '/subscriptions'
     | '/wallet'
     | '/admin/login'
     | '/admin/courses'
@@ -287,6 +297,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/purchased'
     | '/rankings'
+    | '/subscriptions'
     | '/wallet'
     | '/admin/login'
     | '/admin/courses'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/_student/profile'
     | '/_student/purchased'
     | '/_student/rankings'
+    | '/_student/subscriptions'
     | '/_student/wallet'
     | '/admin/login'
     | '/_admin/admin/courses'
@@ -390,6 +402,13 @@ declare module '@tanstack/react-router' {
       path: '/wallet'
       fullPath: '/wallet'
       preLoaderRoute: typeof StudentWalletRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/_student/subscriptions': {
+      id: '/_student/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/subscriptions'
+      preLoaderRoute: typeof StudentSubscriptionsRouteImport
       parentRoute: typeof StudentRoute
     }
     '/_student/rankings': {
@@ -571,6 +590,7 @@ interface StudentRouteChildren {
   StudentProfileRoute: typeof StudentProfileRoute
   StudentPurchasedRoute: typeof StudentPurchasedRoute
   StudentRankingsRoute: typeof StudentRankingsRoute
+  StudentSubscriptionsRoute: typeof StudentSubscriptionsRoute
   StudentWalletRoute: typeof StudentWalletRoute
   StudentTestsIndexRoute: typeof StudentTestsIndexRoute
   StudentTestsTestIdAttemptRoute: typeof StudentTestsTestIdAttemptRoute
@@ -585,6 +605,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentProfileRoute: StudentProfileRoute,
   StudentPurchasedRoute: StudentPurchasedRoute,
   StudentRankingsRoute: StudentRankingsRoute,
+  StudentSubscriptionsRoute: StudentSubscriptionsRoute,
   StudentWalletRoute: StudentWalletRoute,
   StudentTestsIndexRoute: StudentTestsIndexRoute,
   StudentTestsTestIdAttemptRoute: StudentTestsTestIdAttemptRoute,
