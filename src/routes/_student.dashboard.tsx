@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { BookOpen, Trophy, History, PlayCircle, ChevronRight } from "lucide-react";
+import { BookOpen, Trophy, History, PlayCircle, ChevronRight, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_student/dashboard")({ component: Dashboard });
@@ -15,6 +15,7 @@ function Dashboard() {
   const [latestTests, setLatestTests] = useState<any[]>([]);
   const [latestCourses, setLatestCourses] = useState<any[]>([]);
   const [name, setName] = useState("");
+  const [membership, setMembership] = useState<{ status: string; expiry: string | null }>({ status: "free", expiry: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ function Dashboard() {
         supabase.from("tests").select("id", { count: "exact", head: true }),
         supabase.from("rankings_view").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("courses").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name,membership_status,subscription_expiry").eq("id", user.id).maybeSingle(),
         supabase.from("test_attempts").select("id,score,total,submitted_at,tests(title,test_type)").eq("user_id", user.id).not("submitted_at", "is", null).order("submitted_at", { ascending: false }).limit(3),
         supabase.from("tests").select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
         supabase.from("courses" as any).select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
@@ -36,6 +37,7 @@ function Dashboard() {
         courses: courses ?? 0,
       });
       setName(prof?.full_name ?? "");
+      setMembership({ status: (prof as any)?.membership_status ?? "free", expiry: (prof as any)?.subscription_expiry ?? null });
       setRecent(atts ?? []);
       setLatestTests(lt ?? []);
       setLatestCourses(lc ?? []);
@@ -91,11 +93,18 @@ function Dashboard() {
           <h1 className="font-display text-2xl font-bold md:text-3xl">Welcome back{name ? `, ${name.split(" ")[0]}` : ""}!</h1>
           <p className="text-xs text-muted-foreground md:text-sm italic font-medium">Your preparation roadmap is ready.</p>
         </div>
-        <div className="hidden sm:block">
-           <div className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 shadow-soft">
-              <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Syncing Live</span>
-           </div>
+        <div className="hidden sm:flex items-center gap-2">
+           {membership.status === "premium" && membership.expiry && new Date(membership.expiry) > new Date() ? (
+             <Link to={"/subscriptions" as any} className="flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-primary-foreground shadow-soft">
+                <Crown className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Premium · until {new Date(membership.expiry).toLocaleDateString()}</span>
+             </Link>
+           ) : (
+             <Link to={"/subscriptions" as any} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 shadow-soft hover:border-primary/40">
+                <Crown className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Free plan · Upgrade</span>
+             </Link>
+           )}
         </div>
       </div>
 
