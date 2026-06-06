@@ -25,7 +25,7 @@ function Dashboard() {
         supabase.from("tests").select("id", { count: "exact", head: true }),
         supabase.from("rankings_view").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("courses").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name,membership_status,subscription_expiry").eq("id", user.id).maybeSingle(),
         supabase.from("test_attempts").select("id,score,total,submitted_at,tests(title,test_type)").eq("user_id", user.id).not("submitted_at", "is", null).order("submitted_at", { ascending: false }).limit(3),
         supabase.from("tests").select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
         supabase.from("courses" as any).select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
