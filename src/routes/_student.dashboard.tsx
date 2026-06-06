@@ -15,6 +15,7 @@ function Dashboard() {
   const [latestTests, setLatestTests] = useState<any[]>([]);
   const [latestCourses, setLatestCourses] = useState<any[]>([]);
   const [name, setName] = useState("");
+  const [membership, setMembership] = useState<{ status: string; expiry: string | null }>({ status: "free", expiry: null });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
