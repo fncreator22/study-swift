@@ -103,6 +103,8 @@ export type Database = {
           created_at: string
           id: string
           plan: string
+          status: string
+          subscription_id: string | null
           user_id: string
           valid_until: string | null
         }
@@ -110,6 +112,8 @@ export type Database = {
           created_at?: string
           id?: string
           plan?: string
+          status?: string
+          subscription_id?: string | null
           user_id: string
           valid_until?: string | null
         }
@@ -117,10 +121,20 @@ export type Database = {
           created_at?: string
           id?: string
           plan?: string
+          status?: string
+          subscription_id?: string | null
           user_id?: string
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "memberships_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -129,6 +143,8 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          membership_status: string
+          subscription_expiry: string | null
           tokens: number
         }
         Insert: {
@@ -137,6 +153,8 @@ export type Database = {
           created_at?: string
           full_name?: string
           id: string
+          membership_status?: string
+          subscription_expiry?: string | null
           tokens?: number
         }
         Update: {
@@ -145,6 +163,8 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          membership_status?: string
+          subscription_expiry?: string | null
           tokens?: number
         }
         Relationships: []
@@ -203,6 +223,45 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: Json
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          course_ids: string[]
+          created_at: string
+          description: string
+          duration_days: number
+          id: string
+          is_active: boolean
+          name: string
+          test_ids: string[]
+          token_price: number
+          updated_at: string
+        }
+        Insert: {
+          course_ids?: string[]
+          created_at?: string
+          description?: string
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          test_ids?: string[]
+          token_price?: number
+          updated_at?: string
+        }
+        Update: {
+          course_ids?: string[]
+          created_at?: string
+          description?: string
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          test_ids?: string[]
+          token_price?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -629,6 +688,14 @@ export type Database = {
     }
     Functions: {
       get_test_review: { Args: { _attempt_id: string }; Returns: Json }
+      has_active_subscription_for_course: {
+        Args: { _course_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_active_subscription_for_test: {
+        Args: { _test_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_course_access: {
         Args: { _course_id: string; _user_id: string }
         Returns: boolean
@@ -643,6 +710,10 @@ export type Database = {
       has_test_access: {
         Args: { _test_id: string; _user_id: string }
         Returns: boolean
+      }
+      purchase_subscription: {
+        Args: { _subscription_id: string }
+        Returns: Json
       }
       purchase_with_tokens: {
         Args: { _course_id: string; _test_id: string }
