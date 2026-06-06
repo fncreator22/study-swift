@@ -57,10 +57,11 @@ function CourseDetail() {
       setLoading(false);
       return;
     }
-    setCourse(c as Course);
+    const course = c as unknown as Course;
+    setCourse(course);
 
     // Access Check (Reused Logic)
-    if (c.tier === "free") {
+    if (course.tier === "free") {
       setHasAccess(true);
     } else {
       const { data: p } = await supabase.from("purchases").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
