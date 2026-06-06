@@ -48,39 +48,19 @@ function TestDetail() {
 
   async function purchase() {
     if (!user || !test) return;
-    const tokenCost = Math.ceil(test.price / 10);
-    
+    const tokenCost = Math.ceil(test.price);
+
     if (tokens < tokenCost) {
-      toast.error(`Insufficient tokens. This test requires ${tokenCost} tokens (₹${test.price}).`);
+      toast.error(`Insufficient tokens. This test requires ${tokenCost} tokens.`);
       setPurchaseOpen(true);
       return;
     }
 
-    // Deduct tokens and create purchase in a transaction-like way
-    // Since I don't want to write complex RPCs for now, I'll just do it sequentially.
-    // In a real app, this MUST be an RPC.
-    
-    const { error: deductErr } = await supabase
-      .from("profiles")
-      .update({ tokens: tokens - tokenCost })
-      .eq("id", user.id);
-
-    if (deductErr) return toast.error("Failed to deduct tokens: " + deductErr.message);
-
-    const { error } = await supabase.from("purchases").insert({ user_id: user.id, test_id: test.id });
-    if (error) {
-      // Rollback tokens (approximate)
-      await supabase.from("profiles").update({ tokens: tokens }).eq("id", user.id);
-      return toast.error(error.message);
-    }
-
-    // Log transaction
-    await supabase.from("wallet_transactions").insert({
-      user_id: user.id,
-      amount: -tokenCost,
-      type: 'unlock',
-      description: `Unlocked test: ${test.title}`
+    const { error } = await supabase.rpc("purchase_with_tokens" as any, {
+      _test_id: test.id,
+      _course_id: null,
     });
+    if (error) return toast.error(error.message);
 
     toast.success("Test unlocked successfully!");
     setHasAccess(true);
