@@ -93,11 +93,18 @@ function Dashboard() {
           <h1 className="font-display text-2xl font-bold md:text-3xl">Welcome back{name ? `, ${name.split(" ")[0]}` : ""}!</h1>
           <p className="text-xs text-muted-foreground md:text-sm italic font-medium">Your preparation roadmap is ready.</p>
         </div>
-        <div className="hidden sm:block">
-           <div className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 shadow-soft">
-              <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Syncing Live</span>
-           </div>
+        <div className="hidden sm:flex items-center gap-2">
+           {membership.status === "premium" && membership.expiry && new Date(membership.expiry) > new Date() ? (
+             <Link to={"/subscriptions" as any} className="flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-primary-foreground shadow-soft">
+                <Crown className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Premium · until {new Date(membership.expiry).toLocaleDateString()}</span>
+             </Link>
+           ) : (
+             <Link to={"/subscriptions" as any} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 shadow-soft hover:border-primary/40">
+                <Crown className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Free plan · Upgrade</span>
+             </Link>
+           )}
         </div>
       </div>
 
