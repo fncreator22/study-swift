@@ -41,7 +41,7 @@ function AdminSettings() {
     const data: Record<string, any> = {};
     try {
       for (const table of TABLES) {
-        const { data: rows, error } = await supabase.from(table).select("*");
+        const { data: rows, error } = await supabase.from(table as any).select("*");
         if (error) throw error;
         data[table] = rows;
       }
@@ -68,7 +68,7 @@ function AdminSettings() {
         const data = JSON.parse(event.target?.result as string);
         for (const table of TABLES) {
           if (data[table] && Array.isArray(data[table])) {
-            const { error } = await supabase.from(table).upsert(data[table]);
+            const { error } = await supabase.from(table as any).upsert(data[table]);
             if (error) toast.error(`Error importing ${table}: ${error.message}`);
           }
         }

@@ -108,7 +108,7 @@ function Attempt() {
           .order("position");
         if (qErr) throw qErr;
         
-        const questionsList = (qs as Q[]) ?? [];
+        const questionsList = (qs as unknown as Q[]) ?? [];
         setQuestions(questionsList);
 
         if (questionsList.length === 0) {

@@ -63,7 +63,7 @@ function Dashboard() {
           {[...items, ...items].map((it, i) => (
             <Link 
               key={`${it.id}-${i}`} 
-              to={type === 'test' ? `/tests/${it.id}` : `/courses/${it.id}`}
+              to={(type === 'test' ? `/tests/${it.id}` : `/courses/${it.id}`) as any}
               className="flex w-64 shrink-0 items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/40"
             >
               <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted`}>
