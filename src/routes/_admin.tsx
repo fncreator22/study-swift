@@ -27,23 +27,17 @@ function AdminLayout() {
 
   useEffect(() => {
     if (loading) return;
-    // If we have a user but isAdmin is false, wait a moment to see if it updates
-    // (AuthProvider might be in the middle of a role check)
     if (!user) {
       nav({ to: "/admin/login" });
-    } else if (!isAdmin) {
-      // Allow more time for role verification (3s) to prevent race conditions on login
-      const timer = setTimeout(() => {
-        if (!isAdmin) {
-          console.warn("[AdminGuard] Authority verification failed. Access denied.");
-          nav({ to: "/admin/login" });
-        }
-      }, 3000);
-      return () => clearTimeout(timer);
+      return;
+    }
+    if (!isAdmin) {
+      console.warn("[AdminGuard] Not an admin, redirecting.");
+      nav({ to: "/admin/login" });
     }
   }, [user, isAdmin, loading, nav]);
 
-  if (loading || (user && !isAdmin)) {
+  if (loading) {
     return (
       <div className="grid min-h-screen place-items-center bg-background px-4">
         <div className="text-center">
@@ -56,7 +50,8 @@ function AdminLayout() {
       </div>
     );
   }
-  if (!user || !isAdmin) return null; // Should be handled by redirect
+  if (!user || !isAdmin) return null;
+
 
   return (
     <SidebarProvider>
