@@ -23,8 +23,10 @@ function QuestionsAdmin() {
   const [qs, setQs] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(emptyMcq);
+  const [qType, setQType] = useState<"mcq" | "written">("mcq");
 
   const isWritten = test?.test_type === "written";
+  const isHybrid = test?.test_type === "hybrid";
 
   async function load() {
     const { data: t } = await supabase.from("tests").select("*").eq("id", testId).maybeSingle();
@@ -36,9 +38,14 @@ function QuestionsAdmin() {
 
   function openNew() {
     if (qs.length >= MAX_QUESTIONS) return toast.error(`Max ${MAX_QUESTIONS} questions per test`);
-    setForm(isWritten ? { ...emptyWritten, max_words: test?.word_limit ?? 500 } : emptyMcq);
+    const initial: "mcq" | "written" = isWritten ? "written" : "mcq";
+    setQType(initial);
+    setForm(initial === "written" ? { ...emptyWritten, max_words: test?.word_limit ?? 500 } : emptyMcq);
     setOpen(true);
   }
+
+  // Effective per-question type — written/mcq tests force one; hybrid allows admin choice.
+  const formType: "mcq" | "written" = isWritten ? "written" : isHybrid ? qType : "mcq";
 
   async function save() {
     if (!form.question.trim()) return toast.error("Question text required");
@@ -46,9 +53,9 @@ function QuestionsAdmin() {
       test_id: testId,
       position: qs.length,
       question: form.question,
-      question_type: isWritten ? "written" : "mcq",
+      question_type: formType,
     };
-    if (isWritten) {
+    if (formType === "written") {
       base.max_words = Number(form.max_words) || 500;
     } else {
       if (!form.option_a || !form.option_b || !form.option_c || !form.option_d)
