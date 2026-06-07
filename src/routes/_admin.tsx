@@ -5,7 +5,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins, FileText } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins, FileText, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_admin")({ component: AdminLayout });
@@ -17,6 +17,7 @@ const items: { to: string; label: string; icon: typeof LayoutDashboard; exact?: 
   { to: "/admin/reviews", label: "Review Tests", icon: FileText },
   { to: "/admin/courses", label: "Courses", icon: PlayCircle },
   { to: "/admin/tokens", label: "Token Requests", icon: Coins },
+  { to: "/admin/subscriptions", label: "Subscriptions", icon: Crown },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -27,23 +28,17 @@ function AdminLayout() {
 
   useEffect(() => {
     if (loading) return;
-    // If we have a user but isAdmin is false, wait a moment to see if it updates
-    // (AuthProvider might be in the middle of a role check)
     if (!user) {
       nav({ to: "/admin/login" });
-    } else if (!isAdmin) {
-      // Allow more time for role verification (3s) to prevent race conditions on login
-      const timer = setTimeout(() => {
-        if (!isAdmin) {
-          console.warn("[AdminGuard] Authority verification failed. Access denied.");
-          nav({ to: "/admin/login" });
-        }
-      }, 3000);
-      return () => clearTimeout(timer);
+      return;
+    }
+    if (!isAdmin) {
+      console.warn("[AdminGuard] Not an admin, redirecting.");
+      nav({ to: "/admin/login" });
     }
   }, [user, isAdmin, loading, nav]);
 
-  if (loading || (user && !isAdmin)) {
+  if (loading) {
     return (
       <div className="grid min-h-screen place-items-center bg-background px-4">
         <div className="text-center">
@@ -56,7 +51,8 @@ function AdminLayout() {
       </div>
     );
   }
-  if (!user || !isAdmin) return null; // Should be handled by redirect
+  if (!user || !isAdmin) return null;
+
 
   return (
     <SidebarProvider>

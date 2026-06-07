@@ -42,14 +42,15 @@ function AdminReviews() {
       .from("test_attempts")
       .select("*, profiles(full_name, college), tests(title, test_type, total_marks)")
       .not("submitted_at", "is", null)
-      .eq("tests.test_type", "written")
       .order("submitted_at", { ascending: false });
 
     if (error) {
       toast.error(error.message);
     } else {
-      // Supabase inner-join filtering fallback
-      const filtered = (data ?? []).filter((a: any) => a.tests?.test_type === "written");
+      // Show written + hybrid (anything that needs manual review)
+      const filtered = (data ?? []).filter((a: any) =>
+        a.tests && (a.tests.test_type === "written" || a.tests.test_type === "hybrid")
+      );
       setAttempts(filtered as any);
     }
     setLoading(false);
@@ -64,37 +65,26 @@ function AdminReviews() {
     setScore((a.score || 0).toString());
     setTotal((a.total || a.tests?.total_marks || 0).toString());
     setFeedback(a.feedback || "");
-    
-    // Load answers with question text
     const { data, error } = await supabase
       .from("test_answers")
-      .select("*, test_questions(question, max_words)")
+      .select("*, test_questions(question, max_words, question_type, correct_option, explanation)")
       .eq("attempt_id", a.id);
-      
-    if (error) {
-      toast.error("Failed to load responses: " + error.message);
-    } else {
-      setAnswers(data ?? []);
-    }
+    if (error) toast.error("Failed to load responses: " + error.message);
+    else setAnswers(data ?? []);
   }
 
   async function finalize() {
     if (!selected) return;
     setSubmitting(true);
-    const { error } = await supabase
-      .from("test_attempts")
-      .update({
-        score: parseInt(score) || 0,
-        total: parseInt(total) || 0,
-        feedback: feedback,
-        is_reviewed: true
-      })
-      .eq("id", selected.id);
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Result finalized and published!");
+    const { error } = await supabase.rpc("publish_attempt" as any, {
+      _attempt_id: selected.id,
+      _score: parseInt(score) || 0,
+      _total: parseInt(total) || 0,
+      _feedback: feedback,
+    });
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Result published");
       setSelected(null);
       load();
     }
@@ -104,7 +94,7 @@ function AdminReviews() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold">Written Test Reviews</h1>
+        <h1 className="font-display text-3xl font-bold">Written / Hybrid Test Reviews</h1>
         <p className="text-muted-foreground">Review and grade student submissions for written examinations.</p>
       </div>
 
@@ -185,16 +175,33 @@ function AdminReviews() {
               <h3 className="font-display font-bold text-lg flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" /> Student Responses
               </h3>
-              {answers.map((ans, i) => (
-                <div key={ans.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Question {i + 1}</p>
-                  <p className="mt-1 font-semibold">{ans.test_questions?.question}</p>
-                  <div className="mt-4 rounded-xl bg-muted p-4 text-sm whitespace-pre-wrap border border-border/50 italic">
-                    {ans.written_answer || "No answer submitted."}
+              {answers.map((ans, i) => {
+                const q = ans.test_questions;
+                const isMcq = q?.question_type === "mcq";
+                const correct = isMcq && ans.selected_option && q?.correct_option &&
+                  ans.selected_option.toLowerCase() === q.correct_option.toLowerCase();
+                return (
+                  <div key={ans.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Question {i + 1} · {isMcq ? "MCQ" : "Written"}
+                    </p>
+                    <p className="mt-1 font-semibold">{q?.question}</p>
+                    {isMcq ? (
+                      <div className="mt-3 text-sm">
+                        <p>Student answer: <b className={correct ? "text-success" : "text-destructive"}>{ans.selected_option?.toUpperCase() || "—"}</b></p>
+                        <p className="text-muted-foreground">Correct: <b className="text-success">{q?.correct_option?.toUpperCase()}</b></p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mt-4 rounded-xl bg-muted p-4 text-sm whitespace-pre-wrap border border-border/50 italic">
+                          {ans.written_answer || "No answer submitted."}
+                        </div>
+                        <p className="mt-2 text-right text-[10px] text-muted-foreground">Word limit: {q?.max_words || "—"}</p>
+                      </>
+                    )}
                   </div>
-                  <p className="mt-2 text-right text-[10px] text-muted-foreground">Word limit: {ans.test_questions?.max_words || "—"}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="space-y-4 pt-4 border-t border-border">
