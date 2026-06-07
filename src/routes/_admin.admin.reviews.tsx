@@ -94,7 +94,7 @@ function AdminReviews() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold">Written Test Reviews</h1>
+        <h1 className="font-display text-3xl font-bold">Written / Hybrid Test Reviews</h1>
         <p className="text-muted-foreground">Review and grade student submissions for written examinations.</p>
       </div>
 
