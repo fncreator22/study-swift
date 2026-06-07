@@ -22,7 +22,7 @@ function Courses() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("courses" as any).select("*").order("created_at", { ascending: false })
+    supabase.from("courses").select("*").order("created_at", { ascending: false })
       .then(({ data }) => {
         setCourses((data as unknown as Course[]) ?? []);
         setLoading(false);

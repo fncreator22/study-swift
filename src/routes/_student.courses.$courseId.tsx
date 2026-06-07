@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getVideoSignedUrl } from "@/lib/video.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Lock, ArrowLeft, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2 } from "lucide-react";
+import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_student/courses/$courseId")({ component: CourseDetail });
@@ -50,9 +50,13 @@ function CourseDetail() {
   async function load() {
     if (!user) return;
     setLoading(true);
+    
     const { data: c } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle();
-    if (!c) { setLoading(false); return; }
-    setCourse(c as any);
+    if (!c) {
+      setLoading(false);
+      return;
+    }
+    setCourse(c as unknown as Course);
 
     if (c.tier === "free") setHasAccess(true);
     else {
