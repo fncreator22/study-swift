@@ -42,14 +42,15 @@ function AdminReviews() {
       .from("test_attempts")
       .select("*, profiles(full_name, college), tests(title, test_type, total_marks)")
       .not("submitted_at", "is", null)
-      .eq("tests.test_type", "written")
       .order("submitted_at", { ascending: false });
 
     if (error) {
       toast.error(error.message);
     } else {
-      // Supabase inner-join filtering fallback
-      const filtered = (data ?? []).filter((a: any) => a.tests?.test_type === "written");
+      // Show written + hybrid (anything that needs manual review)
+      const filtered = (data ?? []).filter((a: any) =>
+        a.tests && (a.tests.test_type === "written" || a.tests.test_type === "hybrid")
+      );
       setAttempts(filtered as any);
     }
     setLoading(false);
@@ -64,37 +65,26 @@ function AdminReviews() {
     setScore((a.score || 0).toString());
     setTotal((a.total || a.tests?.total_marks || 0).toString());
     setFeedback(a.feedback || "");
-    
-    // Load answers with question text
     const { data, error } = await supabase
       .from("test_answers")
-      .select("*, test_questions(question, max_words)")
+      .select("*, test_questions(question, max_words, question_type, correct_option, explanation)")
       .eq("attempt_id", a.id);
-      
-    if (error) {
-      toast.error("Failed to load responses: " + error.message);
-    } else {
-      setAnswers(data ?? []);
-    }
+    if (error) toast.error("Failed to load responses: " + error.message);
+    else setAnswers(data ?? []);
   }
 
   async function finalize() {
     if (!selected) return;
     setSubmitting(true);
-    const { error } = await supabase
-      .from("test_attempts")
-      .update({
-        score: parseInt(score) || 0,
-        total: parseInt(total) || 0,
-        feedback: feedback,
-        is_reviewed: true
-      })
-      .eq("id", selected.id);
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Result finalized and published!");
+    const { error } = await supabase.rpc("publish_attempt" as any, {
+      _attempt_id: selected.id,
+      _score: parseInt(score) || 0,
+      _total: parseInt(total) || 0,
+      _feedback: feedback,
+    });
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Result published");
       setSelected(null);
       load();
     }
