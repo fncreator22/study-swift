@@ -53,51 +53,49 @@ function Attempt() {
         }
         setTest(t as any);
 
-        // Check for existing unsubmitted attempt
-        const { data: existing } = await supabase
-          .from("test_attempts")
-          .select("id, started_at")
-          .eq("user_id", user.id)
-          .eq("test_id", testId)
-          .is("submitted_at", null)
-          .order("started_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        // Exit-restart rule: a sessionStorage marker identifies the live tab session.
+        // Refresh in same tab → resume; new tab / closed-and-reopened → discard previous.
+        const sessKey = `attempt_${testId}`;
+        const sessAttempt = typeof window !== "undefined" ? sessionStorage.getItem(sessKey) : null;
 
-        let aId = existing?.id;
-        let startedAt = existing?.started_at ? new Date(existing.started_at).getTime() : null;
+        let aId: string | undefined;
+        let startedAt: number | null = null;
+
+        if (sessAttempt) {
+          const { data: existing } = await supabase
+            .from("test_attempts")
+            .select("id, started_at, submitted_at")
+            .eq("id", sessAttempt)
+            .eq("user_id", user.id)
+            .is("submitted_at", null)
+            .maybeSingle();
+          if (existing) { aId = existing.id; startedAt = new Date(existing.started_at).getTime(); }
+        }
 
         if (!aId) {
-          const { data: a, error: aErr } = await supabase
-            .from("test_attempts")
-            .insert({ user_id: user.id, test_id: testId })
-            .select().single();
-          if (aErr) throw aErr;
-          aId = a.id;
-          startedAt = new Date(a.started_at).getTime();
+          // Discard any prior in-progress attempts and start fresh
+          const { data: newId, error: rpcErr } = await supabase.rpc("start_fresh_attempt" as any, { _test_id: testId });
+          if (rpcErr) throw rpcErr;
+          aId = newId as string;
+          startedAt = Date.now();
+          if (typeof window !== "undefined") sessionStorage.setItem(sessKey, aId);
         }
 
         setAttemptId(aId);
-
-        // Calculate remaining time based on started_at
         if (startedAt) {
           const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-          const rem = Math.max(0, t.duration_min * 60 - elapsed);
-          setRemaining(rem);
+          setRemaining(Math.max(0, t.duration_min * 60 - elapsed));
         } else {
           setRemaining(t.duration_min * 60);
         }
 
-        // Load existing answers
+        // Load existing answers (resume case)
         const { data: prevAns } = await supabase
           .from("test_answers")
           .select("question_id, selected_option, written_answer")
           .eq("attempt_id", aId);
-        
         const ansMap: Record<string, string> = {};
-        (prevAns ?? []).forEach(a => {
-          ansMap[a.question_id] = a.selected_option || a.written_answer || "";
-        });
+        (prevAns ?? []).forEach(a => { ansMap[a.question_id] = a.selected_option || a.written_answer || ""; });
         setAnswers(ansMap);
 
         // Fetch from secure view (no correct_option to prevent cheating)
