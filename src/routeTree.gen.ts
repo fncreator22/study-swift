@@ -35,6 +35,7 @@ import { Route as AdminAdminReviewsRouteImport } from './routes/_admin.admin.rev
 import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
 import { Route as StudentTestsTestIdIndexRouteImport } from './routes/_student.tests.$testId.index'
 import { Route as StudentTestsTestIdAttemptRouteImport } from './routes/_student.tests.$testId.attempt'
+import { Route as AdminAdminVideosCourseIdRouteImport } from './routes/_admin.admin.videos.$courseId'
 import { Route as AdminAdminQuestionsTestIdRouteImport } from './routes/_admin.admin.questions.$testId'
 import { Route as StudentTestsTestIdReviewAttemptIdRouteImport } from './routes/_student.tests.$testId.review.$attemptId'
 
@@ -167,6 +168,12 @@ const StudentTestsTestIdAttemptRoute =
     path: '/tests/$testId/attempt',
     getParentRoute: () => StudentRoute,
   } as any)
+const AdminAdminVideosCourseIdRoute =
+  AdminAdminVideosCourseIdRouteImport.update({
+    id: '/admin/videos/$courseId',
+    path: '/admin/videos/$courseId',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminAdminQuestionsTestIdRoute =
   AdminAdminQuestionsTestIdRouteImport.update({
     id: '/admin/questions/$testId',
@@ -204,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminAdminIndexRoute
   '/tests/': typeof StudentTestsIndexRoute
   '/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
+  '/admin/videos/$courseId': typeof AdminAdminVideosCourseIdRoute
   '/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
   '/tests/$testId/': typeof StudentTestsTestIdIndexRoute
   '/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
@@ -232,6 +240,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminAdminIndexRoute
   '/tests': typeof StudentTestsIndexRoute
   '/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
+  '/admin/videos/$courseId': typeof AdminAdminVideosCourseIdRoute
   '/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
   '/tests/$testId': typeof StudentTestsTestIdIndexRoute
   '/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
@@ -263,6 +272,7 @@ export interface FileRoutesById {
   '/_admin/admin/': typeof AdminAdminIndexRoute
   '/_student/tests/': typeof StudentTestsIndexRoute
   '/_admin/admin/questions/$testId': typeof AdminAdminQuestionsTestIdRoute
+  '/_admin/admin/videos/$courseId': typeof AdminAdminVideosCourseIdRoute
   '/_student/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
   '/_student/tests/$testId/': typeof StudentTestsTestIdIndexRoute
   '/_student/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/tests/'
     | '/admin/questions/$testId'
+    | '/admin/videos/$courseId'
     | '/tests/$testId/attempt'
     | '/tests/$testId/'
     | '/tests/$testId/review/$attemptId'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/tests'
     | '/admin/questions/$testId'
+    | '/admin/videos/$courseId'
     | '/tests/$testId/attempt'
     | '/tests/$testId'
     | '/tests/$testId/review/$attemptId'
@@ -351,6 +363,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/'
     | '/_student/tests/'
     | '/_admin/admin/questions/$testId'
+    | '/_admin/admin/videos/$courseId'
     | '/_student/tests/$testId/attempt'
     | '/_student/tests/$testId/'
     | '/_student/tests/$testId/review/$attemptId'
@@ -549,6 +562,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentTestsTestIdAttemptRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/_admin/admin/videos/$courseId': {
+      id: '/_admin/admin/videos/$courseId'
+      path: '/admin/videos/$courseId'
+      fullPath: '/admin/videos/$courseId'
+      preLoaderRoute: typeof AdminAdminVideosCourseIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/questions/$testId': {
       id: '/_admin/admin/questions/$testId'
       path: '/admin/questions/$testId'
@@ -576,6 +596,7 @@ interface AdminRouteChildren {
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
   AdminAdminIndexRoute: typeof AdminAdminIndexRoute
   AdminAdminQuestionsTestIdRoute: typeof AdminAdminQuestionsTestIdRoute
+  AdminAdminVideosCourseIdRoute: typeof AdminAdminVideosCourseIdRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -588,6 +609,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminUsersRoute: AdminAdminUsersRoute,
   AdminAdminIndexRoute: AdminAdminIndexRoute,
   AdminAdminQuestionsTestIdRoute: AdminAdminQuestionsTestIdRoute,
+  AdminAdminVideosCourseIdRoute: AdminAdminVideosCourseIdRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
