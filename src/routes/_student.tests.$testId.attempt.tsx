@@ -182,6 +182,7 @@ function Attempt() {
       return;
     }
 
+    if (typeof window !== "undefined") sessionStorage.removeItem(`attempt_${testId}`);
     toast.success("Submitted successfully");
     nav({ to: "/tests/$testId/review/$attemptId", params: { testId, attemptId } });
   }
