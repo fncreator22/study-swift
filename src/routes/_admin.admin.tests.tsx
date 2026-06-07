@@ -118,16 +118,21 @@ function TestsAdmin() {
       <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Choose test type</DialogTitle></DialogHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <button onClick={() => startNew("mcq")} className="rounded-2xl border border-border p-5 text-left hover:border-primary hover:bg-primary/5">
               <ListOrdered className="h-6 w-6 text-primary" />
               <p className="mt-2 font-display font-semibold">MCQ Test</p>
-              <p className="text-xs text-muted-foreground">Multiple-choice questions auto-graded.</p>
+              <p className="text-xs text-muted-foreground">Multiple-choice, auto-graded.</p>
             </button>
             <button onClick={() => startNew("written")} className="rounded-2xl border border-border p-5 text-left hover:border-primary hover:bg-primary/5">
               <FileText className="h-6 w-6 text-primary" />
               <p className="mt-2 font-display font-semibold">Written Test</p>
-              <p className="text-xs text-muted-foreground">Essay-style answers within a word limit.</p>
+              <p className="text-xs text-muted-foreground">Essay answers, admin-graded.</p>
+            </button>
+            <button onClick={() => startNew("hybrid" as any)} className="rounded-2xl border border-border p-5 text-left hover:border-primary hover:bg-primary/5">
+              <ListChecks className="h-6 w-6 text-primary" />
+              <p className="mt-2 font-display font-semibold">Hybrid Test</p>
+              <p className="text-xs text-muted-foreground">Mix MCQ + written; admin publishes the final score.</p>
             </button>
           </div>
         </DialogContent>

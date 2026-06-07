@@ -23,8 +23,10 @@ function QuestionsAdmin() {
   const [qs, setQs] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(emptyMcq);
+  const [qType, setQType] = useState<"mcq" | "written">("mcq");
 
   const isWritten = test?.test_type === "written";
+  const isHybrid = test?.test_type === "hybrid";
 
   async function load() {
     const { data: t } = await supabase.from("tests").select("*").eq("id", testId).maybeSingle();
@@ -36,9 +38,14 @@ function QuestionsAdmin() {
 
   function openNew() {
     if (qs.length >= MAX_QUESTIONS) return toast.error(`Max ${MAX_QUESTIONS} questions per test`);
-    setForm(isWritten ? { ...emptyWritten, max_words: test?.word_limit ?? 500 } : emptyMcq);
+    const initial: "mcq" | "written" = isWritten ? "written" : "mcq";
+    setQType(initial);
+    setForm(initial === "written" ? { ...emptyWritten, max_words: test?.word_limit ?? 500 } : emptyMcq);
     setOpen(true);
   }
+
+  // Effective per-question type — written/mcq tests force one; hybrid allows admin choice.
+  const formType: "mcq" | "written" = isWritten ? "written" : isHybrid ? qType : "mcq";
 
   async function save() {
     if (!form.question.trim()) return toast.error("Question text required");
@@ -46,9 +53,9 @@ function QuestionsAdmin() {
       test_id: testId,
       position: qs.length,
       question: form.question,
-      question_type: isWritten ? "written" : "mcq",
+      question_type: formType,
     };
-    if (isWritten) {
+    if (formType === "written") {
       base.max_words = Number(form.max_words) || 500;
     } else {
       if (!form.option_a || !form.option_b || !form.option_c || !form.option_d)
@@ -117,14 +124,25 @@ function QuestionsAdmin() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New {isWritten ? "written" : "MCQ"} question (Q{qs.length + 1})</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New {formType === "written" ? "written" : "MCQ"} question (Q{qs.length + 1})</DialogTitle></DialogHeader>
           <div className="grid gap-3">
+            {isHybrid && (
+              <div>
+                <Label>Question type</Label>
+                <Select value={qType} onValueChange={(v: any) => { setQType(v); setForm(v === "written" ? { ...emptyWritten, max_words: test?.word_limit ?? 500 } : emptyMcq); }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mcq">MCQ</SelectItem>
+                    <SelectItem value="written">Written</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div><Label>Question</Label><Textarea rows={3} value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} /></div>
-            {isWritten ? (
+            {formType === "written" ? (
               <div>
                 <Label>Word limit</Label>
-                <Input type="number" value={form.max_words} onChange={(e) => setForm({ ...form, max_words: e.target.value })} />
-                <p className="mt-1 text-xs text-muted-foreground">Students will get a writing area sized for this limit.</p>
+                <Input type="number" value={form.max_words ?? 500} onChange={(e) => setForm({ ...form, max_words: e.target.value })} />
               </div>
             ) : (
               <>
@@ -142,12 +160,7 @@ function QuestionsAdmin() {
                 </div>
                 <div>
                   <Label>Explanation (for correct answer)</Label>
-                  <Textarea
-                    rows={3}
-                    value={form.explanation}
-                    onChange={(e) => setForm({ ...form, explanation: e.target.value })}
-                    placeholder="Why is the answer correct?"
-                  />
+                  <Textarea rows={3} value={form.explanation ?? ""} onChange={(e) => setForm({ ...form, explanation: e.target.value })} placeholder="Why is the answer correct?" />
                 </div>
               </>
             )}
