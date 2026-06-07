@@ -1,28 +1,24 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useServerFn } from "@tanstack/react-start";
+import { getVideoSignedUrl } from "@/lib/video.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy } from "lucide-react";
+import { Lock, ArrowLeft, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_student/courses/$courseId")({ component: CourseDetail });
 
 type Course = {
-  id: string;
-  title: string;
-  description: string;
-  tier: string;
-  price: number;
-  thumbnail_url: string;
-  difficulty: string;
-  instructor_name: string;
-  instructor_bio: string;
-  category: string;
+  id: string; title: string; description: string; tier: string; price: number;
+  thumbnail_url: string; difficulty: string; instructor_name: string; instructor_bio: string; category: string;
 };
-
-type Video = { id: string; title: string; description: string; video_url: string; created_at: string };
+type Video = {
+  id: string; title: string; description: string;
+  video_url: string | null; storage_path: string | null;
+};
 type Comment = { id: string; body: string; created_at: string; user_id: string };
 
 function toEmbed(url: string) {
@@ -38,11 +34,14 @@ function toEmbed(url: string) {
 function CourseDetail() {
   const { courseId } = Route.useParams();
   const { user } = useAuth();
-  const nav = useNavigate();
+  const signUrl = useServerFn(getVideoSignedUrl);
+
   const [course, setCourse] = useState<Course | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [videos, setVideos] = useState<Video[]>([]);
   const [activeVideo, setActiveVideo] = useState<Video | null>(null);
+  const [signedUrl, setSignedUrl] = useState<string>("");
+  const [loadingVideo, setLoadingVideo] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [body, setBody] = useState("");
@@ -51,31 +50,29 @@ function CourseDetail() {
   async function load() {
     if (!user) return;
     setLoading(true);
-    
-    const { data: c } = await supabase.from("courses" as any).select("*").eq("id", courseId).maybeSingle();
-    if (!c) {
-      setLoading(false);
-      return;
-    }
-    const course = c as unknown as Course;
-    setCourse(course);
+    const { data: c } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle();
+    if (!c) { setLoading(false); return; }
+    setCourse(c as any);
 
-    // Access Check (Reused Logic)
-    if (course.tier === "free") {
-      setHasAccess(true);
-    } else {
+    if (c.tier === "free") setHasAccess(true);
+    else {
       const { data: p } = await supabase.from("purchases").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
-      setHasAccess(!!p);
+      let access = !!p;
+      if (!access) {
+        const { data: sub } = await supabase.rpc("has_course_access" as any, { _user_id: user.id, _course_id: courseId });
+        access = !!sub;
+      }
+      setHasAccess(access);
     }
 
-    const { data: vs } = await supabase.from("videos").select("*").eq("course_id", courseId).order("created_at", { ascending: true });
-    setVideos(vs ?? []);
-    if (vs?.length) setActiveVideo(vs[0]);
+    const { data: vs } = await supabase.from("videos").select("id,title,description,video_url,storage_path").eq("course_id", courseId).order("position");
+    const list = (vs ?? []) as Video[];
+    setVideos(list);
+    if (list.length) setActiveVideo(list[0]);
 
     const { data: cs } = await supabase.from("comments").select("*").eq("course_id", courseId).order("created_at", { ascending: false });
     setComments((cs as Comment[]) ?? []);
-
-    const uIds = Array.from(new Set((cs ?? []).map((c) => c.user_id)));
+    const uIds = Array.from(new Set((cs ?? []).map((c: any) => c.user_id)));
     if (uIds.length) {
       const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", uIds);
       const m: Record<string, string> = {};
@@ -84,15 +81,21 @@ function CourseDetail() {
     }
     setLoading(false);
   }
-
   useEffect(() => { load(); }, [user, courseId]);
+
+  // Fetch signed URL whenever active video / access changes
+  useEffect(() => {
+    if (!hasAccess || !activeVideo) { setSignedUrl(""); return; }
+    setLoadingVideo(true);
+    signUrl({ data: { videoId: activeVideo.id } })
+      .then((r) => setSignedUrl(r.url))
+      .catch((e: any) => toast.error(e.message || "Failed to load video"))
+      .finally(() => setLoadingVideo(false));
+  }, [hasAccess, activeVideo?.id]);
 
   async function purchase() {
     if (!user || !course) return;
-    const { error } = await supabase.rpc("purchase_with_tokens" as any, {
-      _test_id: null,
-      _course_id: course.id,
-    });
+    const { error } = await supabase.rpc("purchase_with_tokens" as any, { _test_id: null, _course_id: course.id });
     if (error) return toast.error(error.message);
     toast.success("Course unlocked successfully");
     setHasAccess(true);
@@ -102,12 +105,13 @@ function CourseDetail() {
     if (!body.trim() || !user) return;
     const { error } = await supabase.from("comments").insert({ course_id: courseId, user_id: user.id, body: body.trim() });
     if (error) return toast.error(error.message);
-    setBody("");
-    load();
+    setBody(""); load();
   }
 
-  if (loading) return <div className="grid h-64 place-items-center text-sm text-muted-foreground animate-pulse">Loading course architecture...</div>;
+  if (loading) return <div className="grid h-64 place-items-center text-sm text-muted-foreground animate-pulse">Loading course…</div>;
   if (!course) return <div className="p-8 text-center"><p className="text-muted-foreground">Course not found.</p><Link to="/courses" className="mt-4 inline-block text-primary font-bold">Back to courses</Link></div>;
+
+  const isExternal = activeVideo && !activeVideo.storage_path && activeVideo.video_url;
 
   return (
     <div className="mx-auto max-w-6xl pb-20">
@@ -116,12 +120,23 @@ function CourseDetail() {
       </Link>
 
       <div className="mt-6 grid gap-8 lg:grid-cols-3">
-        {/* Left Column: Video & Info */}
         <div className="lg:col-span-2">
           {hasAccess && activeVideo ? (
             <div className="overflow-hidden rounded-3xl border border-border bg-black shadow-2xl">
-              <div className="aspect-video w-full">
-                <iframe src={toEmbed(activeVideo.video_url)} className="h-full w-full" allowFullScreen title={activeVideo.title} />
+              <div className="aspect-video w-full relative">
+                {loadingVideo ? (
+                  <div className="grid h-full w-full place-items-center text-white"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                ) : isExternal ? (
+                  <iframe src={toEmbed(signedUrl)} className="h-full w-full" allowFullScreen title={activeVideo.title} />
+                ) : signedUrl ? (
+                  <video
+                    src={signedUrl}
+                    controls
+                    controlsList="nodownload"
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="h-full w-full bg-black"
+                  />
+                ) : null}
               </div>
               <div className="bg-card p-6">
                 <h1 className="font-display text-2xl font-bold">{activeVideo.title}</h1>
@@ -132,13 +147,9 @@ function CourseDetail() {
             <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-border bg-muted/50">
               {course.thumbnail_url && <img src={course.thumbnail_url} className="h-full w-full object-cover blur-sm opacity-50" />}
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
-                <div className="grid h-16 w-16 place-items-center rounded-2xl bg-background shadow-xl">
-                  <Lock className="h-8 w-8 text-primary" />
-                </div>
+                <div className="grid h-16 w-16 place-items-center rounded-2xl bg-background shadow-xl"><Lock className="h-8 w-8 text-primary" /></div>
                 <h2 className="mt-6 font-display text-2xl font-bold">This content is locked</h2>
-                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Enroll in this course to gain full access to all video modules and community discussion.
-                </p>
+                <p className="mt-2 max-w-sm text-sm text-muted-foreground">Enroll in this course to gain full access to all video modules and community discussion.</p>
                 {!hasAccess && <Button size="lg" onClick={purchase} className="mt-8 h-14 rounded-2xl px-10 text-base shadow-lg shadow-primary/20">Purchase for ₹{course.price}</Button>}
               </div>
             </div>
@@ -147,7 +158,6 @@ function CourseDetail() {
           <div className="mt-10">
             <h2 className="font-display text-2xl font-bold">About this course</h2>
             <p className="mt-4 whitespace-pre-line text-muted-foreground leading-relaxed">{course.description}</p>
-            
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><GraduationCap className="h-5 w-5" /></div>
@@ -161,10 +171,7 @@ function CourseDetail() {
           </div>
 
           <div className="mt-12">
-            <div className="flex items-center gap-2 mb-6">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <h2 className="font-display text-xl font-bold">Community Discussion</h2>
-            </div>
+            <div className="flex items-center gap-2 mb-6"><MessageSquare className="h-5 w-5 text-primary" /><h2 className="font-display text-xl font-bold">Community Discussion</h2></div>
             {hasAccess ? (
               <div className="flex flex-col gap-4">
                 <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="What did you think of this module?" className="rounded-2xl min-h-[100px]" />
@@ -189,25 +196,15 @@ function CourseDetail() {
           </div>
         </div>
 
-        {/* Right Column: Playlist */}
         <div className="space-y-6">
           <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
             <h3 className="font-display font-bold">Course Content</h3>
             <p className="mt-1 text-xs text-muted-foreground">{videos.length} video modules</p>
-            
             <div className="mt-6 space-y-2">
               {videos.map((v, i) => (
-                <button
-                  key={v.id}
-                  disabled={!hasAccess}
-                  onClick={() => setActiveVideo(v)}
-                  className={`flex w-full items-center gap-4 rounded-2xl p-3 text-left transition-all ${
-                    activeVideo?.id === v.id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "hover:bg-muted"
-                  } ${!hasAccess && 'opacity-60 grayscale cursor-not-allowed'}`}
-                >
-                  <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border font-mono text-xs font-bold ${activeVideo?.id === v.id ? 'border-primary-foreground/30 bg-primary-foreground/10' : 'border-border bg-muted'}`}>
-                    {i + 1}
-                  </div>
+                <button key={v.id} disabled={!hasAccess} onClick={() => setActiveVideo(v)}
+                  className={`flex w-full items-center gap-4 rounded-2xl p-3 text-left transition-all ${activeVideo?.id === v.id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "hover:bg-muted"} ${!hasAccess && 'opacity-60 grayscale cursor-not-allowed'}`}>
+                  <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border font-mono text-xs font-bold ${activeVideo?.id === v.id ? 'border-primary-foreground/30 bg-primary-foreground/10' : 'border-border bg-muted'}`}>{i + 1}</div>
                   <div className="flex-1 min-w-0">
                     <p className="truncate text-sm font-bold leading-tight">{v.title}</p>
                     <p className={`mt-0.5 truncate text-[10px] font-medium ${activeVideo?.id === v.id ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>Module {i + 1}</p>
@@ -218,7 +215,6 @@ function CourseDetail() {
               ))}
             </div>
           </div>
-          
           <div className="rounded-3xl border border-primary/20 bg-primary/5 p-6 text-center">
             <Trophy className="mx-auto h-8 w-8 text-primary" />
             <h4 className="mt-4 font-display font-bold">Certificate of Completion</h4>
