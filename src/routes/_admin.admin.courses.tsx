@@ -84,6 +84,9 @@ function CoursesAdmin() {
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-sm font-bold">{c.tier === 'free' ? 'Free' : `₹${c.price}`}</span>
                 <div className="flex gap-1">
+                  <Link to="/admin/videos/$courseId" params={{ courseId: c.id }}>
+                    <Button size="sm" variant="outline"><Film className="mr-1 h-3 w-3" /> Videos</Button>
+                  </Link>
                   <Button size="sm" variant="ghost" onClick={() => startEdit(c)}><Pencil className="h-3.5 w-3.5" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                 </div>
