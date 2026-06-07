@@ -16,7 +16,7 @@ type Q = {
   explanation: string | null;
   max_words: number | null;
 };
-type Attempt = { score: number; total: number; submitted_at: string };
+type Attempt = { score: number; total: number; submitted_at: string; is_reviewed: boolean; status?: string; feedback?: string | null };
 
 function Review() {
   const { testId, attemptId } = Route.useParams();
@@ -34,7 +34,7 @@ function Review() {
       if (t) setTestType(t.test_type as any);
 
       // Task 1 & 2: Use secure RPC for review data
-      const { data, error: rpcErr } = await supabase.rpc("get_test_review", { p_attempt_id: attemptId });
+      const { data, error: rpcErr } = await supabase.rpc("get_test_review", { _attempt_id: attemptId });
       
       if (rpcErr) {
         setError(rpcErr.message);
@@ -43,9 +43,14 @@ function Review() {
       }
 
       if (data) {
-        setAttempt(data.attempt);
-        setQuestions(data.questions || []);
-        setAnswers(data.answers || {});
+        const payload = data as any;
+        setAttempt(payload.attempt);
+        setQuestions(payload.questions || []);
+        const ansMap: Record<string, { selected: string | null; written: string | null }> = {};
+        (payload.answers || []).forEach((a: any) => {
+          ansMap[a.question_id] = { selected: a.selected_option ?? null, written: a.written_answer ?? null };
+        });
+        setAnswers(ansMap);
       }
       setLoading(false);
     })();
@@ -64,21 +69,30 @@ function Review() {
   if (!attempt) return <p className="text-sm text-muted-foreground">Attempt not found.</p>;
   
   const isWritten = testType === "written";
+  const isHybrid = (testType as string) === "hybrid";
+  const needsReview = isWritten || isHybrid;
+  const published = !!attempt.is_reviewed;
   const pct = attempt.total ? Math.round((attempt.score / attempt.total) * 100) : 0;
 
   return (
     <div className="mx-auto max-w-3xl">
       <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
-        <p className="text-sm text-muted-foreground">{isWritten ? "Submission received" : "Your result"}</p>
-        {isWritten ? (
+        <p className="text-sm text-muted-foreground">{needsReview && !published ? "Submission received" : "Your result"}</p>
+        {needsReview && !published ? (
           <div className="mt-3">
             <p className="font-display text-2xl font-bold">Awaiting review</p>
-            <p className="mt-1 text-sm text-muted-foreground">Written answers are graded manually. You'll see your score once it's reviewed.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your answers will be graded manually. The final score is hidden until an admin publishes the result.</p>
           </div>
         ) : (
           <div className="mt-2 flex flex-wrap items-end gap-6">
             <div><p className="font-display text-5xl font-bold">{attempt.score}<span className="text-2xl text-muted-foreground">/{attempt.total}</span></p><p className="text-sm text-muted-foreground">Score</p></div>
             <div><p className="font-display text-5xl font-bold text-primary">{pct}%</p><p className="text-sm text-muted-foreground">Percentage</p></div>
+          </div>
+        )}
+        {attempt.feedback && published && (
+          <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Feedback</p>
+            <p className="mt-1 whitespace-pre-wrap">{attempt.feedback}</p>
           </div>
         )}
         <div className="mt-6 flex gap-2">

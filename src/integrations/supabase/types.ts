@@ -243,6 +243,13 @@ export type Database = {
             referencedRelation: "test_questions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "test_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "test_questions_secure"
+            referencedColumns: ["id"]
+          },
         ]
       }
       test_attempts: {
@@ -252,6 +259,7 @@ export type Database = {
           is_reviewed: boolean
           score: number
           started_at: string
+          status: string
           submitted_at: string | null
           test_id: string
           total: number
@@ -263,6 +271,7 @@ export type Database = {
           is_reviewed?: boolean
           score?: number
           started_at?: string
+          status?: string
           submitted_at?: string | null
           test_id: string
           total?: number
@@ -274,6 +283,7 @@ export type Database = {
           is_reviewed?: boolean
           score?: number
           started_at?: string
+          status?: string
           submitted_at?: string | null
           test_id?: string
           total?: number
@@ -293,7 +303,9 @@ export type Database = {
         Row: {
           correct_option: string | null
           created_at: string
+          explanation: string
           id: string
+          marks: number
           max_words: number | null
           option_a: string | null
           option_b: string | null
@@ -307,7 +319,9 @@ export type Database = {
         Insert: {
           correct_option?: string | null
           created_at?: string
+          explanation?: string
           id?: string
+          marks?: number
           max_words?: number | null
           option_a?: string | null
           option_b?: string | null
@@ -321,7 +335,9 @@ export type Database = {
         Update: {
           correct_option?: string | null
           created_at?: string
+          explanation?: string
           id?: string
+          marks?: number
           max_words?: number | null
           option_a?: string | null
           option_b?: string | null
@@ -488,28 +504,72 @@ export type Database = {
           course_id: string | null
           created_at: string
           description: string
+          duration_sec: number
           id: string
+          position: number
+          storage_path: string | null
           thumbnail_url: string
           title: string
-          video_url: string
+          video_url: string | null
         }
         Insert: {
           course_id?: string | null
           created_at?: string
           description?: string
+          duration_sec?: number
           id?: string
+          position?: number
+          storage_path?: string | null
           thumbnail_url?: string
           title: string
-          video_url: string
+          video_url?: string | null
         }
         Update: {
           course_id?: string | null
           created_at?: string
           description?: string
+          duration_sec?: number
           id?: string
+          position?: number
+          storage_path?: string | null
           thumbnail_url?: string
           title?: string
-          video_url?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string
+          id?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          type?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -562,6 +622,56 @@ export type Database = {
         }
         Relationships: []
       }
+      test_questions_secure: {
+        Row: {
+          id: string | null
+          marks: number | null
+          max_words: number | null
+          option_a: string | null
+          option_b: string | null
+          option_c: string | null
+          option_d: string | null
+          position: number | null
+          question: string | null
+          question_type: string | null
+          test_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          marks?: number | null
+          max_words?: number | null
+          option_a?: string | null
+          option_b?: string | null
+          option_c?: string | null
+          option_d?: string | null
+          position?: number | null
+          question?: string | null
+          question_type?: string | null
+          test_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          marks?: number | null
+          max_words?: number | null
+          option_a?: string | null
+          option_b?: string | null
+          option_c?: string | null
+          option_d?: string | null
+          position?: number | null
+          question?: string | null
+          question_type?: string | null
+          test_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_questions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_test_review: { Args: { _attempt_id: string }; Returns: Json }
@@ -576,6 +686,24 @@ export type Database = {
         Args: { _test_id: string; _user_id: string }
         Returns: boolean
       }
+      publish_attempt: {
+        Args: {
+          _attempt_id: string
+          _feedback: string
+          _score: number
+          _total: number
+        }
+        Returns: undefined
+      }
+      purchase_subscription: {
+        Args: { _subscription_id: string }
+        Returns: Json
+      }
+      purchase_with_tokens: {
+        Args: { _course_id: string; _test_id: string }
+        Returns: Json
+      }
+      start_fresh_attempt: { Args: { _test_id: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "student"

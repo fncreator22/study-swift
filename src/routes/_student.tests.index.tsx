@@ -27,7 +27,7 @@ function TestsList() {
       const { data } = await supabase.from("tests").select("*").order("created_at", { ascending: false });
       setTests((data as Test[]) ?? []);
       const { data: p } = await supabase.from("purchases").select("test_id").eq("user_id", user.id);
-      setPurchased(new Set((p ?? []).map((r) => r.test_id)));
+      setPurchased(new Set((p ?? []).map((r) => r.test_id).filter((x): x is string => !!x)));
     })();
   }, [user]);
 
