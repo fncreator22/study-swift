@@ -175,16 +175,33 @@ function AdminReviews() {
               <h3 className="font-display font-bold text-lg flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" /> Student Responses
               </h3>
-              {answers.map((ans, i) => (
-                <div key={ans.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Question {i + 1}</p>
-                  <p className="mt-1 font-semibold">{ans.test_questions?.question}</p>
-                  <div className="mt-4 rounded-xl bg-muted p-4 text-sm whitespace-pre-wrap border border-border/50 italic">
-                    {ans.written_answer || "No answer submitted."}
+              {answers.map((ans, i) => {
+                const q = ans.test_questions;
+                const isMcq = q?.question_type === "mcq";
+                const correct = isMcq && ans.selected_option && q?.correct_option &&
+                  ans.selected_option.toLowerCase() === q.correct_option.toLowerCase();
+                return (
+                  <div key={ans.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Question {i + 1} · {isMcq ? "MCQ" : "Written"}
+                    </p>
+                    <p className="mt-1 font-semibold">{q?.question}</p>
+                    {isMcq ? (
+                      <div className="mt-3 text-sm">
+                        <p>Student answer: <b className={correct ? "text-success" : "text-destructive"}>{ans.selected_option?.toUpperCase() || "—"}</b></p>
+                        <p className="text-muted-foreground">Correct: <b className="text-success">{q?.correct_option?.toUpperCase()}</b></p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mt-4 rounded-xl bg-muted p-4 text-sm whitespace-pre-wrap border border-border/50 italic">
+                          {ans.written_answer || "No answer submitted."}
+                        </div>
+                        <p className="mt-2 text-right text-[10px] text-muted-foreground">Word limit: {q?.max_words || "—"}</p>
+                      </>
+                    )}
                   </div>
-                  <p className="mt-2 text-right text-[10px] text-muted-foreground">Word limit: {ans.test_questions?.max_words || "—"}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="space-y-4 pt-4 border-t border-border">
