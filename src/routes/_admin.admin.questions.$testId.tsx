@@ -124,14 +124,25 @@ function QuestionsAdmin() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New {isWritten ? "written" : "MCQ"} question (Q{qs.length + 1})</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>New {formType === "written" ? "written" : "MCQ"} question (Q{qs.length + 1})</DialogTitle></DialogHeader>
           <div className="grid gap-3">
+            {isHybrid && (
+              <div>
+                <Label>Question type</Label>
+                <Select value={qType} onValueChange={(v: any) => { setQType(v); setForm(v === "written" ? { ...emptyWritten, max_words: test?.word_limit ?? 500 } : emptyMcq); }}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mcq">MCQ</SelectItem>
+                    <SelectItem value="written">Written</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div><Label>Question</Label><Textarea rows={3} value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} /></div>
-            {isWritten ? (
+            {formType === "written" ? (
               <div>
                 <Label>Word limit</Label>
-                <Input type="number" value={form.max_words} onChange={(e) => setForm({ ...form, max_words: e.target.value })} />
-                <p className="mt-1 text-xs text-muted-foreground">Students will get a writing area sized for this limit.</p>
+                <Input type="number" value={form.max_words ?? 500} onChange={(e) => setForm({ ...form, max_words: e.target.value })} />
               </div>
             ) : (
               <>
@@ -149,12 +160,7 @@ function QuestionsAdmin() {
                 </div>
                 <div>
                   <Label>Explanation (for correct answer)</Label>
-                  <Textarea
-                    rows={3}
-                    value={form.explanation}
-                    onChange={(e) => setForm({ ...form, explanation: e.target.value })}
-                    placeholder="Why is the answer correct?"
-                  />
+                  <Textarea rows={3} value={form.explanation ?? ""} onChange={(e) => setForm({ ...form, explanation: e.target.value })} placeholder="Why is the answer correct?" />
                 </div>
               </>
             )}
