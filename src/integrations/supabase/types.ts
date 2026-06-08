@@ -144,6 +144,7 @@ export type Database = {
           blocked: boolean
           college: string
           created_at: string
+          email: string
           full_name: string
           id: string
           membership_status: string
@@ -154,6 +155,7 @@ export type Database = {
           blocked?: boolean
           college?: string
           created_at?: string
+          email?: string
           full_name?: string
           id: string
           membership_status?: string
@@ -164,6 +166,7 @@ export type Database = {
           blocked?: boolean
           college?: string
           created_at?: string
+          email?: string
           full_name?: string
           id?: string
           membership_status?: string
@@ -268,6 +271,60 @@ export type Database = {
         }
         Relationships: []
       }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          status: string
+          subcategory: string
+          subject: string
+          ticket_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          status?: string
+          subcategory?: string
+          subject?: string
+          ticket_number?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          status?: string
+          subcategory?: string
+          subject?: string
+          ticket_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "rankings_view"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       test_answers: {
         Row: {
           attempt_id: string
@@ -355,6 +412,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "test_attempts_profile_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_attempts_profile_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "rankings_view"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "test_attempts_test_id_fkey"
             columns: ["test_id"]
@@ -520,6 +591,55 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_replies: {
+        Row: {
+          created_at: string
+          id: string
+          is_admin: boolean
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          message?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_replies_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_replies_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "rankings_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ticket_replies_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       token_requests: {
         Row: {
           amount: number
@@ -551,7 +671,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "token_requests_profile_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "token_requests_profile_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "rankings_view"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
