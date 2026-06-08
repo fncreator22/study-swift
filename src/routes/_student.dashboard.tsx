@@ -2,15 +2,15 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { BookOpen, Trophy, History, PlayCircle, ChevronRight, Crown } from "lucide-react";
+import { BookOpen, Trophy, History, PlayCircle, ChevronRight, Crown, Coins, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_student/dashboard")({ component: Dashboard });
 
 function Dashboard() {
-  const { user } = useAuth();
+  const { user, tokens } = useAuth();
   const nav = useNavigate();
-  const [stats, setStats] = useState({ tests: 0, attempts: 0, avg: 0, courses: 0 });
+  const [stats, setStats] = useState({ tests: 0, attempts: 0, avg: 0, courses: 0, purchasedCourses: 0 });
   const [recent, setRecent] = useState<any[]>([]);
   const [latestTests, setLatestTests] = useState<any[]>([]);
   const [latestCourses, setLatestCourses] = useState<any[]>([]);
@@ -21,12 +21,13 @@ function Dashboard() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [{ count: tests }, { data: rank }, { count: courses }, { data: prof }, { data: atts }, { data: lt }, { data: lc }] = await Promise.all([
+      const [{ count: tests }, { data: rank }, { count: courses }, { count: purchasedCourses }, { data: prof }, { data: atts }, { data: lt }, { data: lc }] = await Promise.all([
         supabase.from("tests").select("id", { count: "exact", head: true }),
         supabase.from("rankings_view").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("courses").select("id", { count: "exact", head: true }),
+        supabase.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", user.id).not("course_id", "is", null),
         supabase.from("profiles").select("full_name,membership_status,subscription_expiry").eq("id", user.id).maybeSingle(),
-        supabase.from("test_attempts").select("id,score,total,submitted_at,tests(title,test_type)").eq("user_id", user.id).not("submitted_at", "is", null).order("submitted_at", { ascending: false }).limit(3),
+        supabase.from("test_attempts").select("id,test_id,score,total,submitted_at,tests(title,test_type)").eq("user_id", user.id).not("submitted_at", "is", null).order("submitted_at", { ascending: false }).limit(3),
         supabase.from("tests").select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
         supabase.from("courses" as any).select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
       ]);
@@ -35,6 +36,7 @@ function Dashboard() {
         attempts: (rank?.attempts_count as number) ?? 0,
         avg: (rank?.avg_percentage as number) ?? 0,
         courses: courses ?? 0,
+        purchasedCourses: purchasedCourses ?? 0,
       });
       setName(prof?.full_name ?? "");
       setMembership({ status: (prof as any)?.membership_status ?? "free", expiry: (prof as any)?.subscription_expiry ?? null });
@@ -45,11 +47,12 @@ function Dashboard() {
     })();
   }, [user]);
 
+  const isPremium = membership.status === "premium" && membership.expiry && new Date(membership.expiry) > new Date();
   const cards = [
-    { t: "Assessments", v: stats.tests, icon: BookOpen, to: "/tests", color: "text-primary" },
-    { t: "Attempts", v: stats.attempts, icon: History, to: "/history", color: "text-blue-500" },
-    { t: "Performance", v: `${stats.avg}%`, icon: Trophy, to: "/rankings", color: "text-amber-500" },
-    { t: "Courses", v: stats.courses, icon: PlayCircle, to: "/courses", color: "text-emerald-500" },
+    { t: "Tokens", v: tokens, icon: Coins, to: "/wallet", color: "text-amber-500" },
+    { t: "Tests Attempted", v: stats.attempts, icon: BookOpen, to: "/history", color: "text-primary" },
+    { t: "Purchased Courses", v: stats.purchasedCourses, icon: ShoppingBag, to: "/purchased", color: "text-emerald-500" },
+    { t: "Membership", v: isPremium ? "Premium" : "Free", icon: Crown, to: "/subscriptions", color: "text-purple-500" },
   ];
 
   if (loading) return <div className="grid h-64 place-items-center text-sm text-muted-foreground animate-pulse">Syncing your learning data...</div>;
