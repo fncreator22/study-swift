@@ -62,6 +62,7 @@ export type Database = {
           created_at: string
           description: string
           difficulty: string
+          duration_min: number
           id: string
           instructor_bio: string
           instructor_name: string
@@ -75,6 +76,7 @@ export type Database = {
           created_at?: string
           description?: string
           difficulty?: string
+          duration_min?: number
           id?: string
           instructor_bio?: string
           instructor_name?: string
@@ -88,6 +90,7 @@ export type Database = {
           created_at?: string
           description?: string
           difficulty?: string
+          duration_min?: number
           id?: string
           instructor_bio?: string
           instructor_name?: string
@@ -103,6 +106,8 @@ export type Database = {
           created_at: string
           id: string
           plan: string
+          status: string
+          subscription_id: string | null
           user_id: string
           valid_until: string | null
         }
@@ -110,6 +115,8 @@ export type Database = {
           created_at?: string
           id?: string
           plan?: string
+          status?: string
+          subscription_id?: string | null
           user_id: string
           valid_until?: string | null
         }
@@ -117,34 +124,53 @@ export type Database = {
           created_at?: string
           id?: string
           plan?: string
+          status?: string
+          subscription_id?: string | null
           user_id?: string
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "memberships_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
           blocked: boolean
           college: string
           created_at: string
+          email: string
           full_name: string
           id: string
+          membership_status: string
+          subscription_expiry: string | null
           tokens: number
         }
         Insert: {
           blocked?: boolean
           college?: string
           created_at?: string
+          email?: string
           full_name?: string
           id: string
+          membership_status?: string
+          subscription_expiry?: string | null
           tokens?: number
         }
         Update: {
           blocked?: boolean
           college?: string
           created_at?: string
+          email?: string
           full_name?: string
           id?: string
+          membership_status?: string
+          subscription_expiry?: string | null
           tokens?: number
         }
         Relationships: []
@@ -206,6 +232,99 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          course_ids: string[]
+          created_at: string
+          description: string
+          duration_days: number
+          id: string
+          is_active: boolean
+          name: string
+          test_ids: string[]
+          token_price: number
+          updated_at: string
+        }
+        Insert: {
+          course_ids?: string[]
+          created_at?: string
+          description?: string
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          test_ids?: string[]
+          token_price?: number
+          updated_at?: string
+        }
+        Update: {
+          course_ids?: string[]
+          created_at?: string
+          description?: string
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          test_ids?: string[]
+          token_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          status: string
+          subcategory: string
+          subject: string
+          ticket_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          status?: string
+          subcategory?: string
+          subject?: string
+          ticket_number?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          status?: string
+          subcategory?: string
+          subject?: string
+          ticket_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "rankings_view"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       test_answers: {
         Row: {
           attempt_id: string
@@ -257,6 +376,7 @@ export type Database = {
           feedback: string | null
           id: string
           is_reviewed: boolean
+          published_at: string | null
           score: number
           started_at: string
           status: string
@@ -269,6 +389,7 @@ export type Database = {
           feedback?: string | null
           id?: string
           is_reviewed?: boolean
+          published_at?: string | null
           score?: number
           started_at?: string
           status?: string
@@ -281,6 +402,7 @@ export type Database = {
           feedback?: string | null
           id?: string
           is_reviewed?: boolean
+          published_at?: string | null
           score?: number
           started_at?: string
           status?: string
@@ -290,6 +412,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "test_attempts_profile_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_attempts_profile_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "rankings_view"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "test_attempts_test_id_fkey"
             columns: ["test_id"]
@@ -401,6 +537,13 @@ export type Database = {
             referencedRelation: "test_questions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "test_reviews_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "test_questions_secure"
+            referencedColumns: ["id"]
+          },
         ]
       }
       tests: {
@@ -448,6 +591,55 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_replies: {
+        Row: {
+          created_at: string
+          id: string
+          is_admin: boolean
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          message?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_replies_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_replies_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "rankings_view"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ticket_replies_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       token_requests: {
         Row: {
           amount: number
@@ -479,7 +671,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "token_requests_profile_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "token_requests_profile_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "rankings_view"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -535,41 +742,6 @@ export type Database = {
           thumbnail_url?: string
           title?: string
           video_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "videos_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      wallet_transactions: {
-        Row: {
-          amount: number
-          created_at: string
-          description: string
-          id: string
-          type: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          description?: string
-          id?: string
-          type?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          description?: string
-          id?: string
-          type?: string
-          user_id?: string
         }
         Relationships: [
           {
@@ -675,6 +847,18 @@ export type Database = {
     }
     Functions: {
       get_test_review: { Args: { _attempt_id: string }; Returns: Json }
+      has_active_subscription_for_course: {
+        Args: { _course_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_active_subscription_for_test: {
+        Args: { _test_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_course_access: {
+        Args: { _course_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
