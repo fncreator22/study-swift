@@ -11,6 +11,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useServerFn } from "@tanstack/react-start";
+import { exportPlatform, importPlatform } from "@/lib/admin-backup.functions";
 
 export const Route = createFileRoute("/_admin/admin/settings")({ component: AdminSettings });
 
@@ -38,6 +40,8 @@ function AdminSettings() {
   const [pwd, setPwd] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const runExport = useServerFn(exportPlatform);
+  const runImport = useServerFn(importPlatform);
 
   async function changePwd() {
     if (pwd.length < 6) return toast.error("Password must be 6+ chars");
@@ -51,22 +55,18 @@ function AdminSettings() {
 
   async function exportData() {
     setLoading(true);
-    const data: Record<string, any> = {};
     try {
-      for (const table of TABLES) {
-        const { data: rows, error } = await (supabase as any).from(table).select("*");
-        if (error) throw error;
-        data[table] = rows;
-      }
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const result = await runExport({ data: undefined as any });
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `examly_backup_${new Date().toISOString().split('T')[0]}.json`;
       a.click();
-      toast.success("Platform data exported successfully");
+      URL.revokeObjectURL(url);
+      toast.success("Platform data exported");
     } catch (err: any) {
-      toast.error("Export failed: " + err.message);
+      toast.error("Export failed: " + (err.message ?? "unknown"));
     }
     setLoading(false);
   }
@@ -82,31 +82,19 @@ function AdminSettings() {
     setLoading(true);
     const reader = new FileReader();
     reader.onload = async (event) => {
-      let imported = 0, failed = 0;
       try {
-        const data = JSON.parse(event.target?.result as string);
-        if (!data || typeof data !== "object") throw new Error("Invalid backup file");
-        for (const table of TABLES) {
-          const rows = data[table];
-          if (!Array.isArray(rows) || rows.length === 0) continue;
-          const onConflict = CONFLICT_KEYS[table] ?? "id";
-          // chunk to avoid payload limits
-          for (let i = 0; i < rows.length; i += 500) {
-            const chunk = rows.slice(i, i + 500);
-            const { error } = await (supabase as any)
-              .from(table)
-              .upsert(chunk, { onConflict, ignoreDuplicates: false });
-            if (error) {
-              failed += chunk.length;
-              toast.error(`${table}: ${error.message}`);
-            } else {
-              imported += chunk.length;
-            }
-          }
+        const parsed = JSON.parse(event.target?.result as string);
+        // Accept both new (wrapped) and legacy (flat) formats.
+        const payload = parsed?.data ? parsed : { data: parsed };
+        const result = await runImport({ data: { payload } });
+        if (result.errors?.length) {
+          toast.warning(`Imported ${result.imported} rows with ${result.errors.length} table errors`);
+          console.warn("Import errors:", result.errors);
+        } else {
+          toast.success(`Imported ${result.imported} rows`);
         }
-        toast.success(`Import complete — ${imported} rows updated/created${failed ? `, ${failed} failed` : ""}`);
       } catch (err: any) {
-        toast.error("Import failed: " + err.message);
+        toast.error("Import failed: " + (err.message ?? "unknown"));
       }
       setLoading(false);
       e.target.value = "";
