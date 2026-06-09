@@ -16,23 +16,6 @@ import { exportPlatform, importPlatform } from "@/lib/admin-backup.functions";
 
 export const Route = createFileRoute("/_admin/admin/settings")({ component: AdminSettings });
 
-// Order matters for import (parents before children referencing them).
-const TABLES = [
-  "profiles", "user_roles",
-  "subscriptions", "memberships",
-  "courses", "videos",
-  "tests", "test_questions",
-  "test_attempts", "test_answers", "test_reviews",
-  "purchases", "wallet_transactions", "token_requests",
-  "support_tickets", "ticket_replies",
-  "comments", "settings",
-] as const;
-
-// Tables whose natural conflict key isn't `id`.
-const CONFLICT_KEYS: Record<string, string> = {
-  user_roles: "user_id,role",
-  purchases: "id",
-};
 
 function AdminSettings() {
   const { user, signOut } = useAuth();
