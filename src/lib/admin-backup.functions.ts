@@ -27,18 +27,18 @@ export const exportPlatform = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const out: Record<string, unknown[]> = {};
+    const out: Record<string, any[]> = {};
     for (const t of TABLES) {
       const { data, error } = await supabaseAdmin.from(t as any).select("*");
       if (error) throw new Error(`${t}: ${error.message}`);
-      out[t] = data ?? [];
+      out[t] = (data ?? []) as any[];
     }
-    return { exported_at: new Date().toISOString(), version: 1, data: out };
+    return { exported_at: new Date().toISOString(), version: 1 as const, data: out };
   });
 
 export const importPlatform = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { payload: { data: Record<string, unknown[]> } }) => {
+  .inputValidator((input: { payload: any }) => {
     if (!input?.payload?.data || typeof input.payload.data !== "object") {
       throw new Error("Invalid backup payload");
     }
