@@ -14,10 +14,23 @@ import {
 
 export const Route = createFileRoute("/_admin/admin/settings")({ component: AdminSettings });
 
+// Order matters for import (parents before children referencing them).
 const TABLES = [
-  "profiles", "tests", "test_questions", "test_attempts", "test_answers", 
-  "purchases", "videos", "comments", "wallet_transactions", "token_requests"
-];
+  "profiles", "user_roles",
+  "subscriptions", "memberships",
+  "courses", "videos",
+  "tests", "test_questions",
+  "test_attempts", "test_answers", "test_reviews",
+  "purchases", "wallet_transactions", "token_requests",
+  "support_tickets", "ticket_replies",
+  "comments", "settings",
+] as const;
+
+// Tables whose natural conflict key isn't `id`.
+const CONFLICT_KEYS: Record<string, string> = {
+  user_roles: "user_id,role",
+  purchases: "id",
+};
 
 function AdminSettings() {
   const { user, signOut } = useAuth();
@@ -61,22 +74,42 @@ function AdminSettings() {
   async function importData(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("File too large (max 50MB)");
+      e.target.value = "";
+      return;
+    }
     setLoading(true);
     const reader = new FileReader();
     reader.onload = async (event) => {
+      let imported = 0, failed = 0;
       try {
         const data = JSON.parse(event.target?.result as string);
+        if (!data || typeof data !== "object") throw new Error("Invalid backup file");
         for (const table of TABLES) {
-          if (data[table] && Array.isArray(data[table])) {
-            const { error } = await (supabase as any).from(table).upsert(data[table]);
-            if (error) toast.error(`Error importing ${table}: ${error.message}`);
+          const rows = data[table];
+          if (!Array.isArray(rows) || rows.length === 0) continue;
+          const onConflict = CONFLICT_KEYS[table] ?? "id";
+          // chunk to avoid payload limits
+          for (let i = 0; i < rows.length; i += 500) {
+            const chunk = rows.slice(i, i + 500);
+            const { error } = await (supabase as any)
+              .from(table)
+              .upsert(chunk, { onConflict, ignoreDuplicates: false });
+            if (error) {
+              failed += chunk.length;
+              toast.error(`${table}: ${error.message}`);
+            } else {
+              imported += chunk.length;
+            }
           }
         }
-        toast.success("Platform data imported successfully");
+        toast.success(`Import complete — ${imported} rows updated/created${failed ? `, ${failed} failed` : ""}`);
       } catch (err: any) {
         toast.error("Import failed: " + err.message);
       }
       setLoading(false);
+      e.target.value = "";
     };
     reader.readAsText(file);
   }
