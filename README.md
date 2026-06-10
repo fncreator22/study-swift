@@ -21,7 +21,7 @@ The platform bridges the gap between content delivery and performance evaluation
 
 ### Assessment Engine
 *   **Dynamic Test Execution**: Support for timed examinations with automated session management.
-*   **Multi-Type Question Support**: Handles Multiple Choice (MCQ) and written descriptive answers.
+*   **Multi-Type Question Support**: Handles Multiple Choice (MCQ) and written descriptive answers, and also has hybrid questions.
 *   **Automated Grading**: Instant score calculation for objective questions and structured tracking for subjective content.
 *   **Tiered Content Access**: Granular control over test availability based on user subscription (Free, Paid, Premium).
 
