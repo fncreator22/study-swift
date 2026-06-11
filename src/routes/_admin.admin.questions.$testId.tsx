@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_admin/admin/questions/$testId")({ component: QuestionsAdmin });
 
@@ -91,9 +92,14 @@ function QuestionsAdmin() {
             {isWritten ? "Written" : "MCQ"} test · {qs.length}/{MAX_QUESTIONS} questions
           </p>
         </div>
-        <Button onClick={openNew} disabled={qs.length >= MAX_QUESTIONS}>
-          <Plus className="mr-2 h-4 w-4" /> Add another question
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link to="/admin/import/$testId" params={{ testId }}><Upload className="mr-2 h-4 w-4" /> Import</Link>
+          </Button>
+          <Button onClick={openNew} disabled={qs.length >= MAX_QUESTIONS}>
+            <Plus className="mr-2 h-4 w-4" /> Add another question
+          </Button>
+        </div>
       </div>
 
       <div className="mt-8 space-y-3">
