@@ -179,10 +179,6 @@ function Attempt() {
       setSubmitting(false);
       return;
     }
-      toast.error("Failed to submit: " + error.message);
-      setSubmitting(false);
-      return;
-    }
 
     if (typeof window !== "undefined") sessionStorage.removeItem(`attempt_${testId}`);
     toast.success("Submitted successfully");
