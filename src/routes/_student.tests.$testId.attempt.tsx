@@ -171,12 +171,14 @@ function Attempt() {
       await syncAnswer(lastQId, answers[lastQId] || "");
     }
 
-    // Task 2: Server-side grading (DB trigger handles score/total calculation)
-    const { error } = await supabase.from("test_attempts").update({
-      submitted_at: new Date().toISOString(),
-    }).eq("id", attemptId);
+    // Server-validated submit: enforces test duration server-side
+    const { error } = await supabase.rpc("submit_attempt" as any, { _attempt_id: attemptId });
 
     if (error) {
+      toast.error("Failed to submit: " + error.message);
+      setSubmitting(false);
+      return;
+    }
       toast.error("Failed to submit: " + error.message);
       setSubmitting(false);
       return;
