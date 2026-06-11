@@ -328,22 +328,37 @@ export type Database = {
       test_answers: {
         Row: {
           attempt_id: string
+          created_at: string
+          feedback: string | null
           id: string
+          marks_awarded: number | null
           question_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           selected_option: string | null
           written_answer: string | null
         }
         Insert: {
           attempt_id: string
+          created_at?: string
+          feedback?: string | null
           id?: string
+          marks_awarded?: number | null
           question_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           selected_option?: string | null
           written_answer?: string | null
         }
         Update: {
           attempt_id?: string
+          created_at?: string
+          feedback?: string | null
           id?: string
+          marks_awarded?: number | null
           question_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           selected_option?: string | null
           written_answer?: string | null
         }
@@ -377,6 +392,7 @@ export type Database = {
           id: string
           is_reviewed: boolean
           published_at: string | null
+          reviewed_by: string | null
           score: number
           started_at: string
           status: string
@@ -390,6 +406,7 @@ export type Database = {
           id?: string
           is_reviewed?: boolean
           published_at?: string | null
+          reviewed_by?: string | null
           score?: number
           started_at?: string
           status?: string
@@ -403,6 +420,7 @@ export type Database = {
           id?: string
           is_reviewed?: boolean
           published_at?: string | null
+          reviewed_by?: string | null
           score?: number
           started_at?: string
           status?: string
@@ -441,6 +459,7 @@ export type Database = {
           created_at: string
           explanation: string
           id: string
+          is_published: boolean
           marks: number
           max_words: number | null
           option_a: string | null
@@ -457,6 +476,7 @@ export type Database = {
           created_at?: string
           explanation?: string
           id?: string
+          is_published?: boolean
           marks?: number
           max_words?: number | null
           option_a?: string | null
@@ -473,6 +493,7 @@ export type Database = {
           created_at?: string
           explanation?: string
           id?: string
+          is_published?: boolean
           marks?: number
           max_words?: number | null
           option_a?: string | null
@@ -889,6 +910,15 @@ export type Database = {
         Returns: Json
       }
       reject_token_request: { Args: { _request_id: string }; Returns: Json }
+      save_review_answer: {
+        Args: {
+          _attempt_id: string
+          _feedback: string
+          _marks: number
+          _question_id: string
+        }
+        Returns: undefined
+      }
       start_fresh_attempt: { Args: { _test_id: string }; Returns: string }
       submit_attempt: { Args: { _attempt_id: string }; Returns: Json }
     }
