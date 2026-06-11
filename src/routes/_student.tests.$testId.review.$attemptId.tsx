@@ -46,9 +46,14 @@ function Review() {
         const payload = data as any;
         setAttempt(payload.attempt);
         setQuestions(payload.questions || []);
-        const ansMap: Record<string, { selected: string | null; written: string | null }> = {};
+        const ansMap: Record<string, { selected: string | null; written: string | null; marks_awarded: number | null; feedback: string | null }> = {};
         (payload.answers || []).forEach((a: any) => {
-          ansMap[a.question_id] = { selected: a.selected_option ?? null, written: a.written_answer ?? null };
+          ansMap[a.question_id] = {
+            selected: a.selected_option ?? null,
+            written: a.written_answer ?? null,
+            marks_awarded: a.marks_awarded ?? null,
+            feedback: a.feedback ?? null,
+          };
         });
         setAnswers(ansMap);
       }
