@@ -846,6 +846,7 @@ export type Database = {
       }
     }
     Functions: {
+      approve_token_request: { Args: { _request_id: string }; Returns: Json }
       get_test_review: { Args: { _attempt_id: string }; Returns: Json }
       has_active_subscription_for_course: {
         Args: { _course_id: string; _user_id: string }
@@ -887,7 +888,9 @@ export type Database = {
         Args: { _course_id: string; _test_id: string }
         Returns: Json
       }
+      reject_token_request: { Args: { _request_id: string }; Returns: Json }
       start_fresh_attempt: { Args: { _test_id: string }; Returns: string }
+      submit_attempt: { Args: { _attempt_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "student"
