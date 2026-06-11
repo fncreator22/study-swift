@@ -114,12 +114,20 @@ function Review() {
               <div key={q.id} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">Question {i + 1} · Written</p>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  {published && a?.marks_awarded != null && (
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">{a.marks_awarded} marks</span>
+                  )}
                 </div>
                 <h3 className="mt-1 font-display font-semibold">{q.question}</h3>
                 <div className="mt-3 rounded-xl bg-muted p-4 text-sm whitespace-pre-wrap">
                   {a?.written?.trim() ? a.written : <span className="text-muted-foreground italic">No answer submitted.</span>}
                 </div>
+                {published && a?.feedback && (
+                  <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-primary">Examiner feedback</p>
+                    <p className="mt-1 whitespace-pre-wrap">{a.feedback}</p>
+                  </div>
+                )}
               </div>
             );
           }
