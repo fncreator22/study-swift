@@ -92,9 +92,14 @@ function QuestionsAdmin() {
             {isWritten ? "Written" : "MCQ"} test · {qs.length}/{MAX_QUESTIONS} questions
           </p>
         </div>
-        <Button onClick={openNew} disabled={qs.length >= MAX_QUESTIONS}>
-          <Plus className="mr-2 h-4 w-4" /> Add another question
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link to="/admin/import/$testId" params={{ testId }}><Upload className="mr-2 h-4 w-4" /> Import</Link>
+          </Button>
+          <Button onClick={openNew} disabled={qs.length >= MAX_QUESTIONS}>
+            <Plus className="mr-2 h-4 w-4" /> Add another question
+          </Button>
+        </div>
       </div>
 
       <div className="mt-8 space-y-3">
