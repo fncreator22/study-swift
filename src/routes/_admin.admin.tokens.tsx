@@ -39,11 +39,8 @@ function AdminTokens() {
   useEffect(() => { load(); }, []);
 
   async function handleStatus(id: string, status: "approved" | "rejected") {
-    const { error } = await supabase
-      .from("token_requests")
-      .update({ status })
-      .eq("id", id);
-
+    const fn = status === "approved" ? "approve_token_request" : "reject_token_request";
+    const { error } = await supabase.rpc(fn as any, { _request_id: id });
     if (error) toast.error(error.message);
     else {
       toast.success(`Request ${status}`);
