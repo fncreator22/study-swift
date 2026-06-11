@@ -24,7 +24,7 @@ function Review() {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [questions, setQuestions] = useState<Q[]>([]);
-  const [answers, setAnswers] = useState<Record<string, { selected: string | null; written: string | null }>>({});
+  const [answers, setAnswers] = useState<Record<string, { selected: string | null; written: string | null; marks_awarded: number | null; feedback: string | null }>>({});
   const [testType, setTestType] = useState<"mcq" | "written">("mcq");
 
   useEffect(() => {
