@@ -159,7 +159,7 @@ function ImportQuestions() {
       marks: q.marks ?? 1,
       is_published: true,
     }));
-    const { error } = await supabase.from("test_questions").insert(rows);
+    const { error } = await supabase.from("test_questions").insert(rows as any);
     setImporting(false);
     if (error) return toast.error(error.message);
     toast.success(`Imported ${rows.length} questions`);
