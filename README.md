@@ -107,9 +107,6 @@ Examly implements a strict **Zero-Trust** authentication model:
 ### Purchase Workflow
 The platform supports a "Pay-per-Test" model. The `purchases` system links users to specific test IDs, which is then verified via the `has_test_access` database function before allowing an attempt.
 
-### Taxation & Billing Readiness
-While currently implementing a direct `price` field on tests, the schema is designed to integrate with external payment gateways (e.g., Stripe) for tax calculation and invoice generation based on the `test_tier` and user region.
-
 ---
 
 ## Database & Storage Architecture
