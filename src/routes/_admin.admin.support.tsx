@@ -44,7 +44,7 @@ function AdminSupport() {
     loadReports();
   }, [statusFilter]);
 
-  // Messages Polling
+  // Realtime Messages for Selected Ticket
   useEffect(() => {
     if (!selectedReport) return;
 
@@ -58,9 +58,60 @@ function AdminSupport() {
     }
 
     loadMessages();
-    const interval = setInterval(loadMessages, 4000);
-    return () => clearInterval(interval);
+
+    const channel = supabase
+      .channel(`admin_chat_messages_${selectedReport.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "support_messages",
+          filter: `report_id=eq.${selectedReport.id}`
+        },
+        (payload) => {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedReport]);
+
+  // Realtime Ticket Listing Status / Inbox updates
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin_tickets_list")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_reports"
+        },
+        (payload) => {
+          if (payload.eventType === "UPDATE") {
+            setSelectedReport((current: any) => {
+              if (current && current.id === payload.new.id) {
+                return { ...current, status: payload.new.status };
+              }
+              return current;
+            });
+          }
+          loadReports();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   async function handleSendReply(e: React.FormEvent) {
     e.preventDefault();

@@ -135,9 +135,72 @@ function SupportPage() {
     }
 
     loadMessages();
-    const interval = setInterval(loadMessages, 4000);
-    return () => clearInterval(interval);
+    if (!user) {
+      const interval = setInterval(loadMessages, 5000);
+      return () => clearInterval(interval);
+    }
   }, [selectedReport, user]);
+
+  // Realtime Messages for Authenticated Users
+  useEffect(() => {
+    if (!selectedReport || !user) return;
+
+    const channel = supabase
+      .channel(`chat_messages_${selectedReport.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "support_messages",
+          filter: `report_id=eq.${selectedReport.id}`
+        },
+        (payload) => {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedReport, user]);
+
+  // Realtime Status Changes & Sidebar Updates for Authenticated Users
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`my_tickets_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_reports",
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === "UPDATE") {
+            setSelectedReport((current: any) => {
+              if (current && current.id === payload.new.id) {
+                return { ...current, status: payload.new.status };
+              }
+              return current;
+            });
+          }
+          loadReports();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   async function handleSubmitTicket(e: React.FormEvent) {
     e.preventDefault();
