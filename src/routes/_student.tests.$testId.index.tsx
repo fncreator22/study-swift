@@ -87,7 +87,7 @@ function TestDetail() {
         <ArrowLeft className="h-3 w-3" /> Back to assessments
       </Link>
 
-      <div className="mt-4 rounded-3xl border border-border bg-card p-8 shadow-soft">
+      <div className="mt-4 rounded-3xl border border-border bg-card p-5 sm:p-8 shadow-soft">
         <div className="flex items-center justify-between">
           <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${test.tier === 'free' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}`}>
             {test.tier}
@@ -95,7 +95,7 @@ function TestDetail() {
           <span className="font-display text-2xl font-black">{test.tier === "free" ? "FREE" : `₹${test.price}`}</span>
         </div>
         
-        <h1 className="mt-6 font-display text-4xl font-bold tracking-tight">{test.title}</h1>
+        <h1 className="mt-6 font-display text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">{test.title}</h1>
         <p className="mt-3 text-lg text-muted-foreground leading-relaxed">{test.description}</p>
 
         <div className="mt-8 grid gap-4 rounded-2xl bg-muted/50 p-6 sm:grid-cols-3">

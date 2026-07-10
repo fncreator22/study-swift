@@ -162,7 +162,7 @@ function CourseDetail() {
               </div>
             </div>
           ) : (
-            <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-border bg-muted/50">
+            <div className="relative w-full overflow-hidden rounded-3xl border border-border bg-muted/50 min-h-[340px] md:aspect-video">
               {course.thumbnail_url && <img src={course.thumbnail_url} className="h-full w-full object-cover blur-sm opacity-50" />}
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
                 <div className="grid h-16 w-16 place-items-center rounded-2xl bg-background shadow-xl"><Lock className="h-8 w-8 text-primary" /></div>

@@ -82,7 +82,7 @@ function Profile() {
         </Button>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { l: "Attempts", v: stats.attempts, icon: BarChart3 }, 
           { l: "Purchases", v: stats.purchases, icon: User },

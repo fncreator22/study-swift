@@ -177,7 +177,7 @@ function AdminSubs() {
             <div className="space-y-4">
               <div className="space-y-2"><Label>Name</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
               <div className="space-y-2"><Label>Description (separate lines or • for pointers)</Label><Textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label>Price (₹)</Label>
                   <Input 

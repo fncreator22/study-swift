@@ -210,7 +210,7 @@ function Attempt() {
   const overLimit = written && q.max_words ? wordCount > q.max_words : false;
 
   return (
-    <div className="mx-auto max-w-3xl pb-20 px-4">
+    <div className="mx-auto max-w-3xl pb-28 px-4">
       <div className="sticky top-0 z-10 -mx-4 mb-6 flex items-center justify-between border-b border-border bg-background/90 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
         <div className="flex items-center gap-3">
           <div className="text-sm font-medium text-muted-foreground">{answered}/{questions.length} <span className="hidden sm:inline">answered</span></div>

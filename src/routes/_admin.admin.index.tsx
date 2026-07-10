@@ -250,16 +250,16 @@ function AdminHome() {
         </div>
       </div>
       
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div key={c.l} className="rounded-3xl border border-border bg-card p-5 shadow-soft hover:border-primary/20 transition-all">
-            <div className="flex items-center gap-3">
-              <div className={`grid h-10 w-10 place-items-center rounded-2xl ${c.bg} ${c.color}`}>
+          <div key={c.l} className="rounded-3xl border border-border bg-card p-4 sm:p-5 shadow-soft hover:border-primary/20 transition-all">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className={`grid h-10 w-10 place-items-center rounded-2xl shrink-0 ${c.bg} ${c.color}`}>
                 <c.icon className="h-5 w-5" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{c.l}</p>
-                <p className="font-display text-2xl font-bold leading-none mt-1">{c.v}</p>
+              <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">{c.l}</p>
+                <p className="font-display text-lg sm:text-2xl font-bold leading-none mt-1">{c.v}</p>
               </div>
             </div>
           </div>

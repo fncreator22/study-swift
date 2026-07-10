@@ -182,7 +182,7 @@ function TestsAdmin() {
           <div className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1">
             <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div><Label>Tier</Label>
                 <Select value={form.tier} onValueChange={(v) => setForm({ ...form, tier: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -208,7 +208,7 @@ function TestsAdmin() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label>Total marks</Label><Input type="number" value={form.total_marks} onChange={(e) => setForm({ ...form, total_marks: e.target.value })} /></div>
               {form.test_type === "written" && (
                 <div><Label>Default word limit</Label><Input type="number" value={form.word_limit} onChange={(e) => setForm({ ...form, word_limit: e.target.value })} /></div>

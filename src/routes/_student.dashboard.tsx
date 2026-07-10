@@ -113,13 +113,13 @@ function Dashboard() {
       {/* Compact Stats Grid */}
       <div className="dashboard-grid mt-8">
         {cards.map((c) => (
-          <Link key={c.t} to={c.to} className="compact-card flex items-center gap-4">
-            <div className={`grid h-10 w-10 place-items-center rounded-xl bg-muted/50 ${c.color}`}>
+          <Link key={c.t} to={c.to} className="compact-card flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+            <div className={`grid h-10 w-10 place-items-center rounded-xl bg-muted/50 shrink-0 ${c.color}`}>
               <c.icon className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{c.t}</p>
-              <p className="font-display text-xl font-bold leading-none mt-1">{c.v}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">{c.t}</p>
+              <p className="font-display text-lg sm:text-xl font-bold leading-none mt-1">{c.v}</p>
             </div>
           </Link>
         ))}

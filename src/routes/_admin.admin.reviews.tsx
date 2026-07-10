@@ -98,8 +98,8 @@ function AdminReviews() {
         <p className="text-muted-foreground">Review and grade student submissions for written examinations.</p>
       </div>
 
-      <div className="rounded-xl border border-border bg-card">
-        <Table>
+      <div className="responsive-table-container rounded-xl border border-border bg-card">
+        <Table className="min-w-[650px]">
           <TableHeader>
             <TableRow>
               <TableHead>Student</TableHead>

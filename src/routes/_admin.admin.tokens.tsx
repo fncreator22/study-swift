@@ -58,8 +58,8 @@ function AdminTokens() {
         <p className="text-muted-foreground">Verify and approve user token purchases.</p>
       </div>
 
-      <div className="rounded-xl border border-border bg-card">
-        <Table>
+      <div className="responsive-table-container rounded-xl border border-border bg-card">
+        <Table className="min-w-[750px]">
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
