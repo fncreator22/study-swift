@@ -306,11 +306,11 @@ function Landing() {
           <div className="mt-10 pt-6 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
             <p>© {new Date().getFullYear()} Examly. All rights reserved.</p>
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-              <span>Privacy Policy</span>
+              <Link to="/privacy" className="hover:text-primary hover:underline transition-colors font-medium">Privacy Policy</Link>
               <span className="hidden sm:inline text-border">|</span>
-              <span>Terms of Service</span>
+              <Link to="/terms" className="hover:text-primary hover:underline transition-colors font-medium">Terms of Service</Link>
               <span className="hidden sm:inline text-border">|</span>
-              <span>Refund Policy</span>
+              <Link to="/refund" className="hover:text-primary hover:underline transition-colors font-medium">Refund Policy</Link>
             </div>
           </div>
         </div>

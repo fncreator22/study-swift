@@ -47,9 +47,18 @@ function Login() {
           <h1 className="font-display text-2xl font-bold">Welcome back</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in to continue.</p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
-            <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label>Password</Label><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-            <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</Button>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline font-semibold">Forgot password?</Link>
+              </div>
+              <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            </div>
+            <Button type="submit" className="w-full rounded-xl" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             No account? <Link to="/signup" className="text-primary hover:underline">Create one</Link>
