@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
@@ -46,6 +46,8 @@ function CourseDetail() {
   const [names, setNames] = useState<Record<string, string>>({});
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const purchasingRef = useRef(false);
 
   async function load() {
     if (!user) return;
@@ -98,11 +100,23 @@ function CourseDetail() {
   }, [hasAccess, activeVideo?.id]);
 
   async function purchase() {
+    if (purchasingRef.current) return;
     if (!user || !course) return;
-    const { error } = await supabase.rpc("purchase_with_tokens" as any, { _test_id: null, _course_id: course.id });
-    if (error) return toast.error(error.message);
-    toast.success("Course unlocked successfully");
-    setHasAccess(true);
+    
+    purchasingRef.current = true;
+    setPurchasing(true);
+    try {
+      const { error } = await supabase.rpc("purchase_with_tokens" as any, { _test_id: null, _course_id: course.id });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Course unlocked successfully");
+        setHasAccess(true);
+      }
+    } finally {
+      purchasingRef.current = false;
+      setPurchasing(false);
+    }
   }
 
   async function postComment() {
@@ -154,7 +168,16 @@ function CourseDetail() {
                 <div className="grid h-16 w-16 place-items-center rounded-2xl bg-background shadow-xl"><Lock className="h-8 w-8 text-primary" /></div>
                 <h2 className="mt-6 font-display text-2xl font-bold">This content is locked</h2>
                 <p className="mt-2 max-w-sm text-sm text-muted-foreground">Enroll in this course to gain full access to all video modules and community discussion.</p>
-                {!hasAccess && <Button size="lg" onClick={purchase} className="mt-8 h-14 rounded-2xl px-10 text-base shadow-lg shadow-primary/20">Purchase for ₹{course.price}</Button>}
+                {!hasAccess && (
+                  <Button 
+                    size="lg" 
+                    onClick={purchase} 
+                    disabled={purchasing}
+                    className="mt-8 h-14 rounded-2xl px-10 text-base shadow-lg shadow-primary/20"
+                  >
+                    {purchasing ? "Unlocking..." : `Purchase for ₹${course.price}`}
+                  </Button>
+                )}
               </div>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ function TestDetail() {
   const [test, setTest] = useState<Test | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const [purchasing, setPurchasing] = useState(false);
+  const purchasingRef = useRef(false);
 
   async function load() {
     if (!user) return;
@@ -47,6 +49,7 @@ function TestDetail() {
   }, [user, testId]);
 
   async function purchase() {
+    if (purchasingRef.current) return;
     if (!user || !test) return;
     const tokenCost = Math.ceil(test.price / 10);
 
@@ -56,15 +59,24 @@ function TestDetail() {
       return;
     }
 
-    const { error } = await supabase.rpc("purchase_with_tokens" as any, {
-      _test_id: test.id,
-      _course_id: null,
-    });
-    if (error) return toast.error(error.message);
-
-    toast.success("Test unlocked successfully!");
-    setHasAccess(true);
-    refreshProfile();
+    purchasingRef.current = true;
+    setPurchasing(true);
+    try {
+      const { error } = await supabase.rpc("purchase_with_tokens" as any, {
+        _test_id: test.id,
+        _course_id: null,
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Test unlocked successfully!");
+        setHasAccess(true);
+        refreshProfile();
+      }
+    } finally {
+      purchasingRef.current = false;
+      setPurchasing(false);
+    }
   }
 
   if (!test) return <div className="grid h-64 place-items-center text-sm text-muted-foreground animate-pulse">Loading test details...</div>;
@@ -116,8 +128,8 @@ function TestDetail() {
               Begin Assessment
             </Button>
           ) : (
-            <Button size="lg" className="h-14 rounded-2xl px-10 text-base font-bold shadow-lg shadow-primary/20" onClick={purchase}>
-              <Lock className="mr-2 h-4 w-4" /> Unlock for ₹{test.price}
+            <Button size="lg" disabled={purchasing} className="h-14 rounded-2xl px-10 text-base font-bold shadow-lg shadow-primary/20" onClick={purchase}>
+              {purchasing ? "Unlocking..." : <><Lock className="mr-2 h-4 w-4" /> Unlock for ₹{test.price}</>}
             </Button>
           )}
           <p className="mt-4 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
