@@ -19,7 +19,7 @@ const root = path.join(__dirname, "..");
 
 // ─── 1. Run Vite build with VERCEL=1 ─────────────────────────────────────────
 console.log("▲ Running Vite build (VERCEL=1)…");
-execSync("npx cross-env VERCEL=1 vite build", {
+execSync("vite build", {
   cwd: root,
   stdio: "inherit",
   env: { ...process.env, VERCEL: "1" },
