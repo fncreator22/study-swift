@@ -1,0 +1,36 @@
+{
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "dist",
+  "framework": null,
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs20.x",
+      "memory": 1024
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/assets/(.*)",
+      "destination": "/dist/client/assets/$1"
+    },
+    {
+      "source": "/:path*\\.:ext(js|css|ico|png|svg|woff|woff2|ttf|map|webmanifest)",
+      "destination": "/dist/client/:path*.:ext"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.js"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}
