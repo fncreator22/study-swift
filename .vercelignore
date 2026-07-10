@@ -1,0 +1,16 @@
+# Build outputs - generated at build time, not source files
+dist/
+api/server.js
+api/assets/
+.vercel/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Supabase (local migration files, credentials)
+supabase/
