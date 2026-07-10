@@ -23,7 +23,7 @@ export default defineConfig(async ({ command }) => {
   ];
 
   // Dynamically load Cloudflare plugin only for production build to optimize dev performance
-  if (command === "build") {
+  if (command === "build" && !process.env.VERCEL) {
     try {
       const { cloudflare } = await import("@cloudflare/vite-plugin");
       plugins.push(cloudflare({ viteEnvironment: { name: "ssr" } }));

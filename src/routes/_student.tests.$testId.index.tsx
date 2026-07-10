@@ -48,7 +48,7 @@ function TestDetail() {
 
   async function purchase() {
     if (!user || !test) return;
-    const tokenCost = Math.ceil(test.price);
+    const tokenCost = Math.ceil(test.price / 10);
 
     if (tokens < tokenCost) {
       toast.error(`Insufficient tokens. This test requires ${tokenCost} tokens.`);

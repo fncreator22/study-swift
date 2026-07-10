@@ -7,5 +7,5 @@ CREATE POLICY "Admins can update test attempts for grading"
 ON public.test_attempts
 FOR UPDATE
 TO authenticated
-USING (public.has_role('admin', auth.uid()))
-WITH CHECK (public.has_role('admin', auth.uid()));
+USING (public.has_role(auth.uid(), 'admin'))
+WITH CHECK (public.has_role(auth.uid(), 'admin'));

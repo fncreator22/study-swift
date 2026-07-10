@@ -126,7 +126,7 @@ BEGIN
     END IF;
   END IF;
 
-  v_cost := GREATEST(0, CEIL(v_price)::int);
+  v_cost := GREATEST(0, CEIL(v_price / 10.0)::int);
 
   SELECT tokens INTO v_balance FROM public.profiles WHERE id = v_user FOR UPDATE;
   IF v_balance IS NULL THEN RAISE EXCEPTION 'Profile missing'; END IF;
