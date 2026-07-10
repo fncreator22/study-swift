@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { BookOpen, Trophy, History, PlayCircle, ChevronRight, Crown } from "lucide-react";
+import { BookOpen, Trophy, History, PlayCircle, ChevronRight, Crown, Settings, MessageSquare, CheckCircle, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_student/dashboard")({ component: Dashboard });
@@ -50,6 +50,15 @@ function Dashboard() {
     { t: "Attempts", v: stats.attempts, icon: History, to: "/history", color: "text-blue-500" },
     { t: "Performance", v: `${stats.avg}%`, icon: Trophy, to: "/rankings", color: "text-amber-500" },
     { t: "Courses", v: stats.courses, icon: PlayCircle, to: "/courses", color: "text-emerald-500" },
+  ];
+
+  const quickLinks = [
+    { label: "My Profile", to: "/profile", icon: Settings, desc: "Account settings", color: "text-primary bg-primary/10" },
+    { label: "Subscriptions", to: "/subscriptions", icon: Crown, desc: "Upgrade plan", color: "text-amber-500 bg-amber-500/10" },
+    { label: "Rankings", to: "/rankings", icon: Trophy, desc: "Leaderboards", color: "text-yellow-500 bg-yellow-500/10" },
+    { label: "Purchases", to: "/purchased", icon: CheckCircle, desc: "Owned content", color: "text-emerald-500 bg-emerald-500/10" },
+    { label: "Support", to: "/support", icon: MessageSquare, desc: "Get help 24/7", color: "text-blue-500 bg-blue-500/10" },
+    { label: "Wallet", to: "/wallet", icon: Coins, desc: "Tokens & billing", color: "text-purple-500 bg-purple-500/10" },
   ];
 
   if (loading) return <div className="grid h-64 place-items-center text-sm text-muted-foreground animate-pulse">Syncing your learning data...</div>;
@@ -123,6 +132,28 @@ function Dashboard() {
             </div>
           </Link>
         ))}
+      </div>
+
+      {/* Quick Access / Shortcuts Grid */}
+      <div className="mt-8">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Quick Access</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {quickLinks.map((ql) => (
+            <Link
+              key={ql.to}
+              to={ql.to as any}
+              className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-soft active:scale-[0.98]"
+            >
+              <div className={`grid h-8 w-8 place-items-center rounded-xl shrink-0 ${ql.color}`}>
+                <ql.icon className="h-4 w-4" />
+              </div>
+              <div className="mt-4">
+                <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{ql.label}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{ql.desc}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-3">
