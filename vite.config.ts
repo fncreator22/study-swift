@@ -60,7 +60,7 @@ export default defineConfig(async ({ command }) => {
           environments: {
             ssr: {
               build: {
-                outDir: "api",
+                outDir: "ssr",
               },
             },
           },

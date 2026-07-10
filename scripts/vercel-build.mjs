@@ -39,9 +39,9 @@ fs.mkdirSync(funcDir, { recursive: true });
 console.log("▲ Copying static assets…");
 copyDir(path.join(root, "dist", "client"), staticDir);
 
-// ─── 4. Copy SSR function (api/ → ssr.func/) ─────────────────────────────────
+// ─── 4. Copy SSR function (ssr/ → ssr.func/) ─────────────────────────────────
 console.log("▲ Copying SSR function…");
-copyDir(path.join(root, "api"), funcDir);
+copyDir(path.join(root, "ssr"), funcDir);
 
 // ─── 5. Write function config ─────────────────────────────────────────────────
 const funcConfig = {
