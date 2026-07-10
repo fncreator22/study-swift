@@ -135,7 +135,7 @@ function Dashboard() {
       </div>
 
       {/* Quick Access / Shortcuts Grid */}
-      <div className="mt-8">
+      <div className="mt-8 md:hidden">
         <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Quick Access</h3>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {quickLinks.map((ql) => (

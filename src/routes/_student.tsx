@@ -108,7 +108,7 @@ function StudentLayout() {
   }
 
   return (
-    <SidebarProvider open={!isExamMode}>
+    <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         {!isExamMode && (
           <>
