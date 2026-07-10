@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy } from "lucide-react";
 import { toast } from "sonner";
+import { TokenRequestModal } from "@/components/TokenRequestModal";
 
 export const Route = createFileRoute("/_student/courses/$courseId")({ component: CourseDetail });
 
@@ -33,7 +34,7 @@ function toEmbed(url: string) {
 
 function CourseDetail() {
   const { courseId } = Route.useParams();
-  const { user } = useAuth();
+  const { user, tokens, refreshProfile } = useAuth();
   const signUrl = useServerFn(getVideoSignedUrl);
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -47,6 +48,7 @@ function CourseDetail() {
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
   const purchasingRef = useRef(false);
 
   async function load() {
@@ -102,6 +104,13 @@ function CourseDetail() {
   async function purchase() {
     if (purchasingRef.current) return;
     if (!user || !course) return;
+    const tokenCost = Math.ceil(course.price / 10);
+
+    if (tokens < tokenCost) {
+      toast.error(`Insufficient tokens. This course requires ${tokenCost} tokens.`);
+      setPurchaseOpen(true);
+      return;
+    }
     
     purchasingRef.current = true;
     setPurchasing(true);
@@ -112,6 +121,7 @@ function CourseDetail() {
       } else {
         toast.success("Course unlocked successfully");
         setHasAccess(true);
+        refreshProfile();
       }
     } finally {
       purchasingRef.current = false;
@@ -249,6 +259,7 @@ function CourseDetail() {
           </div>
         </div>
       </div>
+      <TokenRequestModal open={purchaseOpen} onOpenChange={setPurchaseOpen} />
     </div>
   );
 }

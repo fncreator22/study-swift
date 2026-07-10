@@ -23,6 +23,7 @@ type TokenRequest = {
 function AdminTokens() {
   const [requests, setRequests] = useState<TokenRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -39,11 +40,14 @@ function AdminTokens() {
   useEffect(() => { load(); }, []);
 
   async function handleStatus(id: string, status: "approved" | "rejected") {
+    if (processingId) return;
+    setProcessingId(id);
     const { error } = await supabase
       .from("token_requests")
       .update({ status })
       .eq("id", id);
 
+    setProcessingId(null);
     if (error) toast.error(error.message);
     else {
       toast.success(`Request ${status}`);
@@ -107,10 +111,10 @@ function AdminTokens() {
                 <TableCell className="text-right">
                   {r.status === 'pending' && (
                     <div className="flex justify-end gap-2">
-                      <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" onClick={() => handleStatus(r.id, 'rejected')}>
+                      <Button size="icon" variant="outline" disabled={processingId !== null} className="h-8 w-8 text-destructive" onClick={() => handleStatus(r.id, 'rejected')}>
                         <X className="h-4 w-4" />
                       </Button>
-                      <Button size="icon" variant="outline" className="h-8 w-8 text-success" onClick={() => handleStatus(r.id, 'approved')}>
+                      <Button size="icon" variant="outline" disabled={processingId !== null} className="h-8 w-8 text-success" onClick={() => handleStatus(r.id, 'approved')}>
                         <Check className="h-4 w-4" />
                       </Button>
                     </div>
