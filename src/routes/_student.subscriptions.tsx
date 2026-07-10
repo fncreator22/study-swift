@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,7 @@ function SubscriptionsPage() {
   const [tokenPrice, setTokenPrice] = useState(10);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  const buyingRef = useRef<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -58,9 +59,15 @@ function SubscriptionsPage() {
   }, [user]);
 
   async function buy(planId: string) {
+    if (buyingRef.current) return;
+    buyingRef.current = planId;
     setBuying(planId);
+    
     const { data, error } = await supabase.rpc("purchase_subscription" as any, { _subscription_id: planId });
+    
+    buyingRef.current = null;
     setBuying(null);
+    
     if (error) return toast.error(error.message);
     toast.success("Subscription activated!");
     await refreshProfile();

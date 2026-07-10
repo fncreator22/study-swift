@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -34,12 +34,14 @@ function SupportPage() {
   const [anonName, setAnonName] = useState("");
   const [anonEmail, setAnonEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Active Chat State
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+  const sendingReplyRef = useRef(false);
 
   interface AnonCredential {
     id: string;
@@ -139,6 +141,7 @@ function SupportPage() {
 
   async function handleSubmitTicket(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!details.trim()) return toast.error("Please fill in complaint details.");
     
     let ticketEmail = user?.email || anonEmail;
@@ -147,116 +150,121 @@ function SupportPage() {
     if (!ticketEmail.trim()) return toast.error("Email address is required.");
     if (!ticketName.trim()) return toast.error("Full name is required.");
 
+    submittingRef.current = true;
     setSubmitting(true);
 
-    if (user) {
-      const payload = {
-        user_id: user.id,
-        email: ticketEmail,
-        title: category,
-        description: `Name: ${ticketName}\n\nDetails: ${details}`,
-        status: "active"
-      };
+    try {
+      if (user) {
+        const payload = {
+          user_id: user.id,
+          email: ticketEmail,
+          title: category,
+          description: `Name: ${ticketName}\n\nDetails: ${details}`,
+          status: "active"
+        };
 
-      const { data, error } = await supabase
-        .from("support_reports")
-        .insert(payload)
-        .select("id")
-        .single();
+        const { data, error } = await supabase
+          .from("support_reports")
+          .insert(payload)
+          .select("id")
+          .single();
 
-      setSubmitting(false);
-
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Complaint filed successfully.");
-        setDetails("");
-        loadReports();
-      }
-    } else {
-      // Anonymous submission via RPC
-      const { data, error } = await supabase.rpc("create_anonymous_report", {
-        p_email: ticketEmail,
-        p_title: category,
-        p_description: `Name: ${ticketName}\n\nDetails: ${details}`
-      });
-
-      setSubmitting(false);
-
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Complaint filed successfully.");
-        setDetails("");
-        if (data && data.length > 0) {
-          const ticket = data[0];
-          saveAnonCredential(ticket.id, ticket.anonymous_token);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Complaint filed successfully.");
+          setDetails("");
+          loadReports();
         }
-        loadReports();
+      } else {
+        // Anonymous submission via RPC
+        const { data, error } = await supabase.rpc("create_anonymous_report", {
+          p_email: ticketEmail,
+          p_title: category,
+          p_description: `Name: ${ticketName}\n\nDetails: ${details}`
+        });
+
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Complaint filed successfully.");
+          setDetails("");
+          if (data && data.length > 0) {
+            const ticket = data[0];
+            saveAnonCredential(ticket.id, ticket.anonymous_token);
+          }
+          loadReports();
+        }
       }
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   }
 
   async function handleSendReply(e: React.FormEvent) {
     e.preventDefault();
     if (!replyText.trim() || !selectedReport) return;
+    if (sendingReplyRef.current) return;
 
+    sendingReplyRef.current = true;
     setSendingReply(true);
 
-    if (user) {
-      const { error } = await supabase
-        .from("support_messages")
-        .insert({
-          report_id: selectedReport.id,
-          sender_id: user.id,
-          is_admin_sender: false,
-          message: replyText.trim()
-        });
-
-      setSendingReply(false);
-
-      if (error) {
-        toast.error(error.message);
-      } else {
-        setReplyText("");
-        // Immediate reload
-        const { data } = await supabase
+    try {
+      if (user) {
+        const { error } = await supabase
           .from("support_messages")
-          .select("*")
-          .eq("report_id", selectedReport.id)
-          .order("created_at", { ascending: true });
-        setMessages(data ?? []);
-      }
-    } else {
-      // Anonymous posting via RPC
-      const credentials = getAnonCredentials();
-      const matchingCred = credentials.find(c => c.id === selectedReport.id);
-      const token = matchingCred?.token || "";
+          .insert({
+            report_id: selectedReport.id,
+            sender_id: user.id,
+            is_admin_sender: false,
+            message: replyText.trim()
+          });
 
-      if (!token) {
-        setSendingReply(false);
-        return toast.error("Unauthorized: Access token missing.");
-      }
-
-      const { error } = await supabase.rpc("send_anonymous_report_message", {
-        ticket_id: selectedReport.id,
-        token: token,
-        message_text: replyText.trim()
-      });
-
-      setSendingReply(false);
-
-      if (error) {
-        toast.error(error.message);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          setReplyText("");
+          // Immediate reload
+          const { data } = await supabase
+            .from("support_messages")
+            .select("*")
+            .eq("report_id", selectedReport.id)
+            .order("created_at", { ascending: true });
+          setMessages(data ?? []);
+        }
       } else {
-        setReplyText("");
-        // Immediate reload via secure RPC
-        const { data } = await supabase.rpc("get_anonymous_report_messages", {
+        // Anonymous posting via RPC
+        const credentials = getAnonCredentials();
+        const matchingCred = credentials.find(c => c.id === selectedReport.id);
+        const token = matchingCred?.token || "";
+
+        if (!token) {
+          toast.error("Unauthorized: Access token missing.");
+          return;
+        }
+
+        const { error } = await supabase.rpc("send_anonymous_report_message", {
           ticket_id: selectedReport.id,
-          token: token
+          token: token,
+          message_text: replyText.trim()
         });
-        setMessages(data ?? []);
+
+        if (error) {
+          toast.error(error.message);
+        } else {
+          setReplyText("");
+          // Immediate reload via secure RPC
+          const { data } = await supabase.rpc("get_anonymous_report_messages", {
+            ticket_id: selectedReport.id,
+            token: token
+          });
+          setMessages(data ?? []);
+        }
       }
+    } finally {
+      sendingReplyRef.current = false;
+      setSendingReply(false);
     }
   }
 
@@ -297,18 +305,18 @@ function SupportPage() {
                   <>
                     <div className="space-y-2">
                       <Label>Your Full Name</Label>
-                      <Input placeholder="John Doe" value={anonName} onChange={e => setAnonName(e.target.value)} required />
+                      <Input placeholder="John Doe" value={anonName} onChange={e => setAnonName(e.target.value)} required disabled={submitting} />
                     </div>
                     <div className="space-y-2">
                       <Label>Your Email Address</Label>
-                      <Input type="email" placeholder="john@example.com" value={anonEmail} onChange={e => setAnonEmail(e.target.value)} required />
+                      <Input type="email" placeholder="john@example.com" value={anonEmail} onChange={e => setAnonEmail(e.target.value)} required disabled={submitting} />
                     </div>
                   </>
                 )}
 
                 <div className="space-y-2">
                   <Label>Inquiry Category</Label>
-                  <Select value={category} onValueChange={setCategory}>
+                  <Select value={category} onValueChange={setCategory} disabled={submitting}>
                     <SelectTrigger className="rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
@@ -328,6 +336,7 @@ function SupportPage() {
                     value={details} 
                     onChange={e => setDetails(e.target.value)} 
                     required 
+                    disabled={submitting}
                   />
                 </div>
 

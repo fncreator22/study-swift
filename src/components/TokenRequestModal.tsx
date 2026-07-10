@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,14 +22,17 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
   const [message, setMessage] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const inrValue = parseInt(amount || "0") * 10;
 
   async function handleSubmit() {
+    if (submittingRef.current) return;
     if (!user) return;
     if (!amount || parseInt(amount) <= 0) return toast.error("Please enter a valid amount");
     if (!screenshot) return toast.error("Please upload a payment screenshot");
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       // 1. Upload screenshot
@@ -59,6 +62,7 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
     } catch (error: any) {
       toast.error(error.message || "Failed to submit request");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -106,6 +110,7 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 50"
+                disabled={submitting}
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
                 ≈ ₹{inrValue}
@@ -122,6 +127,7 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
               placeholder="Any details about your payment..."
               className="resize-none"
               rows={2}
+              disabled={submitting}
             />
           </div>
 
@@ -133,6 +139,7 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
                 accept="image/*"
                 onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
                 className="cursor-pointer"
+                disabled={submitting}
               />
             </div>
           </div>

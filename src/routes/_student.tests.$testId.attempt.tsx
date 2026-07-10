@@ -39,9 +39,13 @@ function Attempt() {
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadingAttemptRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
+    if (loadingAttemptRef.current) return;
+    loadingAttemptRef.current = true;
+
     (async () => {
       try {
         const { data: t, error: tErr } = await supabase.from("tests").select("test_type,duration_min").eq("id", testId).maybeSingle();
