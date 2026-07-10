@@ -4,7 +4,6 @@
   "framework": null,
   "functions": {
     "api/index.js": {
-      "runtime": "nodejs20.x",
       "memory": 1024
     }
   },
@@ -14,8 +13,8 @@
       "destination": "/dist/client/assets/$1"
     },
     {
-      "source": "/:path*\\.:ext(js|css|ico|png|svg|woff|woff2|ttf|map|webmanifest)",
-      "destination": "/dist/client/:path*.:ext"
+      "source": "/:path*.(js|css|ico|png|svg|woff|woff2|ttf|map|webmanifest)",
+      "destination": "/dist/client/:path*"
     },
     {
       "source": "/(.*)",
