@@ -9,6 +9,11 @@
 
 The platform bridges the gap between content delivery and performance evaluation, providing a seamless end-to-end workflow from course consumption to rigorous exam execution. Built with a focus on scalability and sub-second performance, Examly enables organizations to deliver high-stakes testing at scale while maintaining deep analytical insights into student progress.
 
+### 🌐 Live Deployment
+The platform is live and deployed on Vercel at:
+👉 **[https://examy-six.vercel.app](https://examy-six.vercel.app)** *(Deployment Protection enabled)*
+👉 Preview URL: **[https://examy-98pxtfju9-sr2mahajangmailcoms-projects.vercel.app](https://examy-98pxtfju9-sr2mahajangmailcoms-projects.vercel.app)**
+
 ### Business Value
 *   **Operational Efficiency**: Automate the entire examination lifecycle from question banking to grading.
 *   **Monetization Ready**: Integrated tiered access system (Free/Paid/Premium) for course and test content.
@@ -31,6 +36,8 @@ The platform bridges the gap between content delivery and performance evaluation
 
 ### Token Wallet & Request System
 *   **Virtual Coin Economy**: Self-contained token wallet system enabling students to accumulate credit and acquire test attempts.
+*   **Token Pricing Rate**: The conversion rate is set to **`1 Token = 10 Rupees` (₹10)**.
+    *   *Example*: A mock exam priced by the administrator at ₹100 will cost exactly 10 tokens to unlock in the student wallet.
 *   **Request Pipeline**: Student-facing interface to request additional tokens directly from platform administrators.
 *   **Administrative Ledger**: Dedicated management suite for administrative adjustments (credit/debit adjustments) and transaction logging.
 *   **Global Rankings**: View-based leaderboard system calculating averages, attempt counts, and college-level performance.
@@ -146,3 +153,18 @@ Copyright © 2026. All Rights Reserved. This software is licensed under a Commer
 1.  **Branching**: All features must be developed on `feature/` branches.
 2.  **Linting**: Adherence to Prettier and ESLint configurations is mandatory.
 3.  **Type Safety**: No `any` types allowed; all database interactions must use generated Supabase types.
+
+---
+
+## ⚙️ Deployment Environment Variables
+
+To run the application, configure the following variables in Vercel's settings (**Settings -> Environment Variables**):
+
+| Variable Name | Value | Purpose |
+| :--- | :--- | :--- |
+| `SUPABASE_URL` | `https://your-project.supabase.co` | Server API connection |
+| `SUPABASE_PUBLISHABLE_KEY` | `your-supabase-publishable-key` | Client client auth |
+| `SUPABASE_SERVICE_ROLE_KEY` | `your-supabase-service-role-key` | Server-side admin queries |
+| `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Client API queries |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | `your-supabase-publishable-key` | Client authentication |
+

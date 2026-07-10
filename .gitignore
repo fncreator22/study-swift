@@ -32,3 +32,5 @@ supabase/
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*
