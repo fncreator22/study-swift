@@ -54,6 +54,11 @@ function Login() {
           <p className="mt-4 text-center text-sm text-muted-foreground">
             No account? <Link to="/signup" className="text-primary hover:underline">Create one</Link>
           </p>
+          <div className="mt-4 text-center border-t border-border/50 pt-4">
+            <Link to="/support" className="text-xs text-muted-foreground hover:text-primary hover:underline">
+              Having trouble logging in or blocked? Contact Support
+            </Link>
+          </div>
         </div>
       </div>
     </div>

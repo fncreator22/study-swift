@@ -11,8 +11,7 @@ The platform bridges the gap between content delivery and performance evaluation
 
 ### 🌐 Live Deployment
 The platform is live and deployed on Vercel at:
-👉 **[https://examy-six.vercel.app](https://examy-six.vercel.app)** *(Deployment Protection enabled)*
-👉 Preview URL: **[https://examy-98pxtfju9-sr2mahajangmailcoms-projects.vercel.app](https://examy-98pxtfju9-sr2mahajangmailcoms-projects.vercel.app)**
+👉 **[https://examy-hazel.vercel.app](https://examy-hazel.vercel.app)**
 
 ### Business Value
 *   **Operational Efficiency**: Automate the entire examination lifecycle from question banking to grading.
@@ -59,7 +58,7 @@ The platform utilizes a modern **Server-Side Rendering (SSR)** architecture, ens
 *   **Frontend Framework**: **React 19** with **TanStack Start**, utilizing cutting-edge file-based routing and SSR capabilities.
 *   **Service Layer**: **Supabase Integration**, providing real-time data synchronization and secure PostgreSQL interaction.
 *   **State Management**: Hybrid approach using **React Query** for server state and **TanStack Router** for navigation state.
-*   **Deployment Architecture**: Optimized for **Cloudflare Workers/Pages** via `wrangler`, ensuring global low-latency delivery.
+*   **Deployment Architecture**: Optimized for **Vercel Serverless Functions** via TanStack Start Build Output API, co-locating compiled assets and handler routes.
 
 ---
 
@@ -163,8 +162,24 @@ To run the application, configure the following variables in Vercel's settings (
 | Variable Name | Value | Purpose |
 | :--- | :--- | :--- |
 | `SUPABASE_URL` | `https://your-project.supabase.co` | Server API connection |
-| `SUPABASE_PUBLISHABLE_KEY` | `your-supabase-publishable-key` | Client client auth |
+| `SUPABASE_PUBLISHABLE_KEY` | `your-supabase-publishable-key` | Client auth |
 | `SUPABASE_SERVICE_ROLE_KEY` | `your-supabase-service-role-key` | Server-side admin queries |
 | `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Client API queries |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | `your-supabase-publishable-key` | Client authentication |
+
+## 🚀 How to Deploy on Vercel
+
+The project is built on the TanStack Start framework using the Build Output API, co-locating Serverless Functions. Deploy it using the following commands:
+
+```bash
+# 1. Pull current settings from Vercel
+npx vercel pull --yes --environment production --token <YOUR_TOKEN>
+
+# 2. Build production assets locally (outputs to .vercel/output)
+npx vercel build --prod --token <YOUR_TOKEN>
+
+# 3. Deploy prebuilt assets directly to production
+npx vercel deploy --prebuilt --prod --token <YOUR_TOKEN>
+```
+
 

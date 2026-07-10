@@ -25,29 +25,53 @@ const empty = {
 
 function CoursesAdmin() {
   const [courses, setCourses] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("none");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(empty);
   const [editing, setEditing] = useState<string | null>(null);
 
   async function load() {
-    const { data } = await supabase.from("courses").select("*").order("created_at", { ascending: false });
-    setCourses(data ?? []);
+    const [{ data: cs }, { data: subs }] = await Promise.all([
+      supabase.from("courses").select("*").order("created_at", { ascending: false }),
+      supabase.from("subscriptions" as any).select("id, name, course_ids"),
+    ]);
+    setCourses(cs ?? []);
+    setSubscriptions(subs ?? []);
   }
   useEffect(() => { load(); }, []);
 
   function startEdit(c: any) {
     setForm(c);
     setEditing(c.id);
+    const plan = subscriptions.find(s => s.course_ids?.includes(c.id));
+    setSelectedPlanId(plan ? plan.id : "none");
     setOpen(true);
   }
 
   async function save() {
     const payload = { ...form, price: Number(form.price) };
-    const { error } = editing 
-      ? await supabase.from("courses").update(payload).eq("id", editing)
-      : await supabase.from("courses").insert(payload);
+    const { data: courseResult, error } = editing 
+      ? await supabase.from("courses").update(payload).eq("id", editing).select("id").single()
+      : await supabase.from("courses").insert(payload).select("id").single();
     
     if (error) return toast.error(error.message);
+
+    // Update subscription course mapping array
+    const courseId = editing || courseResult.id;
+    const oldPlan = subscriptions.find(s => s.course_ids?.includes(courseId));
+    if (oldPlan && oldPlan.id !== selectedPlanId) {
+      const updatedIds = (oldPlan.course_ids || []).filter((id: string) => id !== courseId);
+      await supabase.from("subscriptions" as any).update({ course_ids: updatedIds }).eq("id", oldPlan.id);
+    }
+    if (selectedPlanId !== "none" && (!oldPlan || oldPlan.id !== selectedPlanId)) {
+      const newPlan = subscriptions.find(s => s.id === selectedPlanId);
+      if (newPlan) {
+        const updatedIds = [...(newPlan.course_ids || []), courseId];
+        await supabase.from("subscriptions" as any).update({ course_ids: updatedIds }).eq("id", selectedPlanId);
+      }
+    }
+
     toast.success(editing ? "Updated" : "Added"); 
     setOpen(false); 
     setForm(empty); 
@@ -67,7 +91,7 @@ function CoursesAdmin() {
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold">Courses</h1>
-        <Button onClick={() => { setForm(empty); setEditing(null); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Add course</Button>
+        <Button onClick={() => { setForm(empty); setEditing(null); setSelectedPlanId("none"); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Add course</Button>
       </div>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {courses.map((c) => (
@@ -129,6 +153,18 @@ function CoursesAdmin() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Access Subscription Plan</Label>
+              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (Individual Token purchase / Free)</SelectItem>
+                  {subscriptions.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2"><Label>Thumbnail URL</Label><Input value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-4">

@@ -37,6 +37,7 @@ function AdminSubs() {
   const [loading, setLoading] = useState(true);
   const [tokenPrice, setTokenPrice] = useState<number>(10);
   const [savingPrice, setSavingPrice] = useState(false);
+  const [priceInr, setPriceInr] = useState(0);
 
   async function load() {
     setLoading(true);
@@ -64,8 +65,17 @@ function AdminSubs() {
     toast.success("Token price updated");
   }
 
-  function openNew() { setEditing({ ...EMPTY }); setOpen(true); }
-  function openEdit(p: Plan) { setEditing({ ...p, test_ids: p.test_ids ?? [], course_ids: p.course_ids ?? [] }); setOpen(true); }
+  function openNew() { 
+    setEditing({ ...EMPTY }); 
+    setPriceInr(0); 
+    setOpen(true); 
+  }
+  
+  function openEdit(p: Plan) { 
+    setEditing({ ...p, test_ids: p.test_ids ?? [], course_ids: p.course_ids ?? [] }); 
+    setPriceInr(p.token_price * tokenPrice);
+    setOpen(true); 
+  }
 
   async function savePlan() {
     if (!editing) return;
@@ -127,21 +137,31 @@ function AdminSubs() {
           <div className="grid gap-4 md:grid-cols-2">
             {plans.map((p) => (
               <Card key={p.id}>
-                <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                   <div>
                     <CardTitle className="text-base">{p.name}</CardTitle>
-                    <CardDescription>{p.description || "—"}</CardDescription>
                   </div>
                   <Badge variant={p.is_active ? "success" : "secondary"}>{p.is_active ? "Active" : "Inactive"}</Badge>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div><b className="text-foreground">{p.token_price}</b> tokens · <b className="text-foreground">{p.duration_days}</b> days</div>
+                  {p.description ? (
+                    <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+                      {p.description.split(/•|\n/).map(x => x.trim()).filter(Boolean).map((pt, i) => (
+                        <li key={i}>{pt}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No description</p>
+                  )}
+                  <div className="text-sm text-muted-foreground space-y-1 pt-2">
+                    <div>
+                      <b className="text-foreground">₹{p.token_price * tokenPrice}</b> ({p.token_price} tokens) · <b className="text-foreground">{p.duration_days}</b> days
+                    </div>
                     <div>{p.test_ids?.length ?? 0} tests · {p.course_ids?.length ?? 0} courses</div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => openEdit(p)}><Pencil className="h-3 w-3 mr-1" /> Edit</Button>
-                    <Button variant="outline" size="sm" onClick={() => deletePlan(p.id!)} className="text-destructive"><Trash2 className="h-3 w-3 mr-1" /> Delete</Button>
+                    <Button variant="outline" size="sm" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5 mr-1" /> Edit</Button>
+                    <Button variant="outline" size="sm" onClick={() => deletePlan(p.id!)} className="text-destructive"><Trash2 className="h-3.5 w-3.5 mr-1" /> Delete</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -156,9 +176,34 @@ function AdminSubs() {
           {editing && (
             <div className="space-y-4">
               <div className="space-y-2"><Label>Name</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Description</Label><Textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Price (tokens)</Label><Input type="number" min={0} value={editing.token_price} onChange={(e) => setEditing({ ...editing, token_price: Number(e.target.value) })} /></div>
+              <div className="space-y-2"><Label>Description (separate lines or • for pointers)</Label><Textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>Price (₹)</Label>
+                  <Input 
+                    type="number" 
+                    min={0} 
+                    value={priceInr} 
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setPriceInr(val);
+                      setEditing({ ...editing, token_price: Math.ceil(val / tokenPrice) });
+                    }} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tokens (Auto-converted)</Label>
+                  <Input 
+                    type="number" 
+                    min={0} 
+                    value={editing.token_price} 
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setEditing({ ...editing, token_price: val });
+                      setPriceInr(val * tokenPrice);
+                    }} 
+                  />
+                </div>
                 <div className="space-y-2"><Label>Duration (days)</Label><Input type="number" min={1} value={editing.duration_days} onChange={(e) => setEditing({ ...editing, duration_days: Number(e.target.value) })} /></div>
               </div>
               <div className="flex items-center gap-2"><Switch checked={editing.is_active} onCheckedChange={(v) => setEditing({ ...editing, is_active: v })} /><Label>Active</Label></div>

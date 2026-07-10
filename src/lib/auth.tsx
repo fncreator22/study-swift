@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [tokens, setTokens] = useState(0);
 
   async function fetchProfile(uid: string) {
+    supabase.rpc("claim_anonymous_reports").then(() => {});
     const { data: prof } = await supabase.from("profiles").select("tokens, blocked").eq("id", uid).maybeSingle();
     if (prof) {
       setTokens(prof.tokens);

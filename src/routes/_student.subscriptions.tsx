@@ -33,19 +33,23 @@ function SubscriptionsPage() {
   const { user, tokens, refreshProfile } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [active, setActive] = useState<Membership | null>(null);
+  const [tokenPrice, setTokenPrice] = useState(10);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const [{ data: ps }, { data: ms }] = await Promise.all([
+    const [{ data: ps }, { data: ms }, { data: setting }] = await Promise.all([
       supabase.from("subscriptions" as any).select("*").eq("is_active", true).order("token_price"),
       user
         ? supabase.from("memberships" as any).select("*").eq("user_id", user.id).eq("status", "active").order("valid_until", { ascending: false }).limit(1).maybeSingle()
         : Promise.resolve({ data: null }),
+      supabase.from("settings" as any).select("value").eq("key", "token_price").maybeSingle(),
     ]);
     setPlans((ps as any) ?? []);
     setActive((ms as any) ?? null);
+    const v = (setting as any)?.value;
+    if (v && typeof v.inr === "number") setTokenPrice(v.inr);
     setLoading(false);
   }
 
@@ -75,63 +79,102 @@ function SubscriptionsPage() {
         <p className="text-muted-foreground mt-1">Unlock bundles of tests and courses by spending tokens.</p>
       </div>
 
-      {isActive && (
+      {isActive ? (
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader className="flex flex-row items-center gap-3 space-y-0">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground">
               <Crown className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle className="text-base">Active membership</CardTitle>
+              <CardTitle className="text-base font-bold">Active Premium Membership</CardTitle>
               <CardDescription>Valid until {activeUntil!.toLocaleDateString()}</CardDescription>
+            </div>
+          </CardHeader>
+        </Card>
+      ) : (
+        <Card className="border-border bg-muted/20">
+          <CardHeader className="flex flex-row items-center gap-3 space-y-0">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted text-muted-foreground border">
+              <Sparkles className="h-5 w-5 animate-pulse text-muted-foreground" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-foreground">Active Plan: Basic Tier (Free)</CardTitle>
+              <CardDescription>You have standard access. Any tests or courses marked as 'Free' can be launched without spending tokens. You can upgrade to a Premium Subscription below or purchase individual tests/courses using tokens.</CardDescription>
             </div>
           </CardHeader>
         </Card>
       )}
 
-      {plans.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground text-sm">
-            No subscription plans available yet.
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Free Plan Card */}
+        <Card className="relative flex flex-col border border-border bg-card/60">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="font-display text-xl">Basic Tier (Free)</CardTitle>
+              <Sparkles className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <CardDescription>Standard pay-as-you-go access for all registered users.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col justify-between gap-4">
+            <div className="flex items-baseline gap-1">
+              <span className="font-display text-3xl font-bold">₹0</span>
+              <span className="text-xs text-muted-foreground">/ lifetime</span>
+            </div>
+            <ul className="space-y-2 text-xs list-disc pl-4 flex-1 text-muted-foreground">
+              <li>Free access to all tests marked as 'Free'</li>
+              <li>Free access to all courses marked as 'Free'</li>
+              <li>Pay-as-you-go token access for Paid/Premium tests</li>
+              <li>Basic performance analytics & attempt history</li>
+            </ul>
+            <Button disabled variant="outline" className="w-full rounded-xl">
+              {isActive ? "Standard Access" : "Active"}
+            </Button>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {plans.map((p) => {
-            const canAfford = tokens >= p.token_price;
-            return (
-              <Card key={p.id} className="relative flex flex-col">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="font-display text-xl">{p.name}</CardTitle>
-                    <Sparkles className="h-4 w-4 text-primary" />
-                  </div>
-                  <CardDescription>{p.description || "Premium bundle"}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col gap-4">
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display text-3xl font-bold">{p.token_price}</span>
-                    <span className="text-xs text-muted-foreground">tokens</span>
-                  </div>
-                  <ul className="space-y-2 text-sm flex-1">
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> {p.duration_days} days access</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> {p.test_ids?.length ?? 0} tests included</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> {p.course_ids?.length ?? 0} courses included</li>
+
+        {plans.map((p) => {
+          const canAfford = tokens >= p.token_price;
+          const isPlanActive = active?.subscription_id === p.id && isActive;
+          return (
+            <Card key={p.id} className={`relative flex flex-col ${isPlanActive ? 'border-primary shadow-soft bg-card' : ''}`}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-display text-xl">{p.name}</CardTitle>
+                  <Crown className={`h-4 w-4 ${isPlanActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                </div>
+                {p.description ? (
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4 mt-2">
+                    {p.description.split(/•|\n/).map(x => x.trim()).filter(Boolean).map((pt, i) => (
+                      <li key={i}>{pt}</li>
+                    ))}
                   </ul>
-                  <Button
-                    disabled={!canAfford || buying === p.id}
-                    onClick={() => buy(p.id)}
-                    className="w-full rounded-xl"
-                  >
-                    <Coins className="mr-2 h-4 w-4" />
-                    {buying === p.id ? "Processing…" : canAfford ? "Subscribe" : "Insufficient tokens"}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                ) : (
+                  <CardDescription className="italic">Premium bundle</CardDescription>
+                )}
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col gap-4">
+                <div className="flex items-baseline gap-1">
+                  <span className="font-display text-3xl font-bold">₹{p.token_price * tokenPrice}</span>
+                  <span className="text-xs text-muted-foreground">({p.token_price} tokens)</span>
+                </div>
+                <ul className="space-y-2 text-xs flex-1 border-t pt-3">
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> {p.duration_days} days access</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> {p.test_ids?.length ?? 0} tests included</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-success" /> {p.course_ids?.length ?? 0} courses included</li>
+                </ul>
+                <Button
+                  disabled={isPlanActive || !canAfford || buying === p.id}
+                  onClick={() => buy(p.id)}
+                  className="w-full rounded-xl"
+                >
+                  <Coins className="mr-2 h-4 w-4" />
+                  {buying === p.id ? "Processing…" : isPlanActive ? "Current Plan" : canAfford ? "Subscribe" : "Insufficient tokens"}
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -46,7 +46,7 @@ copyDir(path.join(root, "ssr"), funcDir);
 // ─── 5. Write function config ─────────────────────────────────────────────────
 const funcConfig = {
   runtime: "nodejs20.x",
-  handler: "index.js",
+  handler: "server.js",
   launcherType: "Nodejs",
   shouldAddHelpers: true,
 };

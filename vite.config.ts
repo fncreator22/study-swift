@@ -49,6 +49,9 @@ export default defineConfig(async ({ command }) => {
         "@tanstack/query-core",
       ],
     },
+    ssr: {
+      noExternal: isVercel ? true : undefined,
+    },
     server: {
       host: "::",
       port: 8080,

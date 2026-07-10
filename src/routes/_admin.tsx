@@ -18,6 +18,7 @@ const items: { to: string; label: string; icon: typeof LayoutDashboard; exact?: 
   { to: "/admin/courses", label: "Courses", icon: PlayCircle },
   { to: "/admin/tokens", label: "Token Requests", icon: Coins },
   { to: "/admin/subscriptions", label: "Subscriptions", icon: Crown },
+  { to: "/admin/support", label: "Complaints", icon: MessageSquare },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

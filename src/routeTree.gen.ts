@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as StudentRouteImport } from './routes/_student'
@@ -29,6 +30,7 @@ import { Route as StudentCoursesCourseIdRouteImport } from './routes/_student.co
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin.admin.users'
 import { Route as AdminAdminTokensRouteImport } from './routes/_admin.admin.tokens'
 import { Route as AdminAdminTestsRouteImport } from './routes/_admin.admin.tests'
+import { Route as AdminAdminSupportRouteImport } from './routes/_admin.admin.support'
 import { Route as AdminAdminSubscriptionsRouteImport } from './routes/_admin.admin.subscriptions'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin.admin.settings'
 import { Route as AdminAdminReviewsRouteImport } from './routes/_admin.admin.reviews'
@@ -39,6 +41,11 @@ import { Route as AdminAdminVideosCourseIdRouteImport } from './routes/_admin.ad
 import { Route as AdminAdminQuestionsTestIdRouteImport } from './routes/_admin.admin.questions.$testId'
 import { Route as StudentTestsTestIdReviewAttemptIdRouteImport } from './routes/_student.tests.$testId.review.$attemptId'
 
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -137,6 +144,11 @@ const AdminAdminTestsRoute = AdminAdminTestsRouteImport.update({
   path: '/admin/tests',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminSupportRoute = AdminAdminSupportRouteImport.update({
+  id: '/admin/support',
+  path: '/admin/support',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAdminSubscriptionsRoute = AdminAdminSubscriptionsRouteImport.update({
   id: '/admin/subscriptions',
   path: '/admin/subscriptions',
@@ -191,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/support': typeof SupportRoute
   '/courses': typeof StudentCoursesRouteWithChildren
   '/dashboard': typeof StudentDashboardRoute
   '/history': typeof StudentHistoryRoute
@@ -204,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
+  '/admin/support': typeof AdminAdminSupportRoute
   '/admin/tests': typeof AdminAdminTestsRoute
   '/admin/tokens': typeof AdminAdminTokensRoute
   '/admin/users': typeof AdminAdminUsersRoute
@@ -220,6 +234,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/support': typeof SupportRoute
   '/courses': typeof StudentCoursesRouteWithChildren
   '/dashboard': typeof StudentDashboardRoute
   '/history': typeof StudentHistoryRoute
@@ -233,6 +248,7 @@ export interface FileRoutesByTo {
   '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
+  '/admin/support': typeof AdminAdminSupportRoute
   '/admin/tests': typeof AdminAdminTestsRoute
   '/admin/tokens': typeof AdminAdminTokensRoute
   '/admin/users': typeof AdminAdminUsersRoute
@@ -252,6 +268,7 @@ export interface FileRoutesById {
   '/_student': typeof StudentRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/support': typeof SupportRoute
   '/_student/courses': typeof StudentCoursesRouteWithChildren
   '/_student/dashboard': typeof StudentDashboardRoute
   '/_student/history': typeof StudentHistoryRoute
@@ -265,6 +282,7 @@ export interface FileRoutesById {
   '/_admin/admin/reviews': typeof AdminAdminReviewsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
   '/_admin/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
+  '/_admin/admin/support': typeof AdminAdminSupportRoute
   '/_admin/admin/tests': typeof AdminAdminTestsRoute
   '/_admin/admin/tokens': typeof AdminAdminTokensRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
@@ -283,6 +301,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/support'
     | '/courses'
     | '/dashboard'
     | '/history'
@@ -296,6 +315,7 @@ export interface FileRouteTypes {
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/subscriptions'
+    | '/admin/support'
     | '/admin/tests'
     | '/admin/tokens'
     | '/admin/users'
@@ -312,6 +332,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/support'
     | '/courses'
     | '/dashboard'
     | '/history'
@@ -325,6 +346,7 @@ export interface FileRouteTypes {
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/subscriptions'
+    | '/admin/support'
     | '/admin/tests'
     | '/admin/tokens'
     | '/admin/users'
@@ -343,6 +365,7 @@ export interface FileRouteTypes {
     | '/_student'
     | '/login'
     | '/signup'
+    | '/support'
     | '/_student/courses'
     | '/_student/dashboard'
     | '/_student/history'
@@ -356,6 +379,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/reviews'
     | '/_admin/admin/settings'
     | '/_admin/admin/subscriptions'
+    | '/_admin/admin/support'
     | '/_admin/admin/tests'
     | '/_admin/admin/tokens'
     | '/_admin/admin/users'
@@ -375,11 +399,19 @@ export interface RootRouteChildren {
   StudentRoute: typeof StudentRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  SupportRoute: typeof SupportRoute
   AdminLoginRoute: typeof AdminLoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -520,6 +552,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminTestsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/support': {
+      id: '/_admin/admin/support'
+      path: '/admin/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminAdminSupportRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/subscriptions': {
       id: '/_admin/admin/subscriptions'
       path: '/admin/subscriptions'
@@ -591,6 +630,7 @@ interface AdminRouteChildren {
   AdminAdminReviewsRoute: typeof AdminAdminReviewsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
   AdminAdminSubscriptionsRoute: typeof AdminAdminSubscriptionsRoute
+  AdminAdminSupportRoute: typeof AdminAdminSupportRoute
   AdminAdminTestsRoute: typeof AdminAdminTestsRoute
   AdminAdminTokensRoute: typeof AdminAdminTokensRoute
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
@@ -604,6 +644,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminReviewsRoute: AdminAdminReviewsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
   AdminAdminSubscriptionsRoute: AdminAdminSubscriptionsRoute,
+  AdminAdminSupportRoute: AdminAdminSupportRoute,
   AdminAdminTestsRoute: AdminAdminTestsRoute,
   AdminAdminTokensRoute: AdminAdminTokensRoute,
   AdminAdminUsersRoute: AdminAdminUsersRoute,
@@ -666,6 +707,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudentRoute: StudentRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  SupportRoute: SupportRoute,
   AdminLoginRoute: AdminLoginRoute,
 }
 export const routeTree = rootRouteImport

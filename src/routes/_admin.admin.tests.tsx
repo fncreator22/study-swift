@@ -26,6 +26,8 @@ const empty = {
 
 function TestsAdmin() {
   const [tests, setTests] = useState<any[]>([]);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("none");
   const [open, setOpen] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);
   const [form, setForm] = useState<any>(empty);
@@ -34,8 +36,12 @@ function TestsAdmin() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("tests").select("*").order("created_at", { ascending: false });
-    setTests(data ?? []);
+    const [{ data: ts }, { data: subs }] = await Promise.all([
+      supabase.from("tests").select("*").order("created_at", { ascending: false }),
+      supabase.from("subscriptions" as any).select("id, name, test_ids"),
+    ]);
+    setTests(ts ?? []);
+    setSubscriptions(subs ?? []);
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -43,10 +49,17 @@ function TestsAdmin() {
   function startNew(type: "mcq" | "written") {
     setForm({ ...empty, test_type: type });
     setEditing(null);
+    setSelectedPlanId("none");
     setChooserOpen(false);
     setOpen(true);
   }
-  function startEdit(t: any) { setForm({ ...empty, ...t }); setEditing(t.id); setOpen(true); }
+  function startEdit(t: any) { 
+    setForm({ ...empty, ...t }); 
+    setEditing(t.id); 
+    const plan = subscriptions.find(s => s.test_ids?.includes(t.id));
+    setSelectedPlanId(plan ? plan.id : "none");
+    setOpen(true); 
+  }
 
   async function save() {
     const payload = {
@@ -56,11 +69,31 @@ function TestsAdmin() {
       total_marks: Number(form.total_marks),
       word_limit: Number(form.word_limit) || 500,
     };
-    const { error } = editing
-      ? await supabase.from("tests").update(payload).eq("id", editing)
-      : await supabase.from("tests").insert(payload);
+    
+    const { data: testResult, error } = editing
+      ? await supabase.from("tests").update(payload).eq("id", editing).select("id").single()
+      : await supabase.from("tests").insert(payload).select("id").single();
+      
     if (error) return toast.error(error.message);
-    toast.success("Saved"); setOpen(false); load();
+    
+    // Update subscription test mapping array
+    const testId = editing || testResult.id;
+    const oldPlan = subscriptions.find(s => s.test_ids?.includes(testId));
+    if (oldPlan && oldPlan.id !== selectedPlanId) {
+      const updatedIds = (oldPlan.test_ids || []).filter((id: string) => id !== testId);
+      await supabase.from("subscriptions" as any).update({ test_ids: updatedIds }).eq("id", oldPlan.id);
+    }
+    if (selectedPlanId !== "none" && (!oldPlan || oldPlan.id !== selectedPlanId)) {
+      const newPlan = subscriptions.find(s => s.id === selectedPlanId);
+      if (newPlan) {
+        const updatedIds = [...(newPlan.test_ids || []), testId];
+        await supabase.from("subscriptions" as any).update({ test_ids: updatedIds }).eq("id", selectedPlanId);
+      }
+    }
+    
+    toast.success("Saved"); 
+    setOpen(false); 
+    load();
   }
 
   async function remove(id: string) {
@@ -162,6 +195,18 @@ function TestsAdmin() {
               </div>
               <div><Label>Price (₹)</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
               <div><Label>Duration (min)</Label><Input type="number" value={form.duration_min} onChange={(e) => setForm({ ...form, duration_min: e.target.value })} /></div>
+            </div>
+            <div>
+              <Label>Access Subscription Plan</Label>
+              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (Individual Token purchase / Free)</SelectItem>
+                  {subscriptions.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Total marks</Label><Input type="number" value={form.total_marks} onChange={(e) => setForm({ ...form, total_marks: e.target.value })} /></div>

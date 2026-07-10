@@ -173,6 +173,17 @@ function Landing() {
           <div className="absolute bottom-0 left-0 h-32 w-32 -translate-x-1/2 translate-y-1/2 rounded-full bg-white/10" />
         </div>
       </section>
+
+      <footer className="mt-24 border-t border-border/40 py-8 text-center text-xs text-muted-foreground">
+        <div className="container mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p>© 2026 Examly. All rights reserved.</p>
+          <div className="flex gap-4">
+            <Link to="/support" className="hover:text-primary hover:underline font-semibold">Help & Support</Link>
+            <span className="text-border">|</span>
+            <Link to="/login" className="hover:text-primary hover:underline font-semibold">Sign In / Register</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

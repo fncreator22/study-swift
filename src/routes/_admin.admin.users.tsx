@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { adminResetUserPassword } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_admin/admin/users")({ component: UsersAdmin });
 
@@ -27,12 +28,15 @@ function UsersAdmin() {
   const [attempts, setAttempts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
     if (!viewUser) return;
     setLoadingDetails(true);
+    setNewPassword("");
     Promise.all([
       supabase.from("purchases").select("id, created_at, tests(title), courses(title)").eq("user_id", viewUser.id),
       supabase.from("test_attempts").select("id, started_at, submitted_at, score, total, is_reviewed, tests(title)").eq("user_id", viewUser.id).order("started_at", { ascending: false }),
@@ -132,7 +136,7 @@ function UsersAdmin() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!viewUser} onOpenChange={(o) => !o && setViewUser(null)}>
+      <Dialog open={!!viewUser} onOpenChange={(o) => { if (!o) { setViewUser(null); setNewPassword(""); } }}>
         <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-6 rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-3">
@@ -148,10 +152,11 @@ function UsersAdmin() {
             <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground animate-pulse">Loading profile data...</div>
           ) : (
             <Tabs defaultValue="purchases" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-3 rounded-2xl bg-muted p-1">
+              <TabsList className="grid w-full grid-cols-4 rounded-2xl bg-muted p-1">
                 <TabsTrigger value="purchases" className="rounded-xl py-2 font-semibold">Purchased Items ({purchases.length})</TabsTrigger>
                 <TabsTrigger value="attempts" className="rounded-xl py-2 font-semibold">Attempts History ({attempts.length})</TabsTrigger>
                 <TabsTrigger value="transactions" className="rounded-xl py-2 font-semibold">Wallet Transactions ({transactions.length})</TabsTrigger>
+                <TabsTrigger value="actions" className="rounded-xl py-2 font-semibold">Actions</TabsTrigger>
               </TabsList>
 
               <div className="flex-1 min-h-0 mt-4 overflow-y-auto pr-1">
@@ -222,6 +227,46 @@ function UsersAdmin() {
                       ))}
                     </div>
                   )}
+                </TabsContent>
+
+                <TabsContent value="actions" className="h-full">
+                  <div className="space-y-4 max-w-sm py-4">
+                    <h4 className="font-display font-bold text-sm">Security Settings</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Update this student's account password. Passwords must be at least 6 characters long.
+                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-pass">New Password</Label>
+                      <Input 
+                        id="new-pass" 
+                        type="password" 
+                        placeholder="Enter new password..." 
+                        value={newPassword} 
+                        onChange={(e) => setNewPassword(e.target.value)} 
+                      />
+                    </div>
+                    <Button 
+                      disabled={resettingPassword || !newPassword} 
+                      onClick={async () => {
+                        if (newPassword.length < 6) return toast.error("Password must be at least 6 characters.");
+                        setResettingPassword(true);
+                        try {
+                          const res = await adminResetUserPassword({ targetUserId: viewUser.id, newPassword });
+                          if (res.success) {
+                            toast.success("User password has been successfully reset.");
+                            setNewPassword("");
+                          }
+                        } catch (err: any) {
+                          toast.error(err.message || "Failed to reset password.");
+                        } finally {
+                          setResettingPassword(false);
+                        }
+                      }}
+                      className="rounded-xl"
+                    >
+                      {resettingPassword ? "Updating..." : "Reset Password"}
+                    </Button>
+                  </div>
                 </TabsContent>
               </div>
             </Tabs>

@@ -5,7 +5,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, BookOpen, ShoppingBag, History, Trophy, PlayCircle, User, Settings, LogOut, GraduationCap, Coins, Plus, Crown } from "lucide-react";
+import { LayoutDashboard, BookOpen, CheckCircle, Clock, Trophy, Wallet, PlayCircle, Crown, Settings, User, MessageSquare, GraduationCap, Coins, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
 import { cn } from "@/lib/utils";
@@ -15,13 +15,14 @@ export const Route = createFileRoute("/_student")({ component: StudentLayout });
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tests", label: "All Tests", icon: BookOpen },
-  { to: "/purchased", label: "Purchased", icon: ShoppingBag },
-  { to: "/history", label: "History", icon: History },
+  { to: "/purchased", label: "Purchased", icon: CheckCircle },
+  { to: "/history", label: "History", icon: Clock },
   { to: "/rankings", label: "Rankings", icon: Trophy },
-  { to: "/wallet", label: "Wallet", icon: Coins },
+  { to: "/wallet", label: "Wallet", icon: Wallet },
   { to: "/courses", label: "Courses", icon: PlayCircle },
   { to: "/subscriptions", label: "Subscriptions", icon: Crown },
-  { to: "/profile", label: "Profile", icon: User },
+  { to: "/support", label: "Support", icon: MessageSquare },
+  { to: "/profile", label: "Profile", icon: Settings },
 ] as const;
 
 function StudentLayout() {
