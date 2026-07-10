@@ -6,6 +6,8 @@ import tailwindcss from "@tailwindcss/vite";
 
 // Standard production-ready Vite configuration for TanStack Start
 export default defineConfig(async ({ command }) => {
+  const isVercel = !!process.env.VERCEL;
+
   const plugins = [
     tailwindcss(),
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
@@ -23,7 +25,7 @@ export default defineConfig(async ({ command }) => {
   ];
 
   // Dynamically load Cloudflare plugin only for production build to optimize dev performance
-  if (command === "build" && !process.env.VERCEL) {
+  if (command === "build" && !isVercel) {
     try {
       const { cloudflare } = await import("@cloudflare/vite-plugin");
       plugins.push(cloudflare({ viteEnvironment: { name: "ssr" } }));
@@ -51,5 +53,18 @@ export default defineConfig(async ({ command }) => {
       host: "::",
       port: 8080,
     },
+    // When building for Vercel, output the server bundle into api/
+    // so the serverless function and all its imports are co-located
+    ...(isVercel && command === "build"
+      ? {
+          environments: {
+            ssr: {
+              build: {
+                outDir: "api",
+              },
+            },
+          },
+        }
+      : {}),
   };
 });

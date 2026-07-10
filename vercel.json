@@ -1,21 +1,14 @@
 {
   "buildCommand": "npm run build:vercel",
-  "outputDirectory": "dist",
+  "outputDirectory": "dist/client",
   "framework": null,
   "functions": {
     "api/index.js": {
-      "memory": 1024
+      "memory": 1024,
+      "includeFiles": "api/**"
     }
   },
   "rewrites": [
-    {
-      "source": "/assets/(.*)",
-      "destination": "/dist/client/assets/$1"
-    },
-    {
-      "source": "/:path*.(js|css|ico|png|svg|woff|woff2|ttf|map|webmanifest)",
-      "destination": "/dist/client/:path*"
-    },
     {
       "source": "/(.*)",
       "destination": "/api/index.js"

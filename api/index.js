@@ -1,11 +1,13 @@
-import { createServer } from 'node:http';
-import { Readable } from 'node:stream';
+// Vercel Node.js serverless function entry point
+// Bridges the TanStack Start Web Fetch API handler to Node.js HTTP
 
-// Dynamically import the Cloudflare Worker-style handler built by TanStack Start
 let handlerPromise;
+
 async function getHandler() {
   if (!handlerPromise) {
-    handlerPromise = import('../dist/server/index.js').then((m) => m.default ?? m);
+    // server.js is the TanStack Start SSR handler built by Vite (VERCEL=1)
+    // It exports a default object with a .fetch(request, env, ctx) method
+    handlerPromise = import('./server.js').then((m) => m.default ?? m);
   }
   return handlerPromise;
 }
@@ -76,7 +78,7 @@ export default async function handler(req, res) {
     const workerHandler = await getHandler();
     const webRequest = await nodeRequestToWebRequest(req);
 
-    // The Cloudflare Worker handler signature: fetch(request, env, ctx)
+    // Call the TanStack Start fetch handler
     const webResponse = await workerHandler.fetch(webRequest, process.env, {
       waitUntil: () => {},
       passThroughOnException: () => {},
