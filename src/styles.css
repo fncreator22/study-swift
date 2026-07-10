@@ -129,8 +129,12 @@
 
 @layer utilities {
   .responsive-table-container {
-    @apply w-full overflow-x-auto scrollbar-none;
+    @apply w-full overflow-x-auto;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .responsive-table-container::-webkit-scrollbar {
+    display: none;
   }
 
   .touch-target {

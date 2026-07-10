@@ -15,13 +15,22 @@ function Rankings() {
     <div className="mx-auto max-w-4xl">
       <h1 className="font-display text-3xl font-bold">Rankings</h1>
       <p className="mt-1 text-muted-foreground">Top performers across all tests.</p>
-      <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card">
-        <table className="w-full text-sm">
+      <div className="mt-8 responsive-table-container rounded-2xl border border-border bg-card">
+        <table className="w-full min-w-[480px] text-sm">
           <thead className="bg-muted text-left text-xs uppercase tracking-wider text-muted-foreground">
-            <tr><th className="p-4">Rank</th><th className="p-4">Student</th><th className="p-4">College</th><th className="p-4">Score</th><th className="p-4">Tests</th><th className="p-4">Avg %</th></tr>
+            <tr>
+              <th className="p-4">Rank</th>
+              <th className="p-4">Student</th>
+              <th className="p-4 hidden sm:table-cell">College</th>
+              <th className="p-4">Score</th>
+              <th className="p-4 hidden xs:table-cell">Tests</th>
+              <th className="p-4">Avg %</th>
+            </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No rankings yet.</td></tr>}
+            {rows.length === 0 && (
+              <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No rankings yet.</td></tr>
+            )}
             {rows.map((r, i) => (
               <tr key={r.user_id} className="border-t border-border">
                 <td className="p-4">
@@ -29,10 +38,10 @@ function Rankings() {
                     {i < 3 ? <Trophy className="h-3 w-3" /> : i + 1}
                   </span>
                 </td>
-                <td className="p-4 font-medium">{r.full_name || "Student"}</td>
-                <td className="p-4 text-muted-foreground">{r.college || "—"}</td>
+                <td className="p-4 font-medium max-w-[120px] truncate">{r.full_name || "Student"}</td>
+                <td className="p-4 text-muted-foreground hidden sm:table-cell max-w-[100px] truncate">{r.college || "—"}</td>
                 <td className="p-4 font-semibold">{r.total_score}</td>
-                <td className="p-4">{r.attempts_count}</td>
+                <td className="p-4 hidden xs:table-cell">{r.attempts_count}</td>
                 <td className="p-4">{r.avg_percentage}%</td>
               </tr>
             ))}

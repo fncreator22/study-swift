@@ -60,7 +60,7 @@ function UsersAdmin() {
     <div className="mx-auto max-w-6xl">
       <h1 className="font-display text-3xl font-bold">Users</h1>
       <div className="mt-8 responsive-table-container rounded-2xl border border-border bg-card">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[600px] text-sm">
           <thead className="bg-muted/50 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="px-6 py-4">Name</th>

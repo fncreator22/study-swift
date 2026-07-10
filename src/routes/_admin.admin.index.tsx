@@ -267,7 +267,7 @@ function AdminHome() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
+        <div className="rounded-3xl border border-border bg-card p-4 md:p-6 shadow-soft overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
@@ -275,7 +275,7 @@ function AdminHome() {
             </div>
             <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase">{filter} view</span>
           </div>
-          <div className="h-[240px] w-full">
+          <div className="h-[200px] md:h-[240px] w-full">
             {loading ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground animate-pulse">Loading growth chart...</div>
             ) : (
@@ -301,7 +301,7 @@ function AdminHome() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
+        <div className="rounded-3xl border border-border bg-card p-4 md:p-6 shadow-soft overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-orange-500" />
@@ -309,7 +309,7 @@ function AdminHome() {
             </div>
             <span className="text-[10px] font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full uppercase">{filter} view</span>
           </div>
-          <div className="h-[240px] w-full">
+          <div className="h-[200px] md:h-[240px] w-full">
             {loading ? (
               <div className="flex h-full items-center justify-center text-sm text-muted-foreground animate-pulse">Loading submissions chart...</div>
             ) : (

@@ -54,14 +54,13 @@ function AdminLayout() {
   }
   if (!user || !isAdmin) return null;
 
-
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <Sidebar collapsible="icon">
           <SidebarHeader>
             <Link to="/admin" className="flex items-center gap-2 px-2 py-2 font-display text-base font-bold">
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-foreground text-background"><Lock className="h-4 w-4" /></span>
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-foreground text-background shrink-0"><Lock className="h-4 w-4" /></span>
               <span className="group-data-[collapsible=icon]:hidden">Admin</span>
             </Link>
           </SidebarHeader>
@@ -83,12 +82,34 @@ function AdminLayout() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 rounded-lg text-muted-foreground hover:text-destructive group-data-[collapsible=icon]:justify-center"
+              onClick={() => signOut()}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="group-data-[collapsible=icon]:hidden">Sign out</span>
+            </Button>
+          </SidebarFooter>
         </Sidebar>
-        <div className="flex flex-1 flex-col">
-          <header className="flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur">
+
+        <div className="flex flex-1 flex-col min-w-0">
+          <header className="flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur shrink-0">
+            {/* Sidebar toggle — always visible including mobile */}
             <SidebarTrigger />
+            {/* Mobile brand label */}
+            <Link to="/admin" className="flex items-center gap-2 font-display text-sm font-bold md:hidden">
+              <span className="grid h-6 w-6 place-items-center rounded-lg bg-foreground text-background shrink-0">
+                <Lock className="h-3 w-3" />
+              </span>
+              Admin Panel
+            </Link>
           </header>
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-10"><Outlet /></main>
+          <main className="flex-1 px-4 py-6 md:px-8 md:py-10 overflow-x-hidden">
+            <Outlet />
+          </main>
         </div>
       </div>
     </SidebarProvider>

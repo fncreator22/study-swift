@@ -45,14 +45,14 @@ function TestsList() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold">All tests</h1>
           <p className="mt-1 text-muted-foreground">Browse MCQ and written tests across all tiers.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Select value={tier} onValueChange={setTier}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full min-[480px]:w-32"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
               <SelectItem value="free">Free</SelectItem>
@@ -61,12 +61,12 @@ function TestsList() {
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-full min-[480px]:w-44"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="new">Newest</SelectItem>
               <SelectItem value="old">Oldest</SelectItem>
-              <SelectItem value="price_asc">Price: low to high</SelectItem>
-              <SelectItem value="price_desc">Price: high to low</SelectItem>
+              <SelectItem value="price_asc">Price ↑</SelectItem>
+              <SelectItem value="price_desc">Price ↓</SelectItem>
             </SelectContent>
           </Select>
         </div>
