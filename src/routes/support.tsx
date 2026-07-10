@@ -41,18 +41,32 @@ function SupportPage() {
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
 
-  // Load ticket IDs from localStorage for anonymous users
-  function getAnonTicketIds(): string[] {
+  interface AnonCredential {
+    id: string;
+    token: string;
+  }
+
+  // Load ticket credentials from localStorage for anonymous users
+  function getAnonCredentials(): AnonCredential[] {
     try {
-      return JSON.parse(localStorage.getItem("anonymous_tickets") || "[]");
+      const raw = localStorage.getItem("anonymous_tickets");
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item: any) => {
+        if (typeof item === "string") {
+          return { id: item, token: "" }; // Fallback format
+        }
+        return { id: item.id || "", token: item.token || "" };
+      });
     } catch {
       return [];
     }
   }
 
-  function saveAnonTicketId(id: string) {
-    const current = getAnonTicketIds();
-    localStorage.setItem("anonymous_tickets", JSON.stringify([...current, id]));
+  function saveAnonCredential(id: string, token: string) {
+    const current = getAnonCredentials();
+    localStorage.setItem("anonymous_tickets", JSON.stringify([...current, { id, token }]));
   }
 
   async function loadReports() {
@@ -65,14 +79,17 @@ function SupportPage() {
         .order("created_at", { ascending: false });
       setReports(data ?? []);
     } else {
-      const ids = getAnonTicketIds();
-      if (ids.length > 0) {
-        const { data } = await supabase
-          .from("support_reports")
-          .select("*")
-          .in("id", ids)
-          .order("created_at", { ascending: false });
-        setReports(data ?? []);
+      const credentials = getAnonCredentials().filter(c => c.id && c.token);
+      if (credentials.length > 0) {
+        const { data, error } = await supabase.rpc("get_anonymous_reports_bulk", {
+          creds: credentials
+        });
+        if (error) {
+          toast.error(error.message);
+          setReports([]);
+        } else {
+          setReports(data ?? []);
+        }
       } else {
         setReports([]);
       }
@@ -89,18 +106,36 @@ function SupportPage() {
     if (!selectedReport) return;
 
     async function loadMessages() {
-      const { data } = await supabase
-        .from("support_messages")
-        .select("*")
-        .eq("report_id", selectedReport.id)
-        .order("created_at", { ascending: true });
-      setMessages(data ?? []);
+      if (user) {
+        const { data } = await supabase
+          .from("support_messages")
+          .select("*")
+          .eq("report_id", selectedReport.id)
+          .order("created_at", { ascending: true });
+        setMessages(data ?? []);
+      } else {
+        const credentials = getAnonCredentials();
+        const matchingCred = credentials.find(c => c.id === selectedReport.id);
+        const token = matchingCred?.token || "";
+        
+        if (token) {
+          const { data, error } = await supabase.rpc("get_anonymous_report_messages", {
+            ticket_id: selectedReport.id,
+            token: token
+          });
+          if (!error) {
+            setMessages(data ?? []);
+          }
+        } else {
+          setMessages([]);
+        }
+      }
     }
 
     loadMessages();
     const interval = setInterval(loadMessages, 4000);
     return () => clearInterval(interval);
-  }, [selectedReport]);
+  }, [selectedReport, user]);
 
   async function handleSubmitTicket(e: React.FormEvent) {
     e.preventDefault();
@@ -113,31 +148,52 @@ function SupportPage() {
     if (!ticketName.trim()) return toast.error("Full name is required.");
 
     setSubmitting(true);
-    const payload = {
-      user_id: user?.id || null,
-      email: ticketEmail,
-      title: category,
-      description: `Name: ${ticketName}\n\nDetails: ${details}`,
-      status: "active"
-    };
 
-    const { data, error } = await supabase
-      .from("support_reports")
-      .insert(payload)
-      .select("id")
-      .single();
+    if (user) {
+      const payload = {
+        user_id: user.id,
+        email: ticketEmail,
+        title: category,
+        description: `Name: ${ticketName}\n\nDetails: ${details}`,
+        status: "active"
+      };
 
-    setSubmitting(false);
+      const { data, error } = await supabase
+        .from("support_reports")
+        .insert(payload)
+        .select("id")
+        .single();
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Complaint filed successfully.");
-      setDetails("");
-      if (!user) {
-        saveAnonTicketId(data.id);
+      setSubmitting(false);
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Complaint filed successfully.");
+        setDetails("");
+        loadReports();
       }
-      loadReports();
+    } else {
+      // Anonymous submission via RPC
+      const { data, error } = await supabase.rpc("create_anonymous_report", {
+        p_email: ticketEmail,
+        p_title: category,
+        p_description: `Name: ${ticketName}\n\nDetails: ${details}`
+      });
+
+      setSubmitting(false);
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Complaint filed successfully.");
+        setDetails("");
+        if (data && data.length > 0) {
+          const ticket = data[0];
+          saveAnonCredential(ticket.id, ticket.anonymous_token);
+        }
+        loadReports();
+      }
     }
   }
 
@@ -146,28 +202,61 @@ function SupportPage() {
     if (!replyText.trim() || !selectedReport) return;
 
     setSendingReply(true);
-    const { error } = await supabase
-      .from("support_messages")
-      .insert({
-        report_id: selectedReport.id,
-        sender_id: user?.id || null,
-        is_admin_sender: false,
-        message: replyText.trim()
+
+    if (user) {
+      const { error } = await supabase
+        .from("support_messages")
+        .insert({
+          report_id: selectedReport.id,
+          sender_id: user.id,
+          is_admin_sender: false,
+          message: replyText.trim()
+        });
+
+      setSendingReply(false);
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        setReplyText("");
+        // Immediate reload
+        const { data } = await supabase
+          .from("support_messages")
+          .select("*")
+          .eq("report_id", selectedReport.id)
+          .order("created_at", { ascending: true });
+        setMessages(data ?? []);
+      }
+    } else {
+      // Anonymous posting via RPC
+      const credentials = getAnonCredentials();
+      const matchingCred = credentials.find(c => c.id === selectedReport.id);
+      const token = matchingCred?.token || "";
+
+      if (!token) {
+        setSendingReply(false);
+        return toast.error("Unauthorized: Access token missing.");
+      }
+
+      const { error } = await supabase.rpc("send_anonymous_report_message", {
+        ticket_id: selectedReport.id,
+        token: token,
+        message_text: replyText.trim()
       });
 
-    setSendingReply(false);
+      setSendingReply(false);
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setReplyText("");
-      // Immediate reload
-      const { data } = await supabase
-        .from("support_messages")
-        .select("*")
-        .eq("report_id", selectedReport.id)
-        .order("created_at", { ascending: true });
-      setMessages(data ?? []);
+      if (error) {
+        toast.error(error.message);
+      } else {
+        setReplyText("");
+        // Immediate reload via secure RPC
+        const { data } = await supabase.rpc("get_anonymous_report_messages", {
+          ticket_id: selectedReport.id,
+          token: token
+        });
+        setMessages(data ?? []);
+      }
     }
   }
 
