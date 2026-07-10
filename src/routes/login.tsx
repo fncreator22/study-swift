@@ -12,12 +12,20 @@ export const Route = createFileRoute("/login")({ component: Login });
 
 function Login() {
   const nav = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { if (user) nav({ to: "/dashboard" }); }, [user, nav]);
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (isAdmin) {
+        nav({ to: "/admin" });
+      } else {
+        nav({ to: "/dashboard" });
+      }
+    }
+  }, [user, isAdmin, authLoading, nav]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,7 +34,6 @@ function Login() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Welcome back");
-    nav({ to: "/dashboard" });
   }
 
   return (

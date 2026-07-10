@@ -25,15 +25,21 @@ const items = [
 ] as const;
 
 function StudentLayout() {
-  const { user, loading, signOut, tokens, isBlocked } = useAuth();
+  const { user, loading, signOut, tokens, isBlocked, isAdmin } = useAuth();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const isExamMode = path.includes("/attempt");
   const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) nav({ to: "/login" });
-  }, [loading, user, nav]);
+    if (!loading) {
+      if (!user) {
+        nav({ to: "/login" });
+      } else if (isAdmin) {
+        nav({ to: "/admin" });
+      }
+    }
+  }, [loading, user, isAdmin, nav]);
 
   if (loading || !user) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;
