@@ -50,24 +50,33 @@ function StudentLayout() {
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState<{ fullName: string; tier: string } | null>(null);
+  const [hasMembership, setHasMembership] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (user) {
-      supabase
-        .from("profiles")
-        .select("full_name, membership_status")
-        .eq("id", user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
-            setProfile({
-              fullName: data.full_name || "",
-              tier: data.membership_status || "free",
-            });
-          }
-        });
+      Promise.all([
+        supabase
+          .from("profiles")
+          .select("full_name, membership_status")
+          .eq("id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("memberships")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1)
+      ]).then(([{ data: profData }, { data: memData }]) => {
+        if (profData) {
+          setProfile({
+            fullName: profData.full_name || "",
+            tier: profData.membership_status || "free",
+          });
+        }
+        const activeMem = memData && memData.length > 0;
+        setHasMembership(activeMem);
+      });
     }
-  }, [user]);
+  }, [user, path]);
 
   useEffect(() => {
     if (!loading) {
@@ -75,9 +84,11 @@ function StudentLayout() {
         nav({ to: "/login" });
       } else if (isAdmin) {
         nav({ to: "/admin" });
+      } else if (hasMembership === false && path !== "/subscriptions" && !isExamMode) {
+        nav({ to: "/subscriptions" });
       }
     }
-  }, [loading, user, isAdmin, nav]);
+  }, [loading, user, isAdmin, hasMembership, path, isExamMode, nav]);
 
   if (loading || !user) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;

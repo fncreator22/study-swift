@@ -35,7 +35,7 @@ function Signup() {
     const { error } = await supabase.auth.signUp({
       email, password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
         data: { full_name: name, college },
       },
     });
