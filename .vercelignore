@@ -13,4 +13,4 @@ node_modules/
 !.env.example
 
 # Supabase (local migration files, credentials)
-supabase/
+/supabase/
