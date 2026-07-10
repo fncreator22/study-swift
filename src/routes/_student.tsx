@@ -25,7 +25,7 @@ const items = [
 ] as const;
 
 function StudentLayout() {
-  const { user, loading, signOut, tokens } = useAuth();
+  const { user, loading, signOut, tokens, isBlocked } = useAuth();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const isExamMode = path.includes("/attempt");
@@ -37,6 +37,30 @@ function StudentLayout() {
 
   if (loading || !user) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;
+  }
+
+  if (isBlocked) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background px-4">
+        <div className="w-full max-w-sm rounded-2xl border border-destructive/20 bg-card p-8 shadow-card text-center">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-destructive/10 text-destructive mb-4">
+            <User className="h-6 w-6" />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-foreground">Account Suspended</h1>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            Your Examly account has been suspended by an administrator. Please contact support for assistance.
+          </p>
+          <div className="mt-6 flex flex-col gap-2">
+            <a href="mailto:support@examly.com" className="w-full">
+              <Button className="w-full">Contact Support</Button>
+            </a>
+            <Button variant="outline" className="w-full" onClick={() => signOut()}>
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

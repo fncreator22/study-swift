@@ -7,13 +7,14 @@ type AuthCtx = {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  isBlocked: boolean;
   tokens: number;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx>({
-  user: null, session: null, loading: true, isAdmin: false, tokens: 0,
+  user: null, session: null, loading: true, isAdmin: false, isBlocked: false, tokens: 0,
   signOut: async () => {}, refreshProfile: async () => {},
 });
 
@@ -21,11 +22,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [tokens, setTokens] = useState(0);
 
   async function fetchProfile(uid: string) {
-    const { data: prof } = await supabase.from("profiles").select("tokens").eq("id", uid).maybeSingle();
-    if (prof) setTokens(prof.tokens);
+    const { data: prof } = await supabase.from("profiles").select("tokens, blocked").eq("id", uid).maybeSingle();
+    if (prof) {
+      setTokens(prof.tokens);
+      setIsBlocked(prof.blocked);
+    }
 
     const { data: role } = await supabase
       .from("user_roles")
@@ -43,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchProfile(s.user.id);
       } else {
         setIsAdmin(false);
+        setIsBlocked(false);
         setTokens(0);
       }
     });
@@ -79,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         loading,
         isAdmin,
+        isBlocked,
         tokens,
         signOut: async () => { await supabase.auth.signOut(); },
         refreshProfile: async () => { if (session?.user) await fetchProfile(session.user.id); },
