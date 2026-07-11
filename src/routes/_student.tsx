@@ -79,6 +79,22 @@ function StudentLayout() {
   }, [user, path]);
 
   useEffect(() => {
+    if (!user) return;
+    let localTime = 0;
+    
+    supabase.from("profiles").select("total_time_spent").eq("id", user.id).maybeSingle().then(({ data }) => {
+      localTime = data?.total_time_spent ?? 0;
+    });
+
+    const interval = setInterval(async () => {
+      localTime += 1;
+      await supabase.from("profiles").update({ total_time_spent: localTime }).eq("id", user.id);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
+  useEffect(() => {
     if (!loading) {
       if (!user) {
         nav({ to: "/login" });

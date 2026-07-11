@@ -172,7 +172,13 @@ function UsersAdmin() {
                 <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-bold text-destructive">Blocked</span>
               )}
             </DialogTitle>
-            <p className="text-xs text-muted-foreground">College: {viewUser?.college || "—"} | Balance: {viewUser?.tokens ?? 0} Tokens</p>
+            <div className="text-xs text-muted-foreground mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3 bg-muted/30 rounded-xl p-3 border border-border/50">
+              <div><strong>College:</strong> {viewUser?.college || "—"}</div>
+              <div><strong>Tokens Balance:</strong> {viewUser?.tokens ?? 0} Tokens</div>
+              <div><strong>Location:</strong> {[viewUser?.address, viewUser?.state, viewUser?.country].filter(Boolean).join(", ") || "—"}</div>
+              <div><strong>Subscription:</strong> {viewUser?.membership_status === "premium" ? "Premium" : "Basic Tier (Free)"}</div>
+              <div><strong>Time spent:</strong> {viewUser?.total_time_spent ? `${Math.floor(viewUser.total_time_spent / 60)}h ${viewUser.total_time_spent % 60}m` : "0 mins"}</div>
+            </div>
           </DialogHeader>
 
           {loadingDetails ? (

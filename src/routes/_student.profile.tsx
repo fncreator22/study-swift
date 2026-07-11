@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { LogOut, ShieldAlert, User, Key, BarChart3, Coins, CreditCard } from "lucide-react";
+import { LogOut, ShieldAlert, User, Key, BarChart3, Coins, CreditCard, Clock } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -19,6 +19,11 @@ function Profile() {
   const nav = useNavigate();
   const [name, setName] = useState("");
   const [college, setCollege] = useState("");
+  const [country, setCountry] = useState("India");
+  const [stateName, setStateName] = useState("Delhi");
+  const [address, setAddress] = useState("");
+  const [timeSpent, setTimeSpent] = useState(0);
+  const [activeSub, setActiveSub] = useState("Basic Tier");
   const [pwd, setPwd] = useState("");
   const [stats, setStats] = useState({ attempts: 0, purchases: 0, score: 0, avg: 0 });
   const [loading, setLoading] = useState(false);
@@ -26,10 +31,22 @@ function Profile() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-      setName(p?.full_name ?? ""); setCollege(p?.college ?? "");
-      const { data: r } = await supabase.from("rankings_view").select("*").eq("user_id", user.id).maybeSingle();
-      const { count: pc } = await supabase.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+      const [{ data: p }, { data: r }, { count: pc }, { data: mem }] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        supabase.from("rankings_view").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        supabase.from("memberships" as any).select("*, subscriptions(*)").eq("user_id", user.id).eq("status", "active").order("valid_until", { ascending: false }).limit(1).maybeSingle()
+      ]);
+      setName(p?.full_name ?? ""); 
+      setCollege(p?.college ?? "");
+      setCountry(p?.country ?? "India");
+      setStateName(p?.state ?? "Delhi");
+      setAddress(p?.address ?? "");
+      setTimeSpent(p?.total_time_spent ?? 0);
+      
+      const isSubActive = mem && new Date(mem.valid_until) > new Date();
+      setActiveSub(isSubActive ? ((mem as any).subscriptions?.name || mem.plan || "Premium Tier") : "Basic Tier (Free)");
+
       setStats({
         attempts: r?.attempts_count ?? 0,
         purchases: pc ?? 0,
@@ -42,7 +59,13 @@ function Profile() {
   async function save() {
     if (!user) return;
     setLoading(true);
-    const { error } = await supabase.from("profiles").update({ full_name: name, college }).eq("id", user.id);
+    const { error } = await supabase.from("profiles").update({ 
+      full_name: name, 
+      college,
+      country,
+      state: stateName,
+      address
+    }).eq("id", user.id);
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Profile updated");
@@ -72,6 +95,13 @@ function Profile() {
     toast.success("Logged out");
     nav({ to: "/" });
   }
+
+  const formatTimeSpent = (mins: number) => {
+    if (mins < 60) return `${mins} mins`;
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return `${hrs}h ${rem}m`;
+  };
 
   return (
     <div className="mx-auto max-w-4xl pb-20">
@@ -106,6 +136,11 @@ function Profile() {
             <div className="space-y-2"><Label>Email address</Label><Input value={user?.email ?? ""} disabled className="bg-muted/50" /></div>
             <div className="space-y-2"><Label>Full name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your Name" /></div>
             <div className="space-y-2"><Label>College / University</Label><Input value={college} onChange={(e) => setCollege(e.target.value)} placeholder="University Name" /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Country</Label><Input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Country" /></div>
+              <div className="space-y-2"><Label>State</Label><Input value={stateName} onChange={(e) => setStateName(e.target.value)} placeholder="State" /></div>
+            </div>
+            <div className="space-y-2"><Label>Address</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="City / address" /></div>
             <Button onClick={save} disabled={loading} className="mt-2 w-full rounded-xl">{loading ? "Saving..." : "Save profile"}</Button>
           </div>
         </div>
@@ -133,10 +168,21 @@ function Profile() {
                   <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><CreditCard className="h-5 w-5" /></div>
                   <div>
                     <p className="text-sm font-medium">Account Status</p>
-                    <p className="text-xs text-muted-foreground">Membership level</p>
+                    <p className="text-xs text-muted-foreground">Active Subscription Plan</p>
                   </div>
                 </div>
-                <p className="text-sm font-bold uppercase tracking-wider text-primary">Standard</p>
+                <p className="text-sm font-bold uppercase tracking-wider text-primary truncate max-w-[150px]">{activeSub}</p>
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl bg-muted/50 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><Clock className="h-5 w-5" /></div>
+                  <div>
+                    <p className="text-sm font-medium">Time on System</p>
+                    <p className="text-xs text-muted-foreground">Total logged study time</p>
+                  </div>
+                </div>
+                <p className="text-sm font-bold text-foreground font-mono">{formatTimeSpent(timeSpent)}</p>
               </div>
             </div>
           </div>
