@@ -9,7 +9,7 @@ import {
 
 export const Route = createFileRoute("/_admin/admin/")({ component: AdminHome });
 
-type TimeFilter = 'live' | 'weekly' | 'days' | 'six_months' | 'yearly' | 'five_years' | 'all time';
+type TimeFilter = 'live' | 'one_day' | 'weekly' | 'days' | 'six_months' | 'yearly' | 'five_years' | 'all time';
 
 function AdminHome() {
   const [s, setS] = useState({ users: 0, tests: 0, courses: 0, reviews: 0 });
@@ -42,11 +42,12 @@ function AdminHome() {
   }, []);
 
   const filters: { value: TimeFilter; label: string }[] = [
-    { value: "live", label: "1 Day" },
-    { value: "weekly", label: "Weekly" },
+    { value: "live", label: "Live" },
+    { value: "one_day", label: "1 Day" },
+    { value: "weekly", label: "1 Week" },
     { value: "days", label: "30 Days" },
     { value: "six_months", label: "6 Months" },
-    { value: "yearly", label: "Yearly" },
+    { value: "yearly", label: "1 Year" },
     { value: "five_years", label: "5 Years" },
     { value: "all time", label: "All Time" },
   ];
@@ -59,7 +60,8 @@ function AdminHome() {
     let baselineUsers = 0;
     let windowStart: Date | null = null;
 
-    if (filter === 'live') windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    if (filter === 'live') windowStart = new Date(now.getTime() - 60 * 60 * 1000);
+    else if (filter === 'one_day') windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     else if (filter === 'weekly') windowStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     else if (filter === 'days') windowStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     else if (filter === 'six_months') windowStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
@@ -71,6 +73,32 @@ function AdminHome() {
     }
 
     if (filter === 'live') {
+      for (let i = 5; i >= 0; i--) {
+        const bStart = new Date(now.getTime() - (i + 1) * 10 * 60 * 1000);
+        const bEnd = new Date(now.getTime() - i * 10 * 60 * 1000);
+        const label = i === 0 ? "Now" : `${i * 10}m ago`;
+        
+        const users = profiles.filter(p => {
+          const d = new Date(p.created_at);
+          return d >= bStart && d < bEnd;
+        }).length;
+        
+        const count = attempts.filter(a => {
+          if (!a.submitted_at) return false;
+          const d = new Date(a.submitted_at);
+          return d >= bStart && d < bEnd;
+        }).length;
+
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d >= bStart && d < bEnd;
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
+        growthData.push({ name: label, users });
+        expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
+      }
+    } else if (filter === 'one_day') {
       for (let i = 5; i >= 0; i--) {
         const bStart = new Date(now.getTime() - (i + 1) * 4 * 60 * 60 * 1000);
         const bEnd = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
@@ -199,6 +227,32 @@ function AdminHome() {
         tokensSpentData.push({ month: label, tokens });
       }
     } else if (filter === 'five_years') {
+      const currentYear = now.getFullYear();
+      for (let i = 4; i >= 0; i--) {
+        const targetYear = currentYear - i;
+        const label = `${targetYear}`;
+        
+        const users = profiles.filter(p => {
+          const d = new Date(p.created_at);
+          return d.getFullYear() === targetYear;
+        }).length;
+        
+        const count = attempts.filter(a => {
+          if (!a.submitted_at) return false;
+          const d = new Date(a.submitted_at);
+          return d.getFullYear() === targetYear;
+        }).length;
+
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d.getFullYear() === targetYear;
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
+        growthData.push({ name: label, users });
+        expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
+      }
+    } else if (filter === 'all time') {
       const currentYear = now.getFullYear();
       for (let i = 4; i >= 0; i--) {
         const targetYear = currentYear - i;
