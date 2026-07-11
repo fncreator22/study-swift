@@ -10,7 +10,7 @@ import {
 import { 
   LayoutDashboard, BookOpen, CheckCircle, Clock, Trophy, Wallet, 
   PlayCircle, Crown, Settings, User, MessageSquare, GraduationCap, 
-  Coins, Plus, LogOut, ArrowRight
+  Coins, Plus, LogOut, ArrowRight, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
