@@ -99,7 +99,7 @@ function Dashboard() {
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold md:text-3xl">Welcome back{name ? `, ${name.split(" ")[0]}` : ""}!</h1>
+          <h1 className="font-display text-xl font-bold md:text-2xl">Welcome back{name ? `, ${name.split(" ")[0]}` : ""}!</h1>
           <p className="text-xs text-muted-foreground md:text-sm italic font-medium">Your preparation roadmap is ready.</p>
         </div>
         <div className="flex items-center gap-2">

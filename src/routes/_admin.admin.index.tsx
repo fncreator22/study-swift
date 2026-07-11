@@ -309,7 +309,7 @@ function AdminHome() {
     <div className="mx-auto max-w-6xl pb-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="font-display text-3xl font-bold tracking-tight">System Overview</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">System Overview</h1>
           <p className="text-sm text-muted-foreground italic font-medium">Real-time platform performance & user growth metrics.</p>
         </div>
         <div className="flex flex-wrap gap-1 rounded-2xl border border-border bg-card p-1 shadow-sm">

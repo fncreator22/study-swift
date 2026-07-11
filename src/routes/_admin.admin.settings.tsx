@@ -109,7 +109,7 @@ function AdminSettings() {
     <div className="mx-auto max-w-4xl pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight">Platform Settings & Tools</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Platform Settings & Tools</h1>
           <p className="text-muted-foreground mt-1">Manage system security, data integrity, and administrative tools.</p>
         </div>
         <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl border-destructive/20 text-destructive hover:bg-destructive/5 hover:text-destructive">

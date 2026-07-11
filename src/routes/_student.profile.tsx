@@ -106,7 +106,7 @@ function Profile() {
   return (
     <div className="mx-auto max-w-4xl pb-20">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold tracking-tight">Profile & Settings</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Profile & Settings</h1>
         <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-xl border-destructive/20 text-destructive hover:bg-destructive/5 hover:text-destructive">
           <LogOut className="mr-2 h-4 w-4" /> Log out
         </Button>

@@ -17,6 +17,7 @@ function AdminMonitoring() {
   });
 
   const [activeSubscribers, setActiveSubscribers] = useState<any[]>([]);
+  const [subRequests, setSubRequests] = useState<any[]>([]);
   const [tokenAdjustments, setTokenAdjustments] = useState<any[]>([]);
 
   async function loadData() {
@@ -30,11 +31,14 @@ function AdminMonitoring() {
       // Fetch manual token adjustments
       supabase.from("wallet_transactions").select("*, profiles(full_name, email)").eq("type", "admin_adj").order("created_at", { ascending: false }),
       // Fetch profiles
-      supabase.from("profiles").select("id, total_time_spent")
-    ]).then(([memsResult, txResult, profilesResult]) => {
+      supabase.from("profiles").select("id, total_time_spent"),
+      // Fetch subscription upgrade requests
+      supabase.from("subscription_requests").select("*, subscriptions(*), profiles(full_name, email)").order("created_at", { ascending: false })
+    ]).then(([memsResult, txResult, profilesResult, reqsResult]) => {
       const mems = memsResult.data ?? [];
       const txs = txResult.data ?? [];
       const profiles = profilesResult.data ?? [];
+      const reqs = reqsResult.data ?? [];
 
       // Calculate Metrics
       const active = mems.filter(m => m.status === 'active' && new Date(m.valid_until) > now);
@@ -60,6 +64,7 @@ function AdminMonitoring() {
 
       setActiveSubscribers(active);
       setTokenAdjustments(txs);
+      setSubRequests(reqs);
       setLoading(false);
     }).catch(err => {
       toast.error(err.message || "Failed to load monitoring data");
@@ -70,6 +75,66 @@ function AdminMonitoring() {
   useEffect(() => {
     loadData();
   }, []);
+
+  async function handleApproveRequest(req: any) {
+    if (!req.subscriptions) return toast.error("Subscription details missing");
+    if (confirm(`Approve upgrade to ${req.subscriptions.name} for ${req.profiles?.full_name}?`)) {
+      try {
+        const plan = req.subscriptions;
+        const validUntil = new Date();
+        validUntil.setDate(validUntil.getDate() + (plan.duration_days || 30));
+
+        // 1. Fetch user's current token balance
+        const { data: prof } = await supabase.from("profiles").select("tokens").eq("id", req.user_id).maybeSingle();
+        const currentTokens = prof?.tokens ?? 0;
+        const finalTokens = currentTokens + (plan.token_price || 0);
+
+        // 2. Deactivate any existing active memberships
+        await supabase.from("memberships" as any).update({ status: 'cancelled' }).eq("user_id", req.user_id).eq("status", "active");
+
+        // 3. Insert new premium membership
+        await supabase.from("memberships" as any).insert({
+          user_id: req.user_id,
+          plan: 'premium',
+          valid_until: validUntil.toISOString(),
+          subscription_id: plan.id,
+          status: 'active'
+        });
+
+        // 4. Update user's profile
+        await supabase.from("profiles").update({
+          membership_status: 'premium',
+          subscription_expiry: validUntil.toISOString(),
+          tokens: finalTokens
+        }).eq("id", req.user_id);
+
+        // 5. Insert wallet transaction for the token grant
+        await supabase.from("wallet_transactions").insert({
+          user_id: req.user_id,
+          amount: plan.token_price || 0,
+          type: 'admin_adj',
+          description: `Subscription package grant: ${plan.name}`
+        });
+
+        // 6. Update request status to approved
+        await supabase.from("subscription_requests").update({ status: 'approved' }).eq("id", req.id);
+
+        toast.success("Subscription upgrade request approved!");
+        loadData();
+      } catch (err: any) {
+        toast.error(err.message || "Failed to approve request");
+      }
+    }
+  }
+
+  async function handleRejectRequest(reqId: string) {
+    if (confirm("Reject this upgrade request?")) {
+      const { error } = await supabase.from("subscription_requests").update({ status: 'rejected' }).eq("id", reqId);
+      if (error) return toast.error(error.message);
+      toast.success("Request rejected");
+      loadData();
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-10">
@@ -101,9 +166,10 @@ function AdminMonitoring() {
       </div>
 
       <Tabs defaultValue="subscriptions" className="space-y-6">
-        <TabsList className="grid max-w-md grid-cols-2 rounded-2xl bg-muted p-1">
-          <TabsTrigger value="subscriptions" className="rounded-xl py-2 font-semibold">Subscription Insights</TabsTrigger>
-          <TabsTrigger value="tokens" className="rounded-xl py-2 font-semibold">Token adjustment ledger</TabsTrigger>
+        <TabsList className="grid max-w-xl grid-cols-3 rounded-2xl bg-muted p-1">
+          <TabsTrigger value="subscriptions" className="rounded-xl py-2 font-semibold text-xs sm:text-sm">Subscription Insights</TabsTrigger>
+          <TabsTrigger value="requests" className="rounded-xl py-2 font-semibold text-xs sm:text-sm">Upgrade Requests ({subRequests.filter(r => r.status === "pending").length})</TabsTrigger>
+          <TabsTrigger value="tokens" className="rounded-xl py-2 font-semibold text-xs sm:text-sm">Token Ledger</TabsTrigger>
         </TabsList>
 
         <TabsContent value="subscriptions" className="space-y-4">
@@ -141,6 +207,87 @@ function AdminMonitoring() {
                       <td className="px-6 py-4 text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4 text-muted-foreground">{new Date(item.valid_until).toLocaleDateString()}</td>
                       <td className="px-6 py-4 font-mono font-bold text-primary">{item.profiles?.total_time_spent ?? 0} mins</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="requests" className="space-y-4">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
+            <h3 className="font-display text-lg font-bold">Subscription Upgrade Requests</h3>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-6">Review payment receipts and manually approve or reject student premium membership upgrade requests.</p>
+
+            <div className="responsive-table-container">
+              <table className="w-full text-sm min-w-[650px]">
+                <thead className="bg-muted/50 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-6 py-4">User</th>
+                    <th className="px-6 py-4">Requested Plan</th>
+                    <th className="px-6 py-4">Date Submitted</th>
+                    <th className="px-6 py-4">Receipt Screenshot</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {loading ? (
+                    <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">Loading upgrade requests...</td></tr>
+                  ) : subRequests.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No upgrade requests found</td></tr>
+                  ) : subRequests.map((item, index) => (
+                    <tr key={index} className="transition-colors hover:bg-muted/30">
+                      <td className="px-6 py-4 font-medium">
+                        <div>{item.profiles?.full_name || "—"}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{item.profiles?.email || "—"}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-primary">{item.subscriptions?.name || "Premium Plan"}</span>
+                          <span className="text-xs text-muted-foreground">₹{item.subscriptions?.price_inr}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground">{new Date(item.created_at).toLocaleString()}</td>
+                      <td className="px-6 py-4">
+                        {item.receipt_url ? (
+                          <a href={item.receipt_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-bold">
+                            View Receipt <ArrowUpRight className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No receipt</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          item.status === 'approved' ? 'bg-success/10 text-success' :
+                          item.status === 'rejected' ? 'bg-destructive/10 text-destructive' :
+                          'bg-amber-500/10 text-amber-600 animate-pulse'
+                        }`}>
+                          {item.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {item.status === 'pending' ? (
+                          <div className="flex justify-end gap-2">
+                            <button 
+                              onClick={() => handleApproveRequest(item)}
+                              className="rounded-lg bg-primary hover:bg-primary/95 text-primary-foreground font-bold text-xs px-2.5 py-1.5 shadow-sm"
+                            >
+                              Approve
+                            </button>
+                            <button 
+                              onClick={() => handleRejectRequest(item.id)}
+                              className="rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive font-bold text-xs px-2.5 py-1.5"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
