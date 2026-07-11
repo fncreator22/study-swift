@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { adminResetUserPassword } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_admin/admin/users")({ component: UsersAdmin });
@@ -21,6 +22,7 @@ function UsersAdmin() {
   const [tokenAmt, setTokenAmt] = useState("0");
   const [tokenMsg, setTokenMsg] = useState("Admin adjustment");
   const [tokenSubmitting, setTokenSubmitting] = useState(false);
+  const [tokenAction, setTokenAction] = useState<"add" | "remove">("add");
 
   // States for user details view
   const [viewUser, setViewUser] = useState<any>(null);
@@ -91,7 +93,7 @@ function UsersAdmin() {
                 <td className="px-6 py-4 text-right whitespace-nowrap">
                   <div className="flex justify-end gap-2">
                     <Button size="sm" variant="ghost" className="h-8 rounded-lg border border-border/50 bg-background hover:bg-muted text-primary hover:text-primary" onClick={() => setViewUser(u)}>View Profile</Button>
-                    <Button size="sm" variant="ghost" disabled={u.blocked} className="h-8 rounded-lg border border-border/50 bg-background hover:bg-muted" onClick={() => { setTokenUser(u); setTokenAmt("0"); setTokenMsg("Admin adjustment"); }}>± Tokens</Button>
+                    <Button size="sm" variant="ghost" disabled={u.blocked} className="h-8 rounded-lg border border-border/50 bg-background hover:bg-muted" onClick={() => { setTokenUser(u); setTokenAmt("0"); setTokenMsg("Admin adjustment"); setTokenAction("add"); }}>± Tokens</Button>
                     <Button size="sm" variant="ghost" className="h-8 rounded-lg border border-border/50 bg-background hover:bg-muted" onClick={() => toggleBlock(u.id, u.blocked)}>
                       {u.blocked ? "Unblock" : "Block"}
                     </Button>
@@ -110,8 +112,18 @@ function UsersAdmin() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="tokens">Token Amount (e.g. 100 or -100)</Label>
-              <Input id="tokens" type="number" value={tokenAmt} onChange={(e) => setTokenAmt(e.target.value)} />
+              <Label>Action Type</Label>
+              <Select value={tokenAction} onValueChange={(val: "add" | "remove") => setTokenAction(val)}>
+                <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="add">Add (Grant) Tokens</SelectItem>
+                  <SelectItem value="remove">Remove (Deduct) Tokens</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="tokens">Token Amount</Label>
+              <Input id="tokens" type="number" min="1" value={tokenAmt} onChange={(e) => setTokenAmt(e.target.value)} placeholder="Enter positive number" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="message">Message / Reason</Label>
@@ -121,20 +133,32 @@ function UsersAdmin() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setTokenUser(null)}>Cancel</Button>
             <Button disabled={tokenSubmitting} onClick={async () => {
-              const val = parseInt(tokenAmt);
-              if (isNaN(val)) return toast.error("Invalid amount");
+              const amtInput = parseInt(tokenAmt);
+              if (isNaN(amtInput) || amtInput <= 0) return toast.error("Please enter a valid positive token amount");
               if (tokenUser.blocked) return toast.error("User is blocked");
+              
+              const val = tokenAction === "add" ? amtInput : -amtInput;
+              const finalTokens = (tokenUser.tokens || 0) + val;
+              if (finalTokens < 0) {
+                return toast.error(`Insufficient balance. User has only ${tokenUser.tokens || 0} tokens.`);
+              }
+
               setTokenSubmitting(true);
-              const { error } = await supabase.from("profiles").update({ tokens: (tokenUser.tokens || 0) + val }).eq("id", tokenUser.id);
+              const { error } = await supabase.from("profiles").update({ tokens: finalTokens }).eq("id", tokenUser.id);
               if (error) toast.error(error.message);
               else {
-                await supabase.from("wallet_transactions").insert({ user_id: tokenUser.id, amount: val, type: 'admin_adj', description: tokenMsg });
-                toast.success("Tokens updated");
+                await supabase.from("wallet_transactions").insert({ 
+                  user_id: tokenUser.id, 
+                  amount: val, 
+                  type: 'admin_adj', 
+                  description: tokenMsg 
+                });
+                toast.success(tokenAction === "add" ? "Tokens added successfully" : "Tokens removed successfully");
                 setTokenUser(null);
                 load();
               }
               setTokenSubmitting(false);
-            }}>Update Tokens</Button>
+            }}>{tokenAction === "add" ? "Add Tokens" : "Remove Tokens"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

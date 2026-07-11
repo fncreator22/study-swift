@@ -13,21 +13,24 @@ type TimeFilter = 'live' | 'hour' | 'weekly' | 'days' | 'monthly' | 'yearly' | '
 
 function AdminHome() {
   const [s, setS] = useState({ users: 0, tests: 0, courses: 0, reviews: 0 });
-  const [profiles, setProfiles] = useState<{ created_at: string }[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<{ submitted_at: string | null }[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [filter, setFilter] = useState<TimeFilter>("weekly");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      supabase.from("profiles").select("id, created_at"),
+      supabase.from("profiles").select("id, created_at, country, state, address"),
       supabase.from("tests").select("id", { count: "exact", head: true }),
       supabase.from("courses").select("id", { count: "exact", head: true }),
       supabase.from("test_attempts").select("id, submitted_at").not("submitted_at", "is", null),
-    ]).then(([u, t, c, r]) => {
+      supabase.from("wallet_transactions").select("amount, created_at").lt("amount", 0)
+    ]).then(([u, t, c, r, w]) => {
       setProfiles(u.data ?? []);
       setAttempts(r.data ?? []);
+      setTransactions(w.data ?? []);
       setS({ 
         users: u.data?.length ?? 0, 
         tests: t.count ?? 0, 
@@ -52,6 +55,7 @@ function AdminHome() {
     const now = new Date();
     let growthData: { name: string; users: number }[] = [];
     let expansionData: { month: string; count: number }[] = [];
+    let tokensSpentData: { month: string; tokens: number }[] = [];
     let baselineUsers = 0;
     let windowStart: Date | null = null;
 
@@ -83,8 +87,14 @@ function AdminHome() {
           return d >= bStart && d < bEnd;
         }).length;
 
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d >= bStart && d < bEnd;
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
         growthData.push({ name: label, users });
         expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
       }
     } else if (filter === 'hour') {
       for (let i = 23; i >= 0; i--) {
@@ -103,8 +113,14 @@ function AdminHome() {
           return d >= bStart && d < bEnd;
         }).length;
 
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d >= bStart && d < bEnd;
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
         growthData.push({ name: label, users });
         expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
       }
     } else if (filter === 'weekly') {
       for (let i = 6; i >= 0; i--) {
@@ -122,8 +138,14 @@ function AdminHome() {
           return d.toDateString() === targetDate.toDateString();
         }).length;
 
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d.toDateString() === targetDate.toDateString();
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
         growthData.push({ name: label, users });
         expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
       }
     } else if (filter === 'days') {
       for (let i = 29; i >= 0; i--) {
@@ -141,8 +163,14 @@ function AdminHome() {
           return d.toDateString() === targetDate.toDateString();
         }).length;
 
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d.toDateString() === targetDate.toDateString();
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
         growthData.push({ name: label, users });
         expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
       }
     } else if (filter === 'monthly') {
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -163,8 +191,14 @@ function AdminHome() {
           return d.toDateString() === targetDate.toDateString();
         }).length;
 
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d.toDateString() === targetDate.toDateString();
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
         growthData.push({ name: label, users });
         expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
       }
     } else if (filter === 'yearly') {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -183,8 +217,14 @@ function AdminHome() {
           return d.getFullYear() === now.getFullYear() && d.getMonth() === i;
         }).length;
 
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d.getFullYear() === now.getFullYear() && d.getMonth() === i;
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
         growthData.push({ name: label, users });
         expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
       }
     } else if (filter === 'all time') {
       const currentYear = now.getFullYear();
@@ -203,8 +243,14 @@ function AdminHome() {
           return d.getFullYear() === targetYear;
         }).length;
 
+        const tokens = transactions.filter(t => {
+          const d = new Date(t.created_at);
+          return d.getFullYear() === targetYear;
+        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+
         growthData.push({ name: label, users });
         expansionData.push({ month: label, count });
+        tokensSpentData.push({ month: label, tokens });
       }
     }
 
@@ -214,10 +260,43 @@ function AdminHome() {
       return { name: item.name, users: cumulativeUsers };
     });
 
-    return { growthData, expansionData };
+    return { growthData, expansionData, tokensSpentData };
   }
 
-  const { growthData, expansionData } = getAggregatedData();
+  const { growthData, expansionData, tokensSpentData } = getAggregatedData();
+
+  const getLocations = () => {
+    const countries: Record<string, number> = {};
+    const states: Record<string, number> = {};
+    const addresses: Record<string, number> = {};
+
+    profiles.forEach(p => {
+      const c = p.country || "India";
+      const s = p.state || "Delhi";
+      const a = p.address || "Unspecified";
+
+      countries[c] = (countries[c] || 0) + 1;
+      states[s] = (states[s] || 0) + 1;
+      if (p.address && p.address.trim()) {
+        addresses[a] = (addresses[a] || 0) + 1;
+      }
+    });
+
+    const formatTop = (obj: Record<string, number>) => {
+      return Object.entries(obj)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+    };
+
+    return {
+      topCountries: formatTop(countries),
+      topStates: formatTop(states),
+      topAddresses: formatTop(addresses),
+    };
+  };
+
+  const { topCountries, topStates, topAddresses } = getLocations();
 
   const cards = [
     { l: "Total Users", v: s.users, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
@@ -266,7 +345,7 @@ function AdminHome() {
         ))}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-4 md:p-6 shadow-soft overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -330,6 +409,119 @@ function AdminHome() {
                 </BarChart>
               </ResponsiveContainer>
             )}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-border bg-card p-4 md:p-6 shadow-soft overflow-hidden">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
+              <h2 className="font-display text-lg font-bold">Tokens Consumed</h2>
+            </div>
+            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase">{filter} view</span>
+          </div>
+          <div className="h-[200px] md:h-[240px] w-full">
+            {loading ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground animate-pulse">Loading tokens chart...</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={tokensSpentData}>
+                  <defs>
+                    <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="rgb(16 185 129)" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="rgb(16 185 129)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: 'hsl(var(--muted-foreground))'}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: 'hsl(var(--muted-foreground))'}} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                  />
+                  <Area type="monotone" dataKey="tokens" stroke="rgb(16 185 129)" strokeWidth={3} fillOpacity={1} fill="url(#colorTokens)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-3xl border border-border bg-card p-6 shadow-soft">
+        <h3 className="font-display text-lg font-bold">User Geographic Distribution</h3>
+        <p className="text-xs text-muted-foreground mt-1 mb-6">User breakdown counts and percentages by Country, State, and City/Address.</p>
+        
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Countries</h4>
+            <div className="space-y-3">
+              {topCountries.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No country details available.</p>
+              ) : (
+                topCountries.map((item, idx) => {
+                  const pct = Math.max(5, profiles.length ? Math.round((item.count / profiles.length) * 100) : 0);
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span>{item.name}</span>
+                        <span className="text-muted-foreground">{item.count} users ({pct}%)</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">States</h4>
+            <div className="space-y-3">
+              {topStates.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No state details available.</p>
+              ) : (
+                topStates.map((item, idx) => {
+                  const pct = Math.max(5, profiles.length ? Math.round((item.count / profiles.length) * 100) : 0);
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span>{item.name}</span>
+                        <span className="text-muted-foreground">{item.count} users ({pct}%)</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-500 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cities / Addresses</h4>
+            <div className="space-y-3">
+              {topAddresses.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No specific addresses specified.</p>
+              ) : (
+                topAddresses.map((item, idx) => {
+                  const pct = Math.max(5, profiles.length ? Math.round((item.count / profiles.length) * 100) : 0);
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span>{item.name}</span>
+                        <span className="text-muted-foreground">{item.count} users ({pct}%)</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>
