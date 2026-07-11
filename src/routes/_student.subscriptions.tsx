@@ -139,6 +139,7 @@ function SubscriptionsPage() {
 
   const activeUntil = active?.valid_until ? new Date(active.valid_until) : null;
   const isActive = activeUntil && activeUntil > new Date();
+  const isPremiumActive = isActive && active?.plan === 'premium';
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -163,7 +164,7 @@ function SubscriptionsPage() {
         </Card>
       )}
 
-      {isActive ? (
+      {isPremiumActive ? (
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader className="flex flex-row items-center gap-3 space-y-0">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground">

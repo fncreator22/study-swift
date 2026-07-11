@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
@@ -51,13 +52,14 @@ function StudentLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState<{ fullName: string; tier: string } | null>(null);
   const [hasMembership, setHasMembership] = useState<boolean | null>(null);
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (user) {
       Promise.all([
         supabase
           .from("profiles")
-          .select("full_name, membership_status")
+          .select("full_name, membership_status, country, state")
           .eq("id", user.id)
           .maybeSingle(),
         supabase
@@ -71,6 +73,8 @@ function StudentLayout() {
             fullName: profData.full_name || "",
             tier: profData.membership_status || "free",
           });
+          const incomplete = !profData.country || !profData.state;
+          setIsProfileIncomplete(incomplete);
         }
         const activeMem = memData && memData.length > 0;
         setHasMembership(activeMem);
@@ -100,11 +104,14 @@ function StudentLayout() {
         nav({ to: "/login" });
       } else if (isAdmin) {
         nav({ to: "/admin" });
-      } else if (hasMembership === false && path !== "/subscriptions" && !isExamMode) {
+      } else if (isProfileIncomplete === true && path !== "/profile" && !isExamMode) {
+        toast.info("Please complete your profile details (Country and State) to proceed.");
+        nav({ to: "/profile" });
+      } else if (isProfileIncomplete === false && hasMembership === false && path !== "/subscriptions" && !isExamMode) {
         nav({ to: "/subscriptions" });
       }
     }
-  }, [loading, user, isAdmin, hasMembership, path, isExamMode, nav]);
+  }, [loading, user, isAdmin, isProfileIncomplete, hasMembership, path, isExamMode, nav]);
 
   if (loading || !user) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;

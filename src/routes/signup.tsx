@@ -32,6 +32,23 @@ function Signup() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+
+    const { data: existing, error: checkError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email.trim().toLowerCase())
+      .maybeSingle();
+
+    if (checkError) {
+      setLoading(false);
+      return toast.error("Verification failed. Please try again.");
+    }
+
+    if (existing) {
+      setLoading(false);
+      return toast.error("An account with this email address already exists. Please sign in or reset your password.");
+    }
+
     const { error } = await supabase.auth.signUp({
       email, password,
       options: {
@@ -41,7 +58,7 @@ function Signup() {
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Account created");
+    toast.success("Account created! Please check your email inbox to verify your address.");
   }
 
   return (

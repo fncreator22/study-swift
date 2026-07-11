@@ -68,8 +68,10 @@ function Profile() {
     }).eq("id", user.id);
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Profile updated");
+    toast.success("Profile details saved successfully!");
     refreshProfile?.();
+    // Redirect to subscriptions selection
+    nav({ to: "/subscriptions" });
   }
 
   async function changePwd() {
