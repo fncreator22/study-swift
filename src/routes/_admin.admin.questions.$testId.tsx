@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, ArrowLeft, Upload, Sparkles, FileText, Check } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Upload, Sparkles, FileText, Check, Info } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_admin/admin/questions/$testId")({ component: QuestionsAdmin });
