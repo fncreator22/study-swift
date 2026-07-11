@@ -10,7 +10,7 @@ import {
 import { 
   LayoutDashboard, BookOpen, CheckCircle, Clock, Trophy, Wallet, 
   PlayCircle, Crown, Settings, User, MessageSquare, GraduationCap, 
-  Coins, Plus, LogOut, ArrowRight, Sparkles
+  Coins, Plus, LogOut, ArrowRight, Sparkles, Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
@@ -34,6 +34,7 @@ const items = [
   { to: "/wallet", label: "Wallet", icon: Wallet },
   { to: "/courses", label: "Courses", icon: PlayCircle },
   { to: "/subscriptions", label: "Subscriptions", icon: Crown },
+  { to: "/notifications", label: "Notifications", icon: Bell },
   { to: "/support", label: "Support", icon: MessageSquare },
   { to: "/profile", label: "Profile", icon: Settings },
 ] as const;
@@ -65,6 +66,8 @@ function StudentLayout() {
   const [campaignReceiptOpen, setCampaignReceiptOpen] = useState(false);
   const [campaignReceiptFile, setCampaignReceiptFile] = useState<File | null>(null);
   const [submittingCampaignReceipt, setSubmittingCampaignReceipt] = useState(false);
+  // Notifications
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -131,15 +134,40 @@ function StudentLayout() {
       });
   }, [user, path, isExamMode, isBlocked, isAdmin]);
 
+  // Fetch unread notification count
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("system_notifications" as any)
+      .select("id")
+      .eq("is_active", true)
+      .then(({ data: notifs }) => {
+        if (!notifs || notifs.length === 0) return setUnreadNotifCount(0);
+        const ids = notifs.map((n: any) => n.id);
+        supabase
+          .from("notification_reads" as any)
+          .select("notification_id")
+          .eq("user_id", user.id)
+          .in("notification_id", ids)
+          .then(({ data: reads }) => {
+            const readIds = new Set((reads ?? []).map((r: any) => r.notification_id));
+            setUnreadNotifCount(ids.filter((id: string) => !readIds.has(id)).length);
+          });
+      });
+  }, [user, path]);
+
+  // Campaign 35s auto-dismiss + view-count at 25s
   useEffect(() => {
     if (campaignOpen && activeCampaign) {
-      const timer = setTimeout(async () => {
-        // Increment views_count
+      // View count at 25s
+      const viewTimer = setTimeout(async () => {
         const { data } = await supabase.from("marketing_campaigns").select("views_count").eq("id", activeCampaign.id).maybeSingle();
         const views = data?.views_count ?? 0;
         await supabase.from("marketing_campaigns").update({ views_count: views + 1 }).eq("id", activeCampaign.id);
-      }, 15000);
-      return () => clearTimeout(timer);
+      }, 25000);
+      // Auto-dismiss at 35s
+      const closeTimer = setTimeout(() => { setCampaignOpen(false); }, 35000);
+      return () => { clearTimeout(viewTimer); clearTimeout(closeTimer); };
     }
   }, [campaignOpen, activeCampaign]);
 
@@ -299,6 +327,17 @@ function StudentLayout() {
               </div>
               <div className="flex items-center gap-3">
                 <ThemeToggle />
+                {/* Notification Bell */}
+                <Link to="/notifications" className="relative">
+                  <button className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-card hover:bg-muted transition-colors">
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                    {unreadNotifCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-black text-white">
+                        {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
+                      </span>
+                    )}
+                  </button>
+                </Link>
                 <div className="flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-xs sm:text-sm font-semibold text-primary border border-primary/10">
                   <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span>{tokens} Tokens</span>

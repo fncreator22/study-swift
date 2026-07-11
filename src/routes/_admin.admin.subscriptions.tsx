@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Coins, Crown } from "lucide-react";
+import { Plus, Pencil, Trash2, Coins, Crown, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_admin/admin/subscriptions")({ component: AdminSubs });
 
@@ -38,6 +38,7 @@ function AdminSubs() {
   const [loading, setLoading] = useState(true);
   const [tokenPrice, setTokenPrice] = useState<number>(10);
   const [savingPrice, setSavingPrice] = useState(false);
+  const [autoConvert, setAutoConvert] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -184,21 +185,52 @@ function AdminSubs() {
                     value={editing.price_inr ?? 0} 
                     onChange={(e) => {
                       const val = Number(e.target.value);
-                      setEditing({ ...editing, price_inr: val });
+                      if (autoConvert && tokenPrice > 0) {
+                        setEditing({ ...editing, price_inr: val, token_price: Math.round(val / tokenPrice) });
+                      } else {
+                        setEditing({ ...editing, price_inr: val });
+                      }
                     }} 
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Tokens Cost</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Tokens Cost</Label>
+                    <button
+                      type="button"
+                      title={autoConvert ? "Auto-convert ON: tokens calculated from price" : "Auto-convert OFF: enter tokens manually"}
+                      onClick={() => {
+                        const next = !autoConvert;
+                        setAutoConvert(next);
+                        if (next && tokenPrice > 0) {
+                          setEditing({ ...editing, token_price: Math.round((editing.price_inr ?? 0) / tokenPrice) });
+                        }
+                      }}
+                      className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border transition-all ${
+                        autoConvert 
+                          ? 'bg-primary text-primary-foreground border-primary' 
+                          : 'bg-muted text-muted-foreground border-border hover:border-primary'
+                      }`}
+                    >
+                      <RefreshCw className={`h-2.5 w-2.5 ${autoConvert ? 'animate-spin' : ''}`} />
+                      Auto
+                    </button>
+                  </div>
                   <Input 
                     type="number" 
                     min={0} 
-                    value={editing.token_price} 
+                    value={editing.token_price}
+                    readOnly={autoConvert}
+                    className={autoConvert ? 'opacity-60 cursor-not-allowed' : ''}
                     onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setEditing({ ...editing, token_price: val });
+                      if (!autoConvert) {
+                        setEditing({ ...editing, token_price: Number(e.target.value) });
+                      }
                     }} 
                   />
+                  {autoConvert && tokenPrice > 0 && (
+                    <p className="text-[10px] text-muted-foreground">= ₹{editing.price_inr ?? 0} ÷ ₹{tokenPrice}/token</p>
+                  )}
                 </div>
                 <div className="space-y-2"><Label>Duration (days)</Label><Input type="number" min={1} value={editing.duration_days} onChange={(e) => setEditing({ ...editing, duration_days: Number(e.target.value) })} /></div>
               </div>

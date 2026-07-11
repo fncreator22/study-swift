@@ -74,6 +74,8 @@ function AdminMonitoring() {
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadData, 25000);
+    return () => clearInterval(interval);
   }, []);
 
   async function handleApproveRequest(req: any) {

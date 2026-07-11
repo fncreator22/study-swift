@@ -28,6 +28,7 @@ import { Route as StudentSubscriptionsRouteImport } from './routes/_student.subs
 import { Route as StudentRankingsRouteImport } from './routes/_student.rankings'
 import { Route as StudentPurchasedRouteImport } from './routes/_student.purchased'
 import { Route as StudentProfileRouteImport } from './routes/_student.profile'
+import { Route as StudentNotificationsRouteImport } from './routes/_student.notifications'
 import { Route as StudentHistoryRouteImport } from './routes/_student.history'
 import { Route as StudentDashboardRouteImport } from './routes/_student.dashboard'
 import { Route as StudentCoursesRouteImport } from './routes/_student.courses'
@@ -41,6 +42,7 @@ import { Route as AdminAdminSupportRouteImport } from './routes/_admin.admin.sup
 import { Route as AdminAdminSubscriptionsRouteImport } from './routes/_admin.admin.subscriptions'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin.admin.settings'
 import { Route as AdminAdminReviewsRouteImport } from './routes/_admin.admin.reviews'
+import { Route as AdminAdminNotificationsRouteImport } from './routes/_admin.admin.notifications'
 import { Route as AdminAdminMonitoringRouteImport } from './routes/_admin.admin.monitoring'
 import { Route as AdminAdminMarketingRouteImport } from './routes/_admin.admin.marketing'
 import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
@@ -143,6 +145,11 @@ const StudentProfileRoute = StudentProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => StudentRoute,
 } as any)
+const StudentNotificationsRoute = StudentNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => StudentRoute,
+} as any)
 const StudentHistoryRoute = StudentHistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -208,6 +215,11 @@ const AdminAdminReviewsRoute = AdminAdminReviewsRouteImport.update({
   path: '/admin/reviews',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminNotificationsRoute = AdminAdminNotificationsRouteImport.update({
+  id: '/admin/notifications',
+  path: '/admin/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAdminMonitoringRoute = AdminAdminMonitoringRouteImport.update({
   id: '/admin/monitoring',
   path: '/admin/monitoring',
@@ -267,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/courses': typeof StudentCoursesRouteWithChildren
   '/dashboard': typeof StudentDashboardRoute
   '/history': typeof StudentHistoryRoute
+  '/notifications': typeof StudentNotificationsRoute
   '/profile': typeof StudentProfileRoute
   '/purchased': typeof StudentPurchasedRoute
   '/rankings': typeof StudentRankingsRoute
@@ -277,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/marketing': typeof AdminAdminMarketingRoute
   '/admin/monitoring': typeof AdminAdminMonitoringRoute
+  '/admin/notifications': typeof AdminAdminNotificationsRoute
   '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
@@ -307,6 +321,7 @@ export interface FileRoutesByTo {
   '/courses': typeof StudentCoursesRouteWithChildren
   '/dashboard': typeof StudentDashboardRoute
   '/history': typeof StudentHistoryRoute
+  '/notifications': typeof StudentNotificationsRoute
   '/profile': typeof StudentProfileRoute
   '/purchased': typeof StudentPurchasedRoute
   '/rankings': typeof StudentRankingsRoute
@@ -317,6 +332,7 @@ export interface FileRoutesByTo {
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/marketing': typeof AdminAdminMarketingRoute
   '/admin/monitoring': typeof AdminAdminMonitoringRoute
+  '/admin/notifications': typeof AdminAdminNotificationsRoute
   '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
@@ -350,6 +366,7 @@ export interface FileRoutesById {
   '/_student/courses': typeof StudentCoursesRouteWithChildren
   '/_student/dashboard': typeof StudentDashboardRoute
   '/_student/history': typeof StudentHistoryRoute
+  '/_student/notifications': typeof StudentNotificationsRoute
   '/_student/profile': typeof StudentProfileRoute
   '/_student/purchased': typeof StudentPurchasedRoute
   '/_student/rankings': typeof StudentRankingsRoute
@@ -360,6 +377,7 @@ export interface FileRoutesById {
   '/_admin/admin/courses': typeof AdminAdminCoursesRoute
   '/_admin/admin/marketing': typeof AdminAdminMarketingRoute
   '/_admin/admin/monitoring': typeof AdminAdminMonitoringRoute
+  '/_admin/admin/notifications': typeof AdminAdminNotificationsRoute
   '/_admin/admin/reviews': typeof AdminAdminReviewsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
   '/_admin/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
@@ -392,6 +410,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/dashboard'
     | '/history'
+    | '/notifications'
     | '/profile'
     | '/purchased'
     | '/rankings'
@@ -402,6 +421,7 @@ export interface FileRouteTypes {
     | '/admin/courses'
     | '/admin/marketing'
     | '/admin/monitoring'
+    | '/admin/notifications'
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/subscriptions'
@@ -432,6 +452,7 @@ export interface FileRouteTypes {
     | '/courses'
     | '/dashboard'
     | '/history'
+    | '/notifications'
     | '/profile'
     | '/purchased'
     | '/rankings'
@@ -442,6 +463,7 @@ export interface FileRouteTypes {
     | '/admin/courses'
     | '/admin/marketing'
     | '/admin/monitoring'
+    | '/admin/notifications'
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/subscriptions'
@@ -474,6 +496,7 @@ export interface FileRouteTypes {
     | '/_student/courses'
     | '/_student/dashboard'
     | '/_student/history'
+    | '/_student/notifications'
     | '/_student/profile'
     | '/_student/purchased'
     | '/_student/rankings'
@@ -484,6 +507,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/courses'
     | '/_admin/admin/marketing'
     | '/_admin/admin/monitoring'
+    | '/_admin/admin/notifications'
     | '/_admin/admin/reviews'
     | '/_admin/admin/settings'
     | '/_admin/admin/subscriptions'
@@ -653,6 +677,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentProfileRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/_student/notifications': {
+      id: '/_student/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof StudentNotificationsRouteImport
+      parentRoute: typeof StudentRoute
+    }
     '/_student/history': {
       id: '/_student/history'
       path: '/history'
@@ -744,6 +775,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminReviewsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/notifications': {
+      id: '/_admin/admin/notifications'
+      path: '/admin/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminAdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/monitoring': {
       id: '/_admin/admin/monitoring'
       path: '/admin/monitoring'
@@ -807,6 +845,7 @@ interface AdminRouteChildren {
   AdminAdminCoursesRoute: typeof AdminAdminCoursesRoute
   AdminAdminMarketingRoute: typeof AdminAdminMarketingRoute
   AdminAdminMonitoringRoute: typeof AdminAdminMonitoringRoute
+  AdminAdminNotificationsRoute: typeof AdminAdminNotificationsRoute
   AdminAdminReviewsRoute: typeof AdminAdminReviewsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
   AdminAdminSubscriptionsRoute: typeof AdminAdminSubscriptionsRoute
@@ -823,6 +862,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminCoursesRoute: AdminAdminCoursesRoute,
   AdminAdminMarketingRoute: AdminAdminMarketingRoute,
   AdminAdminMonitoringRoute: AdminAdminMonitoringRoute,
+  AdminAdminNotificationsRoute: AdminAdminNotificationsRoute,
   AdminAdminReviewsRoute: AdminAdminReviewsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
   AdminAdminSubscriptionsRoute: AdminAdminSubscriptionsRoute,
@@ -853,6 +893,7 @@ interface StudentRouteChildren {
   StudentCoursesRoute: typeof StudentCoursesRouteWithChildren
   StudentDashboardRoute: typeof StudentDashboardRoute
   StudentHistoryRoute: typeof StudentHistoryRoute
+  StudentNotificationsRoute: typeof StudentNotificationsRoute
   StudentProfileRoute: typeof StudentProfileRoute
   StudentPurchasedRoute: typeof StudentPurchasedRoute
   StudentRankingsRoute: typeof StudentRankingsRoute
@@ -868,6 +909,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentCoursesRoute: StudentCoursesRouteWithChildren,
   StudentDashboardRoute: StudentDashboardRoute,
   StudentHistoryRoute: StudentHistoryRoute,
+  StudentNotificationsRoute: StudentNotificationsRoute,
   StudentProfileRoute: StudentProfileRoute,
   StudentPurchasedRoute: StudentPurchasedRoute,
   StudentRankingsRoute: StudentRankingsRoute,
