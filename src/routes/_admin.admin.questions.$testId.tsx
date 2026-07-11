@@ -16,7 +16,7 @@ const MAX_QUESTIONS = 100;
 const emptyMcq = { question: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_option: "a", explanation: "" };
 const emptyWritten = { question: "", max_words: 500 };
 
-function parseQuestionsFromText(text: string): any[] {
+function parseQuestionsFromText(text: string, testType: "mcq" | "written" | "hybrid", defaultWordLimit: number = 500): any[] {
   const lines = text.split('\n');
   const questions: any[] = [];
   let currentQ: any = null;
@@ -37,8 +37,10 @@ function parseQuestionsFromText(text: string): any[] {
         option_b: "",
         option_c: "",
         option_d: "",
-        correct_option: "a",
-        explanation: ""
+        correct_option: "",
+        explanation: "",
+        max_words: defaultWordLimit,
+        question_type: testType === "written" ? "written" : testType === "mcq" ? "mcq" : null
       };
       continue;
     }
@@ -50,6 +52,7 @@ function parseQuestionsFromText(text: string): any[] {
     if (optMatch) {
       const optLetter = line.slice(0, 1).toLowerCase();
       currentQ[`option_${optLetter}`] = optMatch[1].trim();
+      currentQ.question_type = currentQ.question_type || "mcq";
       continue;
     }
 
@@ -57,6 +60,15 @@ function parseQuestionsFromText(text: string): any[] {
     const ansMatch = line.match(/^(?:Correct(?:\s*Option|\s*Answer)?|Ans(?:wer)?)\s*[:.-]?\s*([A-D])/i);
     if (ansMatch) {
       currentQ.correct_option = ansMatch[1].toLowerCase();
+      currentQ.question_type = currentQ.question_type || "mcq";
+      continue;
+    }
+
+    // Check for Word Limit: e.g., "Max Words: 300", "Limit: 250"
+    const wordsMatch = line.match(/^(?:Max\s*Words?|Word\s*Limit)\s*[:.-]?\s*(\d+)/i);
+    if (wordsMatch) {
+      currentQ.max_words = Number(wordsMatch[1]);
+      currentQ.question_type = currentQ.question_type || "written";
       continue;
     }
 
@@ -64,10 +76,11 @@ function parseQuestionsFromText(text: string): any[] {
     const expMatch = line.match(/^(?:Explanation|Exp|Description)\s*[:.-]?\s*(.*)/i);
     if (expMatch) {
       currentQ.explanation = expMatch[1].trim();
+      currentQ.question_type = currentQ.question_type || "mcq";
       continue;
     }
 
-    // If none of the above, append text to either question, explanation, or last option
+    // Append to active field
     if (currentQ.explanation) {
       currentQ.explanation += " " + line;
     } else if (currentQ.option_d) {
@@ -93,25 +106,38 @@ function parseQuestionsFromText(text: string): any[] {
     for (const para of paragraphs) {
       const pText = para.trim();
       if (!pText) continue;
+      
+      const isMcqLike = pText.includes("A)") || pText.includes("B)") || pText.includes("A.") || pText.includes("B.");
+      const type = testType === "written" ? "written" : testType === "mcq" ? "mcq" : isMcqLike ? "mcq" : "written";
+      
       questions.push({
         question: pText.slice(0, 200),
-        option_a: "Option A",
-        option_b: "Option B",
-        option_c: "Option C",
-        option_d: "Option D",
-        correct_option: "a",
-        explanation: "Auto-extracted from document chunk"
+        option_a: type === "mcq" ? "Option A" : "",
+        option_b: type === "mcq" ? "Option B" : "",
+        option_c: type === "mcq" ? "Option C" : "",
+        option_d: type === "mcq" ? "Option D" : "",
+        correct_option: type === "mcq" ? "a" : "",
+        explanation: type === "mcq" ? "Auto-extracted" : "",
+        max_words: defaultWordLimit,
+        question_type: type
       });
     }
   }
 
-  return questions.map(q => ({
-    ...q,
-    option_a: q.option_a || "Option A",
-    option_b: q.option_b || "Option B",
-    option_c: q.option_c || "Option C",
-    option_d: q.option_d || "Option D",
-  }));
+  return questions.map(q => {
+    const qType = q.question_type || (testType === "hybrid" ? "mcq" : testType);
+    return {
+      ...q,
+      question_type: qType,
+      option_a: qType === "mcq" ? (q.option_a || "Option A") : "",
+      option_b: qType === "mcq" ? (q.option_b || "Option B") : "",
+      option_c: qType === "mcq" ? (q.option_c || "Option C") : "",
+      option_d: qType === "mcq" ? (q.option_d || "Option D") : "",
+      correct_option: qType === "mcq" ? (q.correct_option || "a") : "",
+      explanation: qType === "mcq" ? q.explanation : "",
+      max_words: qType === "written" ? q.max_words : null
+    };
+  });
 }
 
 function QuestionsAdmin() {
@@ -127,6 +153,7 @@ function QuestionsAdmin() {
   const [rawText, setRawText] = useState("");
   const [parsedQuestions, setParsedQuestions] = useState<any[]>([]);
   const [publishing, setPublishing] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -135,7 +162,7 @@ function QuestionsAdmin() {
     reader.onload = (event) => {
       const text = event.target?.result as string;
       setRawText(text);
-      const parsed = parseQuestionsFromText(text);
+      const parsed = parseQuestionsFromText(text, test?.test_type || "mcq", test?.word_limit || 500);
       setParsedQuestions(parsed);
       toast.success(`Extracted ${parsed.length} questions draft!`);
     };
@@ -144,7 +171,7 @@ function QuestionsAdmin() {
 
   const handleParseText = () => {
     if (!rawText.trim()) return toast.error("Please paste textbook/QA page content first");
-    const parsed = parseQuestionsFromText(rawText);
+    const parsed = parseQuestionsFromText(rawText, test?.test_type || "mcq", test?.word_limit || 500);
     setParsedQuestions(parsed);
     toast.success(`Extracted ${parsed.length} questions draft!`);
   };
@@ -153,18 +180,27 @@ function QuestionsAdmin() {
     if (parsedQuestions.length === 0) return toast.error("No questions to publish");
     setPublishing(true);
     const startPos = qs.length;
-    const toInsert = parsedQuestions.map((q, idx) => ({
-      test_id: testId,
-      position: startPos + idx,
-      question: q.question,
-      question_type: "mcq",
-      option_a: q.option_a,
-      option_b: q.option_b,
-      option_c: q.option_c,
-      option_d: q.option_d,
-      correct_option: q.correct_option,
-      explanation: q.explanation
-    }));
+    const toInsert = parsedQuestions.map((q, idx) => {
+      const base: any = {
+        test_id: testId,
+        position: startPos + idx,
+        question: q.question,
+        question_type: q.question_type || "mcq"
+      };
+      if (base.question_type === "written") {
+        base.max_words = q.max_words || 500;
+      } else {
+        Object.assign(base, {
+          option_a: q.option_a,
+          option_b: q.option_b,
+          option_c: q.option_c,
+          option_d: q.option_d,
+          correct_option: q.correct_option,
+          explanation: q.explanation
+        });
+      }
+      return base;
+    });
 
     const { error } = await supabase.from("test_questions").insert(toInsert);
     setPublishing(false);
@@ -244,11 +280,9 @@ function QuestionsAdmin() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {!isWritten && (
-            <Button variant="outline" onClick={() => setImportOpen(true)} disabled={qs.length >= MAX_QUESTIONS} className="rounded-xl">
-              <Upload className="mr-2 h-4 w-4" /> Import from Document
-            </Button>
-          )}
+          <Button variant="outline" onClick={() => setImportOpen(true)} disabled={qs.length >= MAX_QUESTIONS} className="rounded-xl">
+            <Upload className="mr-2 h-4 w-4" /> Import from Document
+          </Button>
           <Button onClick={openNew} disabled={qs.length >= MAX_QUESTIONS} className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add another question
           </Button>
@@ -328,15 +362,68 @@ function QuestionsAdmin() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if(!v) { setParsedQuestions([]); setRawText(""); } }}>
+      <Dialog open={importOpen} onOpenChange={(v) => { setImportOpen(v); if(!v) { setParsedQuestions([]); setRawText(""); setShowTutorial(false); } }}>
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-6">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between border-b pb-3">
             <DialogTitle className="flex items-center gap-2 font-display text-xl font-bold">
               <Sparkles className="h-5 w-5 text-primary" /> Import Questions from Document
             </DialogTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 rounded-xl ${showTutorial ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}
+              onClick={() => setShowTutorial(!showTutorial)}
+              title="Show formatting instructions tutorial"
+            >
+              <Info className="h-4.5 w-4.5" />
+            </Button>
           </DialogHeader>
+
+          {showTutorial && (
+            <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 text-xs space-y-3 animate-fadeIn">
+              <div className="flex items-center gap-1.5 font-bold text-primary">
+                <Info className="h-4 w-4" />
+                <span>Document Formatting Instructions Tutorial Guide</span>
+              </div>
+              <p className="text-muted-foreground leading-relaxed">
+                The import engine automatically parses question text, options, answers, and explanations based on simple line prefixes. Write or paste your content following these structures:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                <div className="p-3 bg-card border rounded-xl space-y-1.5">
+                  <p className="font-bold text-foreground">1. MCQ Question Format</p>
+                  <pre className="bg-muted p-2 rounded text-[10px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap leading-tight">
+{`Q1: What is the capital of France?
+A) Berlin
+B) Paris
+C) Rome
+D) London
+Answer: B
+Explanation: Paris is the capital of France.`}
+                  </pre>
+                  <p className="text-[10px] text-muted-foreground mt-1">Options must start with letter <code className="font-mono bg-muted px-1 rounded">A-D</code> followed by closing bracket or dot.</p>
+                </div>
+
+                <div className="p-3 bg-card border rounded-xl space-y-1.5">
+                  <p className="font-bold text-foreground">2. Written Question Format</p>
+                  <pre className="bg-muted p-2 rounded text-[10px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap leading-tight">
+{`Q2: Describe the core features of React.
+Max Words: 300`}
+                  </pre>
+                  <p className="text-[10px] text-muted-foreground mt-1">Specify <code className="font-mono bg-muted px-1 rounded">Max Words</code> or <code className="font-mono bg-muted px-1 rounded">Word Limit</code> to auto-convert to Written type.</p>
+                </div>
+
+                <div className="p-3 bg-card border rounded-xl space-y-1.5">
+                  <p className="font-bold text-foreground">3. Hybrid Question Format</p>
+                  <p className="text-muted-foreground leading-relaxed text-[11px]">
+                    For Hybrid tests, the system automatically checks each question. If options are found, it sets the type to MCQ; otherwise, it marks it as a Written question.
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-semibold text-primary pt-1">★ Any parts the engine misses can be edited manually before publishing!</p>
+                </div>
+              </div>
+            </div>
+          )}
           
-          <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-1">
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1 py-1 mt-2">
             {parsedQuestions.length === 0 ? (
               <div className="space-y-4">
                 <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-8 text-center">
@@ -383,7 +470,9 @@ function QuestionsAdmin() {
                   {parsedQuestions.map((q, idx) => (
                     <div key={idx} className="p-5 border border-border rounded-2xl bg-card shadow-soft space-y-4 relative group">
                       <div className="flex justify-between items-center border-b pb-2">
-                        <span className="text-xs font-bold text-primary">Question {idx + 1} (MCQ)</span>
+                        <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                          Question {idx + 1} ({q.question_type === "written" ? "Written" : "MCQ"})
+                        </span>
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -408,57 +497,75 @@ function QuestionsAdmin() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {(["a", "b", "c", "d"] as const).map((k) => (
-                          <div key={k} className="space-y-1">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Option {k.toUpperCase()}</Label>
-                            <Input 
-                              value={q["option_" + k]} 
-                              onChange={(e) => {
-                                const updated = [...parsedQuestions];
-                                updated[idx]["option_" + k] = e.target.value;
-                                setParsedQuestions(updated);
-                              }}
-                              className="text-xs rounded-xl h-9"
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                        <div className="space-y-1 sm:col-span-1">
-                          <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Correct Option</Label>
-                          <Select 
-                            value={q.correct_option} 
-                            onValueChange={(val) => {
-                              const updated = [...parsedQuestions];
-                              updated[idx].correct_option = val;
-                              setParsedQuestions(updated);
-                            }}
-                          >
-                            <SelectTrigger className="text-xs rounded-xl h-9"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {(["a", "b", "c", "d"] as const).map((k) => (
-                                <SelectItem key={k} value={k}>{k.toUpperCase()}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1 sm:col-span-2">
-                          <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Explanation</Label>
+                      {q.question_type === "written" ? (
+                        <div className="space-y-1 max-w-xs">
+                          <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Word Limit (Max Words)</Label>
                           <Input 
-                            value={q.explanation} 
+                            type="number"
+                            value={q.max_words ?? 500} 
                             onChange={(e) => {
                               const updated = [...parsedQuestions];
-                              updated[idx].explanation = e.target.value;
+                              updated[idx].max_words = Number(e.target.value);
                               setParsedQuestions(updated);
                             }}
                             className="text-xs rounded-xl h-9"
-                            placeholder="Why is it correct?"
                           />
                         </div>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {(["a", "b", "c", "d"] as const).map((k) => (
+                              <div key={k} className="space-y-1">
+                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Option {k.toUpperCase()}</Label>
+                                <Input 
+                                  value={q["option_" + k]} 
+                                  onChange={(e) => {
+                                    const updated = [...parsedQuestions];
+                                    updated[idx]["option_" + k] = e.target.value;
+                                    setParsedQuestions(updated);
+                                  }}
+                                  className="text-xs rounded-xl h-9"
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                            <div className="space-y-1 sm:col-span-1">
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Correct Option</Label>
+                              <Select 
+                                value={q.correct_option} 
+                                onValueChange={(val) => {
+                                  const updated = [...parsedQuestions];
+                                  updated[idx].correct_option = val;
+                                  setParsedQuestions(updated);
+                                }}
+                              >
+                                <SelectTrigger className="text-xs rounded-xl h-9"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {(["a", "b", "c", "d"] as const).map((k) => (
+                                    <SelectItem key={k} value={k}>{k.toUpperCase()}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-1 sm:col-span-2">
+                              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Explanation</Label>
+                              <Input 
+                                value={q.explanation} 
+                                onChange={(e) => {
+                                  const updated = [...parsedQuestions];
+                                  updated[idx].explanation = e.target.value;
+                                  setParsedQuestions(updated);
+                                }}
+                                className="text-xs rounded-xl h-9"
+                                placeholder="Why is it correct?"
+                              />
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>

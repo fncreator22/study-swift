@@ -74,7 +74,10 @@ function UsersAdmin() {
           <tbody className="divide-y divide-border">
             {users.map((u) => (
               <tr key={u.id} className="transition-colors hover:bg-muted/30">
-                <td className="px-6 py-4 font-medium whitespace-nowrap">{u.full_name || "—"}</td>
+                <td className="px-6 py-4 font-medium whitespace-nowrap">
+                  <div>{u.full_name || "—"}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{u.email || "—"}</div>
+                </td>
                 <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">{u.college || "—"}</td>
                 <td className="px-6 py-4 font-mono text-primary whitespace-nowrap">{u.tokens ?? 0}</td>
                 <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">{new Date(u.created_at).toLocaleDateString()}</td>
