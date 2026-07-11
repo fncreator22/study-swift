@@ -15,6 +15,7 @@ type Plan = {
   name: string;
   description: string;
   token_price: number;
+  price_inr?: number;
   duration_days: number;
   test_ids: string[];
   course_ids: string[];
@@ -141,7 +142,7 @@ function SubscriptionsPage() {
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-4">
                 <div className="flex items-baseline gap-1">
-                  <span className="font-display text-3xl font-bold">₹{p.token_price * tokenPrice}</span>
+                  <span className="font-display text-3xl font-bold">₹{p.price_inr ?? p.token_price * tokenPrice}</span>
                   {p.token_price > 0 && (
                     <span className="text-xs text-muted-foreground">({p.token_price} tokens)</span>
                   )}

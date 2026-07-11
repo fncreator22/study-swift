@@ -20,13 +20,14 @@ type Plan = {
   name: string;
   description: string;
   token_price: number;
+  price_inr: number;
   duration_days: number;
   test_ids: string[];
   course_ids: string[];
   is_active: boolean;
 };
 
-const EMPTY: Plan = { name: "", description: "", token_price: 100, duration_days: 30, test_ids: [], course_ids: [], is_active: true };
+const EMPTY: Plan = { name: "", description: "", token_price: 100, price_inr: 1000, duration_days: 30, test_ids: [], course_ids: [], is_active: true };
 
 function AdminSubs() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -37,7 +38,6 @@ function AdminSubs() {
   const [loading, setLoading] = useState(true);
   const [tokenPrice, setTokenPrice] = useState<number>(10);
   const [savingPrice, setSavingPrice] = useState(false);
-  const [priceInr, setPriceInr] = useState(0);
 
   async function load() {
     setLoading(true);
@@ -67,13 +67,11 @@ function AdminSubs() {
 
   function openNew() { 
     setEditing({ ...EMPTY }); 
-    setPriceInr(0); 
     setOpen(true); 
   }
   
   function openEdit(p: Plan) { 
-    setEditing({ ...p, test_ids: p.test_ids ?? [], course_ids: p.course_ids ?? [] }); 
-    setPriceInr(p.token_price * tokenPrice);
+    setEditing({ ...p, price_inr: p.price_inr ?? p.token_price * 10, test_ids: p.test_ids ?? [], course_ids: p.course_ids ?? [] }); 
     setOpen(true); 
   }
 
@@ -155,7 +153,7 @@ function AdminSubs() {
                   )}
                   <div className="text-sm text-muted-foreground space-y-1 pt-2">
                     <div>
-                      <b className="text-foreground">₹{p.token_price * tokenPrice}</b> ({p.token_price} tokens) · <b className="text-foreground">{p.duration_days}</b> days
+                      <b className="text-foreground">₹{p.price_inr ?? p.token_price * tokenPrice}</b> ({p.token_price} tokens) · <b className="text-foreground">{p.duration_days}</b> days
                     </div>
                     <div>{p.test_ids?.length ?? 0} tests · {p.course_ids?.length ?? 0} courses</div>
                   </div>
@@ -183,16 +181,15 @@ function AdminSubs() {
                   <Input 
                     type="number" 
                     min={0} 
-                    value={priceInr} 
+                    value={editing.price_inr ?? 0} 
                     onChange={(e) => {
                       const val = Number(e.target.value);
-                      setPriceInr(val);
-                      setEditing({ ...editing, token_price: Math.ceil(val / tokenPrice) });
+                      setEditing({ ...editing, price_inr: val });
                     }} 
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Tokens (Auto-converted)</Label>
+                  <Label>Tokens Cost</Label>
                   <Input 
                     type="number" 
                     min={0} 
@@ -200,7 +197,6 @@ function AdminSubs() {
                     onChange={(e) => {
                       const val = Number(e.target.value);
                       setEditing({ ...editing, token_price: val });
-                      setPriceInr(val * tokenPrice);
                     }} 
                   />
                 </div>
