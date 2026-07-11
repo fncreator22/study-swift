@@ -107,7 +107,7 @@ function AdminSubs() {
     <div className="mx-auto max-w-5xl space-y-8 pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold">Subscriptions</h1>
+          <h1 className="font-display text-2xl font-bold">Subscriptions</h1>
           <p className="text-muted-foreground mt-1">Configure token economy and subscription bundles.</p>
         </div>
         <Button onClick={openNew} className="rounded-xl"><Plus className="mr-2 h-4 w-4" /> New plan</Button>

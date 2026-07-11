@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeSubscriptionRouteImport } from './routes/welcome-subscription'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -40,6 +41,8 @@ import { Route as AdminAdminSupportRouteImport } from './routes/_admin.admin.sup
 import { Route as AdminAdminSubscriptionsRouteImport } from './routes/_admin.admin.subscriptions'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin.admin.settings'
 import { Route as AdminAdminReviewsRouteImport } from './routes/_admin.admin.reviews'
+import { Route as AdminAdminMonitoringRouteImport } from './routes/_admin.admin.monitoring'
+import { Route as AdminAdminMarketingRouteImport } from './routes/_admin.admin.marketing'
 import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
 import { Route as StudentTestsTestIdIndexRouteImport } from './routes/_student.tests.$testId.index'
 import { Route as StudentTestsTestIdAttemptRouteImport } from './routes/_student.tests.$testId.attempt'
@@ -47,6 +50,11 @@ import { Route as AdminAdminVideosCourseIdRouteImport } from './routes/_admin.ad
 import { Route as AdminAdminQuestionsTestIdRouteImport } from './routes/_admin.admin.questions.$testId'
 import { Route as StudentTestsTestIdReviewAttemptIdRouteImport } from './routes/_student.tests.$testId.review.$attemptId'
 
+const WelcomeSubscriptionRoute = WelcomeSubscriptionRouteImport.update({
+  id: '/welcome-subscription',
+  path: '/welcome-subscription',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -200,6 +208,16 @@ const AdminAdminReviewsRoute = AdminAdminReviewsRouteImport.update({
   path: '/admin/reviews',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminMonitoringRoute = AdminAdminMonitoringRouteImport.update({
+  id: '/admin/monitoring',
+  path: '/admin/monitoring',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminMarketingRoute = AdminAdminMarketingRouteImport.update({
+  id: '/admin/marketing',
+  path: '/admin/marketing',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAdminCoursesRoute = AdminAdminCoursesRouteImport.update({
   id: '/admin/courses',
   path: '/admin/courses',
@@ -245,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/welcome-subscription': typeof WelcomeSubscriptionRoute
   '/courses': typeof StudentCoursesRouteWithChildren
   '/dashboard': typeof StudentDashboardRoute
   '/history': typeof StudentHistoryRoute
@@ -256,6 +275,8 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
+  '/admin/marketing': typeof AdminAdminMarketingRoute
+  '/admin/monitoring': typeof AdminAdminMonitoringRoute
   '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
@@ -282,6 +303,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/welcome-subscription': typeof WelcomeSubscriptionRoute
   '/courses': typeof StudentCoursesRouteWithChildren
   '/dashboard': typeof StudentDashboardRoute
   '/history': typeof StudentHistoryRoute
@@ -293,6 +315,8 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
+  '/admin/marketing': typeof AdminAdminMarketingRoute
+  '/admin/monitoring': typeof AdminAdminMonitoringRoute
   '/admin/reviews': typeof AdminAdminReviewsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
   '/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
@@ -322,6 +346,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/welcome-subscription': typeof WelcomeSubscriptionRoute
   '/_student/courses': typeof StudentCoursesRouteWithChildren
   '/_student/dashboard': typeof StudentDashboardRoute
   '/_student/history': typeof StudentHistoryRoute
@@ -333,6 +358,8 @@ export interface FileRoutesById {
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_admin/admin/courses': typeof AdminAdminCoursesRoute
+  '/_admin/admin/marketing': typeof AdminAdminMarketingRoute
+  '/_admin/admin/monitoring': typeof AdminAdminMonitoringRoute
   '/_admin/admin/reviews': typeof AdminAdminReviewsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
   '/_admin/admin/subscriptions': typeof AdminAdminSubscriptionsRoute
@@ -361,6 +388,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/terms'
+    | '/welcome-subscription'
     | '/courses'
     | '/dashboard'
     | '/history'
@@ -372,6 +400,8 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/auth/callback'
     | '/admin/courses'
+    | '/admin/marketing'
+    | '/admin/monitoring'
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/subscriptions'
@@ -398,6 +428,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/terms'
+    | '/welcome-subscription'
     | '/courses'
     | '/dashboard'
     | '/history'
@@ -409,6 +440,8 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/auth/callback'
     | '/admin/courses'
+    | '/admin/marketing'
+    | '/admin/monitoring'
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/subscriptions'
@@ -437,6 +470,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/support'
     | '/terms'
+    | '/welcome-subscription'
     | '/_student/courses'
     | '/_student/dashboard'
     | '/_student/history'
@@ -448,6 +482,8 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/auth/callback'
     | '/_admin/admin/courses'
+    | '/_admin/admin/marketing'
+    | '/_admin/admin/monitoring'
     | '/_admin/admin/reviews'
     | '/_admin/admin/settings'
     | '/_admin/admin/subscriptions'
@@ -477,12 +513,20 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
+  WelcomeSubscriptionRoute: typeof WelcomeSubscriptionRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome-subscription': {
+      id: '/welcome-subscription'
+      path: '/welcome-subscription'
+      fullPath: '/welcome-subscription'
+      preLoaderRoute: typeof WelcomeSubscriptionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -700,6 +744,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminReviewsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/monitoring': {
+      id: '/_admin/admin/monitoring'
+      path: '/admin/monitoring'
+      fullPath: '/admin/monitoring'
+      preLoaderRoute: typeof AdminAdminMonitoringRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/marketing': {
+      id: '/_admin/admin/marketing'
+      path: '/admin/marketing'
+      fullPath: '/admin/marketing'
+      preLoaderRoute: typeof AdminAdminMarketingRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/courses': {
       id: '/_admin/admin/courses'
       path: '/admin/courses'
@@ -747,6 +805,8 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAdminCoursesRoute: typeof AdminAdminCoursesRoute
+  AdminAdminMarketingRoute: typeof AdminAdminMarketingRoute
+  AdminAdminMonitoringRoute: typeof AdminAdminMonitoringRoute
   AdminAdminReviewsRoute: typeof AdminAdminReviewsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
   AdminAdminSubscriptionsRoute: typeof AdminAdminSubscriptionsRoute
@@ -761,6 +821,8 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminCoursesRoute: AdminAdminCoursesRoute,
+  AdminAdminMarketingRoute: AdminAdminMarketingRoute,
+  AdminAdminMonitoringRoute: AdminAdminMonitoringRoute,
   AdminAdminReviewsRoute: AdminAdminReviewsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
   AdminAdminSubscriptionsRoute: AdminAdminSubscriptionsRoute,
@@ -833,6 +895,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
+  WelcomeSubscriptionRoute: WelcomeSubscriptionRoute,
   AdminLoginRoute: AdminLoginRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }

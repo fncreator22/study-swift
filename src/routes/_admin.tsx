@@ -5,8 +5,9 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins, FileText, Crown, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins, FileText, Crown, BarChart3, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/_admin")({ component: AdminLayout });
 
@@ -19,6 +20,7 @@ const items: { to: string; label: string; icon: typeof LayoutDashboard; exact?: 
   { to: "/admin/tokens", label: "Token Requests", icon: Coins },
   { to: "/admin/subscriptions", label: "Subscriptions", icon: Crown },
   { to: "/admin/monitoring", label: "Monitoring", icon: BarChart3 },
+  { to: "/admin/marketing", label: "Marketing", icon: Sparkles },
   { to: "/admin/support", label: "Complaints", icon: MessageSquare },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
@@ -97,16 +99,19 @@ function AdminLayout() {
         </Sidebar>
 
         <div className="flex flex-1 flex-col min-w-0">
-          <header className="flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur shrink-0">
-            {/* Sidebar toggle — always visible including mobile */}
-            <SidebarTrigger />
-            {/* Mobile brand label */}
-            <Link to="/admin" className="flex items-center gap-2 font-display text-sm font-bold md:hidden">
-              <span className="grid h-6 w-6 place-items-center rounded-lg bg-foreground text-background shrink-0">
-                <Lock className="h-3 w-3" />
-              </span>
-              Admin Panel
-            </Link>
+          <header className="flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur shrink-0">
+            <div className="flex items-center gap-3">
+              {/* Sidebar toggle — always visible including mobile */}
+              <SidebarTrigger />
+              {/* Mobile brand label */}
+              <Link to="/admin" className="flex items-center gap-2 font-display text-sm font-bold md:hidden">
+                <span className="grid h-6 w-6 place-items-center rounded-lg bg-foreground text-background shrink-0">
+                  <Lock className="h-3 w-3" />
+                </span>
+                Admin Panel
+              </Link>
+            </div>
+            <ThemeToggle />
           </header>
           <main className="flex-1 px-4 py-6 md:px-8 md:py-10 overflow-x-hidden">
             <Outlet />

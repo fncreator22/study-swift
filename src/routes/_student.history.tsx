@@ -24,7 +24,7 @@ function History() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-3xl font-bold">Attempt history</h1>
+      <h1 className="font-display text-2xl font-bold">Attempt history</h1>
 
       {/* Mobile card list */}
       <div className="mt-8 sm:hidden space-y-3">

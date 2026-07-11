@@ -90,7 +90,7 @@ function CoursesAdmin() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold">Courses</h1>
+        <h1 className="font-display text-2xl font-bold">Courses</h1>
         <Button onClick={() => { setForm(empty); setEditing(null); setSelectedPlanId("none"); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Add course</Button>
       </div>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

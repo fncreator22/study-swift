@@ -114,7 +114,7 @@ function TestsAdmin() {
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold">Tests</h1>
+        <h1 className="font-display text-2xl font-bold">Tests</h1>
         <Button onClick={() => setChooserOpen(true)}><Plus className="mr-2 h-4 w-4" /> New test</Button>
       </div>
 

@@ -58,7 +58,7 @@ function AdminTokens() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-bold">Token Purchase Requests</h1>
+        <h1 className="font-display text-2xl font-bold">Token Purchase Requests</h1>
         <p className="text-muted-foreground">Verify and approve user token purchases.</p>
       </div>
 

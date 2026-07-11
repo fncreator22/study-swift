@@ -212,7 +212,7 @@ function AdminSupport() {
   return (
     <div className="mx-auto max-w-6xl px-4 pb-10">
       <div className="flex flex-col gap-1 mb-8">
-        <h1 className="font-display text-3xl font-bold">Complaints &amp; Reports</h1>
+        <h1 className="font-display text-2xl font-bold">Complaints &amp; Reports</h1>
         <p className="text-sm text-muted-foreground italic">Manage user feedback, technical complaints, and support requests.</p>
       </div>
 

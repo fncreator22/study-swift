@@ -47,7 +47,7 @@ function TestsList() {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold">All tests</h1>
+          <h1 className="font-display text-2xl font-bold">All tests</h1>
           <p className="mt-1 text-muted-foreground">Browse MCQ and written tests across all tiers.</p>
         </div>
         <div className="flex gap-2 flex-wrap">

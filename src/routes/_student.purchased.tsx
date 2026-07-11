@@ -31,7 +31,7 @@ function Purchased() {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold italic">Your library</h1>
+          <h1 className="font-display text-2xl font-bold italic">Your library</h1>
           <p className="mt-1 text-muted-foreground font-medium italic">All your premium unlocked content in one place.</p>
         </div>
       </div>

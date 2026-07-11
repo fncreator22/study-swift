@@ -37,7 +37,7 @@ function WalletPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-bold">Token Wallet</h1>
+        <h1 className="font-display text-2xl font-bold">Token Wallet</h1>
         <p className="text-muted-foreground">Manage your tokens and view transaction history.</p>
       </div>
 

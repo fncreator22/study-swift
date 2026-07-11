@@ -274,7 +274,7 @@ function QuestionsAdmin() {
       <button onClick={() => nav({ to: "/admin/tests" })} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3 w-3" /> Tests</button>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold">Questions · {test.title}</h1>
+          <h1 className="font-display text-2xl font-bold">Questions · {test.title}</h1>
           <p className="text-sm text-muted-foreground">
             {isWritten ? "Written" : "MCQ"} test · {qs.length}/{MAX_QUESTIONS} questions
           </p>

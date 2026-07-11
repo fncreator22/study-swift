@@ -35,7 +35,7 @@ function Courses() {
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold">Learning modules</h1>
+          <h1 className="font-display text-2xl font-bold">Learning modules</h1>
           <p className="mt-1 text-muted-foreground">Expert-led video courses to master your preparation.</p>
         </div>
       </div>

@@ -139,7 +139,7 @@ function AdminMonitoring() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-10">
       <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight">Monitoring & Analytics</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">Monitoring & Analytics</h1>
         <p className="text-sm text-muted-foreground italic font-medium">Analyze subscription health, customer retention, and token adjustments ledger.</p>
       </div>
 

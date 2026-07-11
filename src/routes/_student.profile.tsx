@@ -70,8 +70,8 @@ function Profile() {
     if (error) return toast.error(error.message);
     toast.success("Profile details saved successfully!");
     refreshProfile?.();
-    // Redirect to subscriptions selection
-    nav({ to: "/subscriptions" });
+    // Redirect to welcome subscription wizard
+    nav({ to: "/welcome-subscription" });
   }
 
   async function changePwd() {

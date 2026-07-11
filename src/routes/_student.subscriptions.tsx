@@ -144,7 +144,7 @@ function SubscriptionsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-bold">Subscriptions</h1>
+        <h1 className="font-display text-2xl font-bold">Subscriptions</h1>
         <p className="text-muted-foreground mt-1">Unlock premium packages or activate basic tier options.</p>
       </div>
 

@@ -9,7 +9,7 @@ import {
 
 export const Route = createFileRoute("/_admin/admin/")({ component: AdminHome });
 
-type TimeFilter = 'live' | 'hour' | 'weekly' | 'days' | 'monthly' | 'yearly' | 'all time';
+type TimeFilter = 'live' | 'weekly' | 'days' | 'six_months' | 'yearly' | 'five_years' | 'all time';
 
 function AdminHome() {
   const [s, setS] = useState({ users: 0, tests: 0, courses: 0, reviews: 0 });
@@ -42,12 +42,12 @@ function AdminHome() {
   }, []);
 
   const filters: { value: TimeFilter; label: string }[] = [
-    { value: "live", label: "Live" },
-    { value: "hour", label: "Hourly" },
+    { value: "live", label: "1 Day" },
     { value: "weekly", label: "Weekly" },
     { value: "days", label: "30 Days" },
-    { value: "monthly", label: "Monthly" },
+    { value: "six_months", label: "6 Months" },
     { value: "yearly", label: "Yearly" },
+    { value: "five_years", label: "5 Years" },
     { value: "all time", label: "All Time" },
   ];
 
@@ -59,12 +59,12 @@ function AdminHome() {
     let baselineUsers = 0;
     let windowStart: Date | null = null;
 
-    if (filter === 'live') windowStart = new Date(now.getTime() - 60 * 60 * 1000);
-    else if (filter === 'hour') windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    if (filter === 'live') windowStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     else if (filter === 'weekly') windowStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     else if (filter === 'days') windowStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    else if (filter === 'monthly') windowStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    else if (filter === 'six_months') windowStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
     else if (filter === 'yearly') windowStart = new Date(now.getFullYear(), 0, 1);
+    else if (filter === 'five_years') windowStart = new Date(now.getFullYear() - 4, 0, 1);
 
     if (windowStart) {
       baselineUsers = profiles.filter(p => new Date(p.created_at) < windowStart!).length;
@@ -72,35 +72,9 @@ function AdminHome() {
 
     if (filter === 'live') {
       for (let i = 5; i >= 0; i--) {
-        const bStart = new Date(now.getTime() - (i + 1) * 10 * 60 * 1000);
-        const bEnd = new Date(now.getTime() - i * 10 * 60 * 1000);
-        const label = i === 0 ? "Now" : `${i * 10}m ago`;
-        
-        const users = profiles.filter(p => {
-          const d = new Date(p.created_at);
-          return d >= bStart && d < bEnd;
-        }).length;
-        
-        const count = attempts.filter(a => {
-          if (!a.submitted_at) return false;
-          const d = new Date(a.submitted_at);
-          return d >= bStart && d < bEnd;
-        }).length;
-
-        const tokens = transactions.filter(t => {
-          const d = new Date(t.created_at);
-          return d >= bStart && d < bEnd;
-        }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
-
-        growthData.push({ name: label, users });
-        expansionData.push({ month: label, count });
-        tokensSpentData.push({ month: label, tokens });
-      }
-    } else if (filter === 'hour') {
-      for (let i = 23; i >= 0; i--) {
-        const bStart = new Date(now.getTime() - (i + 1) * 60 * 60 * 1000);
-        const bEnd = new Date(now.getTime() - i * 60 * 60 * 1000);
-        const label = `${bStart.getHours()}:00`;
+        const bStart = new Date(now.getTime() - (i + 1) * 4 * 60 * 60 * 1000);
+        const bEnd = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
+        const label = i === 0 ? "Now" : `${i * 4}h ago`;
         
         const users = profiles.filter(p => {
           const d = new Date(p.created_at);
@@ -172,28 +146,26 @@ function AdminHome() {
         expansionData.push({ month: label, count });
         tokensSpentData.push({ month: label, tokens });
       }
-    } else if (filter === 'monthly') {
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      for (let i = 1; i <= daysInMonth; i++) {
-        const targetDate = new Date(now.getFullYear(), now.getMonth(), i);
-        const label = `${i}`;
+    } else if (filter === 'six_months') {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      for (let i = 5; i >= 0; i--) {
+        const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const label = `${months[targetDate.getMonth()]} ${targetDate.getFullYear().toString().slice(-2)}`;
         
-        if (targetDate > now) break;
-
         const users = profiles.filter(p => {
           const d = new Date(p.created_at);
-          return d.toDateString() === targetDate.toDateString();
+          return d.getFullYear() === targetDate.getFullYear() && d.getMonth() === targetDate.getMonth();
         }).length;
         
         const count = attempts.filter(a => {
           if (!a.submitted_at) return false;
           const d = new Date(a.submitted_at);
-          return d.toDateString() === targetDate.toDateString();
+          return d.getFullYear() === targetDate.getFullYear() && d.getMonth() === targetDate.getMonth();
         }).length;
 
         const tokens = transactions.filter(t => {
           const d = new Date(t.created_at);
-          return d.toDateString() === targetDate.toDateString();
+          return d.getFullYear() === targetDate.getFullYear() && d.getMonth() === targetDate.getMonth();
         }).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
 
         growthData.push({ name: label, users });
@@ -226,7 +198,7 @@ function AdminHome() {
         expansionData.push({ month: label, count });
         tokensSpentData.push({ month: label, tokens });
       }
-    } else if (filter === 'all time') {
+    } else if (filter === 'five_years') {
       const currentYear = now.getFullYear();
       for (let i = 4; i >= 0; i--) {
         const targetYear = currentYear - i;
@@ -312,20 +284,17 @@ function AdminHome() {
           <h1 className="font-display text-2xl font-bold tracking-tight">System Overview</h1>
           <p className="text-sm text-muted-foreground italic font-medium">Real-time platform performance & user growth metrics.</p>
         </div>
-        <div className="flex flex-wrap gap-1 rounded-2xl border border-border bg-card p-1 shadow-sm">
-          {filters.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
-                filter === f.value
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 bg-card border rounded-2xl px-3 py-1.5 shadow-sm h-fit">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <select 
+            value={filter} 
+            onChange={(e) => setFilter(e.target.value as TimeFilter)}
+            className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer pr-4"
+          >
+            {filters.map((f) => (
+              <option key={f.value} value={f.value} className="bg-card text-foreground font-semibold">{f.label}</option>
+            ))}
+          </select>
         </div>
       </div>
       

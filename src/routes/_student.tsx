@@ -10,13 +10,18 @@ import {
 import { 
   LayoutDashboard, BookOpen, CheckCircle, Clock, Trophy, Wallet, 
   PlayCircle, Crown, Settings, User, MessageSquare, GraduationCap, 
-  Coins, Plus, LogOut 
+  Coins, Plus, LogOut, ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Upload } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/_student")({ component: StudentLayout });
 
@@ -53,6 +58,13 @@ function StudentLayout() {
   const [profile, setProfile] = useState<{ fullName: string; tier: string } | null>(null);
   const [hasMembership, setHasMembership] = useState<boolean | null>(null);
   const [isProfileIncomplete, setIsProfileIncomplete] = useState<boolean | null>(null);
+
+  // Marketing Campaign popups
+  const [activeCampaign, setActiveCampaign] = useState<any>(null);
+  const [campaignOpen, setCampaignOpen] = useState(false);
+  const [campaignReceiptOpen, setCampaignReceiptOpen] = useState(false);
+  const [campaignReceiptFile, setCampaignReceiptFile] = useState<File | null>(null);
+  const [submittingCampaignReceipt, setSubmittingCampaignReceipt] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -98,6 +110,88 @@ function StudentLayout() {
     return () => clearInterval(interval);
   }, [user]);
 
+  // Marketing Campaign triggers and analytics
+  useEffect(() => {
+    if (!user || isBlocked || isAdmin || isExamMode || path === "/welcome-subscription") return;
+    
+    supabase.from("marketing_campaigns")
+      .select("*, subscriptions(*)")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          const sessionKey = `shown_campaign_${data.id}`;
+          if (!sessionStorage.getItem(sessionKey)) {
+            setActiveCampaign(data);
+            setCampaignOpen(true);
+            sessionStorage.setItem(sessionKey, "true");
+          }
+        }
+      });
+  }, [user, path, isExamMode, isBlocked, isAdmin]);
+
+  useEffect(() => {
+    if (campaignOpen && activeCampaign) {
+      const timer = setTimeout(async () => {
+        // Increment views_count
+        const { data } = await supabase.from("marketing_campaigns").select("views_count").eq("id", activeCampaign.id).maybeSingle();
+        const views = data?.views_count ?? 0;
+        await supabase.from("marketing_campaigns").update({ views_count: views + 1 }).eq("id", activeCampaign.id);
+      }, 15000);
+      return () => clearTimeout(timer);
+    }
+  }, [campaignOpen, activeCampaign]);
+
+  async function handleCampaignClick() {
+    if (!activeCampaign) return;
+    
+    // Increment clicks_count
+    const { data } = await supabase.from("marketing_campaigns").select("clicks_count").eq("id", activeCampaign.id).maybeSingle();
+    const clicks = data?.clicks_count ?? 0;
+    await supabase.from("marketing_campaigns").update({ clicks_count: clicks + 1 }).eq("id", activeCampaign.id);
+
+    setCampaignOpen(false);
+    setCampaignReceiptOpen(true);
+  }
+
+  async function handleCampaignReceiptSubmit() {
+    if (!activeCampaign?.subscriptions || !campaignReceiptFile || submittingCampaignReceipt) return;
+    setSubmittingCampaignReceipt(true);
+    try {
+      const fileExt = campaignReceiptFile.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage.from('receipts').upload(filePath, campaignReceiptFile);
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage.from('receipts').getPublicUrl(filePath);
+
+      // Insert subscription request
+      const { error: reqError } = await supabase.from("subscription_requests").insert({
+        user_id: user.id,
+        subscription_id: activeCampaign.subscription_id,
+        receipt_url: publicUrl,
+        status: "pending"
+      });
+      if (reqError) throw reqError;
+
+      // Increment conversions_count
+      const { data: cData } = await supabase.from("marketing_campaigns").select("conversions_count").eq("id", activeCampaign.id).maybeSingle();
+      const conversions = cData?.conversions_count ?? 0;
+      await supabase.from("marketing_campaigns").update({ conversions_count: conversions + 1 }).eq("id", activeCampaign.id);
+
+      toast.success("Upgrade request submitted successfully! Admin will audit the receipt.");
+      setCampaignReceiptOpen(false);
+      setCampaignReceiptFile(null);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit receipt");
+    } finally {
+      setSubmittingCampaignReceipt(false);
+    }
+  }
+
   useEffect(() => {
     if (!loading) {
       if (!user) {
@@ -107,8 +201,8 @@ function StudentLayout() {
       } else if (isProfileIncomplete === true && path !== "/profile" && !isExamMode) {
         toast.info("Please complete your profile details (Country and State) to proceed.");
         nav({ to: "/profile" });
-      } else if (isProfileIncomplete === false && hasMembership === false && path !== "/subscriptions" && !isExamMode) {
-        nav({ to: "/subscriptions" });
+      } else if (isProfileIncomplete === false && hasMembership === false && path !== "/welcome-subscription" && !isExamMode) {
+        nav({ to: "/welcome-subscription" });
       }
     }
   }, [loading, user, isAdmin, isProfileIncomplete, hasMembership, path, isExamMode, nav]);
@@ -204,6 +298,7 @@ function StudentLayout() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                <ThemeToggle />
                 <div className="flex items-center gap-1.5 rounded-full bg-primary/5 px-2.5 py-1 text-xs sm:text-sm font-semibold text-primary border border-primary/10">
                   <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span>{tokens} Tokens</span>
@@ -338,6 +433,106 @@ function StudentLayout() {
         </div>
       </div>
       {!isExamMode && <TokenRequestModal open={purchaseOpen} onOpenChange={setPurchaseOpen} />}
+
+      {/* Marketing Campaign Pop-up */}
+      <Dialog open={campaignOpen} onOpenChange={setCampaignOpen}>
+        <DialogContent className="sm:max-w-[450px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
+              <span>{activeCampaign?.title}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Exclusive promotional offer for active members.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 space-y-4">
+            <p className="text-sm text-foreground font-medium">{activeCampaign?.description}</p>
+            
+            {activeCampaign?.subscriptions && (
+              <div className="rounded-2xl border p-4 bg-muted/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-foreground">{activeCampaign.subscriptions.name}</span>
+                  <span className="font-bold text-primary text-sm">₹{activeCampaign.subscriptions.price_inr}</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Includes {activeCampaign.subscriptions.token_price} tokens and unlocks premium features for {activeCampaign.subscriptions.duration_days} days.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCampaignOpen(false)} className="rounded-xl">Close</Button>
+            <Button onClick={handleCampaignClick} className="rounded-xl bg-primary text-primary-foreground font-bold">
+              Upgrade Now <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Marketing Receipt Upload Dialog */}
+      <Dialog open={campaignReceiptOpen} onOpenChange={(o) => { if(!o) { setCampaignReceiptOpen(false); setCampaignReceiptFile(null); } }}>
+        <DialogContent className="sm:max-w-[450px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-bold">
+              <Crown className="h-5 w-5 text-amber-500" />
+              <span>Submit Payment Receipt</span>
+            </DialogTitle>
+            <DialogDescription>
+              Upload payment screenshot to request activation for {activeCampaign?.subscriptions?.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4 text-sm">
+            <div className="rounded-2xl border p-4 bg-muted/30 space-y-2">
+              <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Payment Details</p>
+              <p className="text-xs text-foreground font-medium">Please transfer <strong>₹{activeCampaign?.subscriptions?.price_inr}</strong> using UPI or Bank details:</p>
+              <div className="bg-card p-3 rounded-xl border border-border/50 font-mono text-[11px] text-muted-foreground space-y-1">
+                <div><strong>UPI ID:</strong> examy@upi</div>
+                <div><strong>Bank:</strong> HDFC Bank</div>
+                <div><strong>A/c Number:</strong> 50200012345678</div>
+                <div><strong>IFSC Code:</strong> HDFC0000123</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Upload Receipt Screenshot</Label>
+              <div className="flex items-center justify-center border border-dashed border-border rounded-xl p-4 bg-muted/10">
+                {campaignReceiptFile ? (
+                  <div className="text-center space-y-2 w-full">
+                    <p className="text-xs font-semibold text-primary truncate max-w-[300px] mx-auto">✓ {campaignReceiptFile.name}</p>
+                    <Button variant="ghost" size="xs" onClick={() => setCampaignReceiptFile(null)} className="text-[10px] text-destructive hover:bg-destructive/10">Remove file</Button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center gap-2 cursor-pointer w-full text-center py-2">
+                    <Upload className="h-5 w-5 text-muted-foreground animate-bounce" />
+                    <span className="text-xs font-semibold text-muted-foreground">Select Screenshot Image</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => setCampaignReceiptFile(e.target.files?.[0] || null)} 
+                      className="hidden" 
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCampaignReceiptOpen(false)} className="rounded-xl">Cancel</Button>
+            <Button 
+              disabled={!campaignReceiptFile || submittingCampaignReceipt} 
+              onClick={handleCampaignReceiptSubmit} 
+              className="rounded-xl bg-primary text-primary-foreground font-bold shadow-lg"
+            >
+              {submittingCampaignReceipt ? "Submitting..." : "Submit Receipt"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }

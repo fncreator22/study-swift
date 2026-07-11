@@ -13,7 +13,7 @@ function Rankings() {
   }, []);
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="font-display text-3xl font-bold">Rankings</h1>
+      <h1 className="font-display text-2xl font-bold">Rankings</h1>
       <p className="mt-1 text-muted-foreground">Top performers across all tests.</p>
       <div className="mt-8 responsive-table-container rounded-2xl border border-border bg-card">
         <table className="w-full min-w-[480px] text-sm">
