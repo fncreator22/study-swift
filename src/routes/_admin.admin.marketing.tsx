@@ -137,9 +137,6 @@ function AdminMarketing() {
 
   async function handleToggleActive(campId: string, currentlyActive: boolean) {
     try {
-      if (!currentlyActive) {
-        await supabase.from("marketing_campaigns").update({ is_active: false }).neq("id", campId);
-      }
       const { error } = await supabase.from("marketing_campaigns").update({ is_active: !currentlyActive }).eq("id", campId);
       if (error) throw error;
       toast.success(currentlyActive ? "Campaign deactivated" : "Campaign activated!");

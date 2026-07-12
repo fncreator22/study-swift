@@ -128,7 +128,7 @@ function CourseDetail() {
     if (targetTestId) {
       const [{ data: cert }, { data: att }] = await Promise.all([
         supabase.from("certificates").select("*").eq("user_id", user.id).eq("course_id", courseId).maybeSingle(),
-        supabase.from("test_attempts").select("id, score, total, is_reviewed").eq("user_id", user.id).eq("test_id", targetTestId).eq("is_reviewed", true).order("created_at", { ascending: false }).limit(1).maybeSingle()
+        supabase.from("test_attempts").select("id, score, total, is_reviewed").eq("user_id", user.id).eq("test_id", targetTestId).eq("is_reviewed", true).order("submitted_at", { ascending: false }).maybeSingle()
       ]);
       setCertificate(cert);
       setCompletionAttempt(att);
@@ -452,18 +452,32 @@ function CourseDetail() {
                 <p className="text-sm text-muted-foreground italic">Syllabus modules are currently being added. Check back soon!</p>
               ) : (
                 videos.map((v, i) => (
-                  <div key={v.id} className="flex items-center justify-between p-4 rounded-2xl border border-border bg-card shadow-sm">
+                  <button 
+                    key={v.id} 
+                    onClick={() => {
+                      if (hasAccess) {
+                        setActiveVideo(v);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      } else {
+                        toast.error("Please enroll to access this module");
+                      }
+                    }}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${!hasAccess ? 'opacity-65 cursor-not-allowed bg-muted/40 border-border' : 'bg-card border-border hover:border-primary/20 hover:bg-primary/5'}`}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-700 font-mono text-xs font-bold">{i + 1}</div>
-                      <div className="text-left">
-                        <p className="text-sm font-bold">{v.title}</p>
+                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-700 font-mono text-xs font-bold">Module {i + 1}</div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{v.title}</p>
                         <p className="text-xs text-muted-foreground line-clamp-1">{v.description || "Module description details."}</p>
                       </div>
                     </div>
-                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-slate-500">
-                      {v.text_content ? "Reading" : "Video"}
-                    </span>
-                  </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-slate-500">
+                        {v.text_content ? "Reading" : "Video"}
+                      </span>
+                      {!hasAccess && <Lock className="h-3.5 w-3.5 text-muted-foreground/60" />}
+                    </div>
+                  </button>
                 ))
               )}
             </div>
@@ -549,9 +563,9 @@ function CourseDetail() {
                       <div className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-mono font-bold ${activeVideo?.id === v.id ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-muted'}`}>{i + 1}</div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="truncate text-xs font-bold leading-tight">{v.title}</p>
+                      <p className="truncate text-xs font-bold leading-tight">Module {i + 1}: {v.title}</p>
                       <p className="mt-0.5 truncate text-[9px] text-muted-foreground flex items-center gap-1">
-                        {v.text_content ? <><BookOpen className="h-2.5 w-2.5" /> Reading</> : <><PlayCircle className="h-2.5 w-2.5" /> Video</>}
+                        {v.text_content ? <><BookOpen className="h-2.5 w-2.5" /> Reading Module</> : <><PlayCircle className="h-2.5 w-2.5" /> Video Module</>}
                       </p>
                     </div>
                     {!hasAccess && <Lock className="h-3 w-3 text-muted-foreground/60" />}

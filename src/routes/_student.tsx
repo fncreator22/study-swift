@@ -171,7 +171,7 @@ function StudentLayout() {
               }
             });
         }
-      }, 10000);
+      }, 1500);
     }
   };
 

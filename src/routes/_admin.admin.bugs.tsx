@@ -15,14 +15,14 @@ type BugReport = {
   error_message: string;
   error_stack: string | null;
   route: string;
-  status: "open" | "resolved";
+  status: "open" | "ongoing" | "resolved" | "closed";
   created_at: string;
 };
 
 function AdminBugsPage() {
   const [bugs, setBugs] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "open" | "resolved">("open");
+  const [filter, setFilter] = useState<"all" | "open" | "ongoing" | "resolved" | "closed">("all");
   const [expandedBugId, setExpandedBugId] = useState<string | null>(null);
   const [usersMap, setUsersMap] = useState<Record<string, string>>({});
 
@@ -61,14 +61,14 @@ function AdminBugsPage() {
     load();
   }, [filter]);
 
-  async function resolveBug(id: string) {
+  async function updateBugStatus(id: string, newStatus: string) {
     const { error } = await supabase
       .from("bug_reports" as any)
-      .update({ status: "resolved" })
+      .update({ status: newStatus })
       .eq("id", id);
 
     if (error) return toast.error(error.message);
-    toast.success("Bug marked as resolved successfully");
+    toast.success(`Bug status updated to ${newStatus}`);
     load();
   }
 
@@ -105,8 +105,10 @@ function AdminBugsPage() {
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               <SelectItem value="all">All Logs</SelectItem>
-              <SelectItem value="open">Open Logs</SelectItem>
-              <SelectItem value="resolved">Resolved Logs</SelectItem>
+              <SelectItem value="open">Active / Open</SelectItem>
+              <SelectItem value="ongoing">Ongoing</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -127,13 +129,13 @@ function AdminBugsPage() {
                 <TableHead className="w-[200px]">Time / User</TableHead>
                 <TableHead className="w-[180px]">Location (Route)</TableHead>
                 <TableHead>Error Message</TableHead>
-                <TableHead className="w-[120px] text-right">Actions</TableHead>
+                <TableHead className="w-[180px] text-right">Status / Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {bugs.map((b) => (
                 <>
-                  <TableRow key={b.id} className={`${b.status === 'resolved' ? 'opacity-60 bg-muted/5' : ''}`}>
+                  <TableRow key={b.id} className={`${b.status === 'resolved' || b.status === 'closed' ? 'opacity-60 bg-muted/5' : ''}`}>
                     <TableCell className="font-mono text-xs space-y-1">
                       <p className="flex items-center gap-1 text-muted-foreground">
                         <Clock className="h-3 w-3" /> {new Date(b.created_at).toLocaleString()}
@@ -165,16 +167,17 @@ function AdminBugsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1.5">
-                        {b.status === "open" && (
-                          <Button
-                            size="sm"
-                            onClick={() => resolveBug(b.id)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-8 rounded-lg text-xs"
-                          >
-                            Resolve
-                          </Button>
-                        )}
+                      <div className="flex justify-end items-center gap-2">
+                        <select
+                          value={b.status}
+                          onChange={(e) => updateBugStatus(b.id, e.target.value)}
+                          className="h-8 rounded-lg border border-input bg-background px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="open">Active / Open</option>
+                          <option value="ongoing">Ongoing</option>
+                          <option value="resolved">Resolved</option>
+                          <option value="closed">Closed</option>
+                        </select>
                         <Button
                           variant="ghost"
                           size="sm"
