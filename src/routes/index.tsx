@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { PlayCircle, BookOpen, GraduationCap, ArrowRight, Star, ShieldCheck, Zap, BarChart3, Clock, Trophy, Users, MessageSquare, Mail, Sparkles } from "lucide-react";
+import { PlayCircle, BookOpen, GraduationCap, ArrowRight, Star, ShieldCheck, Zap, BarChart3, Clock, Trophy, Users, MessageSquare, Mail, Sparkles, Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,8 @@ function Landing() {
   const nav = useNavigate();
   const [tests, setTests] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Campaign popup states, queue, and analytics refs
   const [activeCampaign, setActiveCampaign] = useState<any>(null);
@@ -172,9 +174,83 @@ function Landing() {
   );
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden pt-16">
+      {/* ── HEADER NAVBAR ── */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-200">
+        <div className="container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          {/* Logo / Brand */}
+          <Link to="/" className="flex items-center gap-2">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground font-black tracking-tighter">
+              E
+            </div>
+            <span className="font-display font-black text-xl tracking-tight text-slate-900">
+              Examly<span className="text-primary font-black">.</span>
+            </span>
+          </Link>
+
+          {/* Desktop Nav Links */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-bold text-muted-foreground">
+            <Link to="/courses" className="hover:text-primary transition-colors">Explore Courses</Link>
+            <Link to="/tests" className="hover:text-primary transition-colors">Practice Tests</Link>
+            <Link to="/support" className="hover:text-primary transition-colors">Help & Support</Link>
+          </nav>
+
+          {/* Action Buttons */}
+          <div className="hidden md:flex items-center gap-3">
+            {user ? (
+              <Button size="sm" className="rounded-xl font-bold px-5" asChild>
+                <Link to="/dashboard">Go to Dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" className="rounded-xl font-bold" asChild>
+                  <Link to="/login">Sign In</Link>
+                </Button>
+                <Button size="sm" className="rounded-xl font-bold px-5" asChild>
+                  <Link to="/login">Get Started</Link>
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden rounded-xl p-2 hover:bg-muted transition-colors text-slate-800"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-border bg-background px-4 py-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+            <Link to="/courses" onClick={() => setMobileMenuOpen(false)} className="block text-sm font-bold p-2 hover:bg-muted rounded-xl transition-colors">Explore Courses</Link>
+            <Link to="/tests" onClick={() => setMobileMenuOpen(false)} className="block text-sm font-bold p-2 hover:bg-muted rounded-xl transition-colors">Practice Tests</Link>
+            <Link to="/support" onClick={() => setMobileMenuOpen(false)} className="block text-sm font-bold p-2 hover:bg-muted rounded-xl transition-colors">Help & Support</Link>
+            <div className="border-t border-border pt-3 flex flex-col gap-2">
+              {user ? (
+                <Button className="w-full rounded-xl font-bold" asChild onClick={() => setMobileMenuOpen(false)}>
+                  <Link to="/dashboard">Go to Dashboard</Link>
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" className="w-full rounded-xl font-bold" asChild onClick={() => setMobileMenuOpen(false)}>
+                    <Link to="/login">Sign In</Link>
+                  </Button>
+                  <Button className="w-full rounded-xl font-bold" asChild onClick={() => setMobileMenuOpen(false)}>
+                    <Link to="/login">Get Started Free</Link>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
+
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden pt-16 pb-16 md:pt-32 md:pb-32">
+      <section className="relative overflow-hidden pt-12 pb-16 md:pt-24 md:pb-24">
         <div className="container relative z-10 mx-auto px-4 sm:px-6">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary animate-in fade-in slide-in-from-bottom-4 duration-700">

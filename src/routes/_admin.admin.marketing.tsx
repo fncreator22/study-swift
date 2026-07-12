@@ -67,12 +67,13 @@ function AdminMarketing() {
         setSelectedSubId(subs[0].id);
       }
 
-      // Fetch campaign events analytics for the active campaign
-      const active = campList.find((c: any) => c.is_active);
-      if (active) {
+      // Fetch campaign events analytics for active campaigns
+      const activeCamps = campList.filter((c: any) => c.is_active);
+      if (activeCamps.length > 0) {
+        const activeIds = activeCamps.map((c: any) => c.id);
         const { data: evs } = await supabase.from("campaign_events")
           .select("*")
-          .eq("campaign_id", active.id);
+          .in("campaign_id", activeIds);
         
         const eventsData = evs ?? [];
         const clicks = eventsData.filter(e => e.event_type === 'click');
@@ -186,12 +187,17 @@ function AdminMarketing() {
     }
   }
 
-  const activeCampaign = campaigns.find(c => c.is_active);
-  const ctr = activeCampaign && activeCampaign.views_count > 0
-    ? ((activeCampaign.clicks_count / activeCampaign.views_count) * 100).toFixed(1)
+  const activeCamps = campaigns.filter(c => c.is_active);
+  const activeViews = activeCamps.reduce((sum, c) => sum + (c.views_count || 0), 0);
+  const activeCloses = activeCamps.reduce((sum, c) => sum + (c.closes_count || 0), 0);
+  const activeClicks = activeCamps.reduce((sum, c) => sum + (c.clicks_count || 0), 0);
+  const activeConversions = activeCamps.reduce((sum, c) => sum + (c.conversions_count || 0), 0);
+
+  const ctr = activeViews > 0
+    ? ((activeClicks / activeViews) * 100).toFixed(1)
     : "0.0";
-  const convRate = activeCampaign && activeCampaign.clicks_count > 0
-    ? ((activeCampaign.conversions_count / activeCampaign.clicks_count) * 100).toFixed(1)
+  const convRate = activeClicks > 0
+    ? ((activeConversions / activeClicks) * 100).toFixed(1)
     : "0.0";
 
   return (
@@ -211,34 +217,36 @@ function AdminMarketing() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base font-bold">
             <TrendingUp className="h-5 w-5 text-primary" />
-            <span>Active Campaign Performance Funnel</span>
+            <span>Active Campaigns Performance Funnel</span>
           </CardTitle>
           <CardDescription>
-            {activeCampaign ? `Live analytics for campaign: "${activeCampaign.title}"` : "No campaign currently active"}
+            {activeCamps.length > 0
+              ? `Aggregated metrics for ${activeCamps.length} active campaign(s): ${activeCamps.map(c => `"${c.title}"`).join(", ")}`
+              : "No campaign currently active"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {activeCampaign ? (
+          {activeCamps.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <div className="bg-muted/40 p-4 rounded-2xl border">
                 <div className="flex justify-center mb-1 text-muted-foreground"><Eye className="h-4 w-4" /></div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Views (5s+)</p>
-                <p className="font-display text-2xl font-extrabold mt-1">{activeCampaign.views_count}</p>
+                <p className="font-display text-2xl font-extrabold mt-1">{activeViews}</p>
               </div>
               <div className="bg-muted/40 p-4 rounded-2xl border">
                 <div className="flex justify-center mb-1 text-muted-foreground"><X className="h-4 w-4 text-destructive" /></div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Closes</p>
-                <p className="font-display text-2xl font-extrabold mt-1">{activeCampaign.closes_count}</p>
+                <p className="font-display text-2xl font-extrabold mt-1">{activeCloses}</p>
               </div>
               <div className="bg-muted/40 p-4 rounded-2xl border">
                 <div className="flex justify-center mb-1 text-muted-foreground"><MousePointerClick className="h-4 w-4 text-primary" /></div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Clicks (CTR {ctr}%)</p>
-                <p className="font-display text-2xl font-extrabold mt-1">{activeCampaign.clicks_count}</p>
+                <p className="font-display text-2xl font-extrabold mt-1">{activeClicks}</p>
               </div>
               <div className="bg-muted/40 p-4 rounded-2xl border text-emerald-600 bg-emerald-500/5 border-emerald-500/10">
                 <div className="flex justify-center mb-1 text-emerald-600"><Check className="h-4 w-4" /></div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-emerald-600/80">Conversions ({convRate}%)</p>
-                <p className="font-display text-2xl font-extrabold mt-1">{activeCampaign.conversions_count}</p>
+                <p className="font-display text-2xl font-extrabold mt-1">{activeConversions}</p>
               </div>
             </div>
           ) : (

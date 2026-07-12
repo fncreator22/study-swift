@@ -76,30 +76,32 @@ function SupportPage() {
 
   async function loadReports() {
     setLoading(true);
-    if (user) {
-      const { data } = await supabase
-        .from("support_reports")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      setReports(data ?? []);
-    } else {
+    try {
       const credentials = getAnonCredentials().filter(c => c.id && c.token);
+      let anonData: any[] = [];
       if (credentials.length > 0) {
-        const { data, error } = await supabase.rpc("get_anonymous_reports_bulk", {
-          creds: credentials
-        });
-        if (error) {
-          toast.error(error.message);
-          setReports([]);
-        } else {
-          setReports(data ?? []);
-        }
-      } else {
-        setReports([]);
+        const { data } = await supabase.rpc("get_anonymous_reports_bulk", { creds: credentials });
+        anonData = data ?? [];
       }
+
+      if (user) {
+        const { data: regData } = await supabase
+          .from("support_reports")
+          .select("*")
+          .eq("user_id", user.id);
+        
+        const combined = [...(regData ?? []), ...anonData];
+        const unique = Array.from(new Map(combined.map(r => [r.id, r])).values());
+        unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setReports(unique);
+      } else {
+        setReports(anonData);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load reports");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -111,7 +113,8 @@ function SupportPage() {
     if (!selectedReport) return;
 
     async function loadMessages() {
-      if (user) {
+      const isOwnedTicket = user && selectedReport.user_id === user.id;
+      if (isOwnedTicket) {
         const { data } = await supabase
           .from("support_messages")
           .select("*")
@@ -135,7 +138,8 @@ function SupportPage() {
     }
 
     loadMessages();
-    if (!user) {
+    const isOwnedTicket = user && selectedReport.user_id === user.id;
+    if (!isOwnedTicket) {
       const interval = setInterval(loadMessages, 5000);
       return () => clearInterval(interval);
     }
@@ -249,7 +253,8 @@ function SupportPage() {
     setSendingReply(true);
 
     try {
-      if (user) {
+      const isOwnedTicket = user && selectedReport.user_id === user.id;
+      if (isOwnedTicket) {
         const { error } = await supabase
           .from("support_messages")
           .insert({ report_id: selectedReport.id, sender_id: user.id, is_admin_sender: false, message: replyText.trim() });
