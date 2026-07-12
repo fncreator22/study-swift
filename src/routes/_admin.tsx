@@ -5,7 +5,7 @@ import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu,
   SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, SidebarFooter, SidebarHeader,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins, FileText, Crown, BarChart3, Sparkles, Bell } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, PlayCircle, MessageSquare, Settings, LogOut, Lock, Coins, FileText, Crown, BarChart3, Sparkles, Bell, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -19,6 +19,7 @@ const items: { to: string; label: string; icon: typeof LayoutDashboard; exact?: 
   { to: "/admin/courses", label: "Courses", icon: PlayCircle },
   { to: "/admin/tokens", label: "Token Requests", icon: Coins },
   { to: "/admin/subscriptions", label: "Subscriptions", icon: Crown },
+  { to: "/admin/bugs", label: "Bugs", icon: ShieldAlert },
   { to: "/admin/monitoring", label: "Monitoring", icon: BarChart3 },
   { to: "/admin/marketing", label: "Marketing", icon: Sparkles },
   { to: "/admin/notifications", label: "Notifications", icon: Bell },

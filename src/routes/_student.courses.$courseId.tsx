@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import { getVideoSignedUrl } from "@/lib/video.functions";
+import { reportBug } from "@/lib/bug.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2, Award, Calendar } from "lucide-react";
+import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2, Award, Calendar, AlertCircle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
 import { CertificateModal } from "@/components/CertificateModal";
@@ -50,6 +51,7 @@ function CourseDetail() {
   const [activeVideo, setActiveVideo] = useState<Video | null>(null);
   const [signedUrl, setSignedUrl] = useState<string>("");
   const [loadingVideo, setLoadingVideo] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [body, setBody] = useState("");
@@ -151,17 +153,43 @@ function CourseDetail() {
 
   // Fetch signed URL whenever active video / access changes
   useEffect(() => {
-    if (!hasAccess || !activeVideo) { setSignedUrl(""); return; }
+    if (!hasAccess || !activeVideo) { 
+      setSignedUrl(""); 
+      setVideoError(null); 
+      return; 
+    }
     if (activeVideo.text_content && !activeVideo.video_url && !activeVideo.storage_path) {
       setSignedUrl("");
+      setVideoError(null);
       return; // Text only module
     }
     setLoadingVideo(true);
+    setVideoError(null);
     signUrl({ data: { videoId: activeVideo.id } })
-      .then((r) => setSignedUrl(r.url))
-      .catch((e: any) => toast.error(e.message || "Failed to load video"))
+      .then((r) => {
+        setSignedUrl(r.url);
+        if (!r.url) {
+          throw new Error("Empty URL returned from signing provider");
+        }
+      })
+      .catch(async (e: any) => {
+        const errMsg = e.message || "Failed to load video source stream";
+        setVideoError(errMsg);
+        // Silently log bug to database for the admin!
+        try {
+          await reportBug({
+            data: {
+              error_message: `Video playback load failed on course: "${course?.title || courseId}", module: "${activeVideo.title}". Error: ${errMsg}`,
+              route: window.location.pathname,
+              user_id: user?.id
+            }
+          });
+        } catch (reportErr) {
+          console.error("Failed to report diagnostics to DB:", reportErr);
+        }
+      })
       .finally(() => setLoadingVideo(false));
-  }, [hasAccess, activeVideo?.id]);
+  }, [hasAccess, activeVideo?.id, course?.title]);
 
   async function purchase() {
     if (purchasingRef.current) return;
@@ -276,7 +304,7 @@ function CourseDetail() {
   
   // Progression percentage
   const totalModules = videos.length;
-  const completedCount = completedModules.size;
+  const completedCount = videos.filter(v => completedModules.has(v.id)).length;
   const progressPercent = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
   const allCompleted = progressPercent === 100 && totalModules > 0;
 
@@ -298,7 +326,37 @@ function CourseDetail() {
           {hasAccess && activeVideo ? (
             <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
               <div className="aspect-video w-full relative bg-black">
-                {loadingVideo || (!signedUrl && !isTextModule) ? (
+                {videoError ? (
+                  <div className="h-full w-full bg-slate-950 p-8 flex flex-col items-center justify-center text-center text-white space-y-4">
+                    <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
+                      <AlertCircle className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-display font-bold text-sm tracking-tight">Unable to load media content</h3>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto leading-normal">
+                        We encountered an issue loading this module's media content. The diagnostics have been reported to the administration team.
+                      </p>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Link to="/courses">
+                        <Button size="sm" variant="outline" className="border-slate-800 text-slate-300 hover:bg-slate-900 rounded-xl h-8 text-xs font-bold px-3">
+                          <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Go Back
+                        </Button>
+                      </Link>
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          const v = activeVideo;
+                          setActiveVideo(null);
+                          setTimeout(() => setActiveVideo(v), 50);
+                        }} 
+                        className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl h-8 text-xs px-3"
+                      >
+                        <RotateCcw className="mr-1 h-3.5 w-3.5" /> Retry
+                      </Button>
+                    </div>
+                  </div>
+                ) : loadingVideo || (!signedUrl && !isTextModule) ? (
                   <div className="grid h-full w-full place-items-center text-white">
                     <div className="text-center space-y-2">
                       <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />

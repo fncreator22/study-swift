@@ -46,6 +46,7 @@ import { Route as AdminAdminNotificationsRouteImport } from './routes/_admin.adm
 import { Route as AdminAdminMonitoringRouteImport } from './routes/_admin.admin.monitoring'
 import { Route as AdminAdminMarketingRouteImport } from './routes/_admin.admin.marketing'
 import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
+import { Route as AdminAdminBugsRouteImport } from './routes/_admin.admin.bugs'
 import { Route as StudentTestsTestIdIndexRouteImport } from './routes/_student.tests.$testId.index'
 import { Route as StudentTestsTestIdAttemptRouteImport } from './routes/_student.tests.$testId.attempt'
 import { Route as AdminAdminVideosCourseIdRouteImport } from './routes/_admin.admin.videos.$courseId'
@@ -235,6 +236,11 @@ const AdminAdminCoursesRoute = AdminAdminCoursesRouteImport.update({
   path: '/admin/courses',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminBugsRoute = AdminAdminBugsRouteImport.update({
+  id: '/admin/bugs',
+  path: '/admin/bugs',
+  getParentRoute: () => AdminRoute,
+} as any)
 const StudentTestsTestIdIndexRoute = StudentTestsTestIdIndexRouteImport.update({
   id: '/tests/$testId/',
   path: '/tests/$testId/',
@@ -286,6 +292,7 @@ export interface FileRoutesByFullPath {
   '/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/admin/bugs': typeof AdminAdminBugsRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/marketing': typeof AdminAdminMarketingRoute
   '/admin/monitoring': typeof AdminAdminMonitoringRoute
@@ -328,6 +335,7 @@ export interface FileRoutesByTo {
   '/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/admin/bugs': typeof AdminAdminBugsRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/marketing': typeof AdminAdminMarketingRoute
   '/admin/monitoring': typeof AdminAdminMonitoringRoute
@@ -373,6 +381,7 @@ export interface FileRoutesById {
   '/_student/wallet': typeof StudentWalletRoute
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/_admin/admin/bugs': typeof AdminAdminBugsRoute
   '/_admin/admin/courses': typeof AdminAdminCoursesRoute
   '/_admin/admin/marketing': typeof AdminAdminMarketingRoute
   '/_admin/admin/monitoring': typeof AdminAdminMonitoringRoute
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/admin/login'
     | '/auth/callback'
+    | '/admin/bugs'
     | '/admin/courses'
     | '/admin/marketing'
     | '/admin/monitoring'
@@ -459,6 +469,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/admin/login'
     | '/auth/callback'
+    | '/admin/bugs'
     | '/admin/courses'
     | '/admin/marketing'
     | '/admin/monitoring'
@@ -503,6 +514,7 @@ export interface FileRouteTypes {
     | '/_student/wallet'
     | '/admin/login'
     | '/auth/callback'
+    | '/_admin/admin/bugs'
     | '/_admin/admin/courses'
     | '/_admin/admin/marketing'
     | '/_admin/admin/monitoring'
@@ -803,6 +815,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminCoursesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/bugs': {
+      id: '/_admin/admin/bugs'
+      path: '/admin/bugs'
+      fullPath: '/admin/bugs'
+      preLoaderRoute: typeof AdminAdminBugsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_student/tests/$testId/': {
       id: '/_student/tests/$testId/'
       path: '/tests/$testId'
@@ -842,6 +861,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAdminBugsRoute: typeof AdminAdminBugsRoute
   AdminAdminCoursesRoute: typeof AdminAdminCoursesRoute
   AdminAdminMarketingRoute: typeof AdminAdminMarketingRoute
   AdminAdminMonitoringRoute: typeof AdminAdminMonitoringRoute
@@ -859,6 +879,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdminBugsRoute: AdminAdminBugsRoute,
   AdminAdminCoursesRoute: AdminAdminCoursesRoute,
   AdminAdminMarketingRoute: AdminAdminMarketingRoute,
   AdminAdminMonitoringRoute: AdminAdminMonitoringRoute,
