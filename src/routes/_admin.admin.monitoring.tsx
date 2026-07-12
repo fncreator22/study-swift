@@ -94,10 +94,13 @@ function AdminMonitoring() {
         // 2. Deactivate any existing active memberships
         await supabase.from("memberships" as any).update({ status: 'cancelled' }).eq("user_id", req.user_id).eq("status", "active");
 
-        // 3. Insert new premium membership
+        const isPremium = (plan.price_inr || 0) > 0;
+        const membershipTier = isPremium ? 'premium' : 'basic';
+
+        // 3. Insert new membership (basic or premium)
         await supabase.from("memberships" as any).insert({
           user_id: req.user_id,
-          plan: 'premium',
+          plan: membershipTier,
           valid_until: validUntil.toISOString(),
           subscription_id: plan.id,
           status: 'active'
@@ -105,7 +108,7 @@ function AdminMonitoring() {
 
         // 4. Update user's profile
         await supabase.from("profiles").update({
-          membership_status: 'premium',
+          membership_status: membershipTier,
           subscription_expiry: validUntil.toISOString(),
           tokens: finalTokens
         }).eq("id", req.user_id);

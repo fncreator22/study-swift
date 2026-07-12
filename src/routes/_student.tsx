@@ -466,10 +466,14 @@ function StudentLayout() {
                           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                             profile?.tier === "premium"
                               ? "bg-primary/10 text-primary animate-pulse"
+                              : profile?.tier === "base"
+                              ? "bg-blue-500/10 text-blue-600"
                               : "bg-muted text-muted-foreground border"
                           }`}>
                             {profile?.tier === "premium" ? (
                               <><Crown className="h-2.5 w-2.5 shrink-0" /> Premium</>
+                            ) : profile?.tier === "base" ? (
+                              "Base Tier"
                             ) : (
                               "Free Basic"
                             )}

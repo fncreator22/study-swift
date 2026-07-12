@@ -29,6 +29,7 @@ function UsersAdmin() {
   const [purchases, setPurchases] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [activeMembership, setActiveMembership] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [resettingPassword, setResettingPassword] = useState(false);
@@ -43,10 +44,12 @@ function UsersAdmin() {
       supabase.from("purchases").select("id, created_at, tests(title), courses(title)").eq("user_id", viewUser.id),
       supabase.from("test_attempts").select("id, started_at, submitted_at, score, total, is_reviewed, tests(title)").eq("user_id", viewUser.id).order("started_at", { ascending: false }),
       supabase.from("wallet_transactions").select("id, amount, type, description, created_at").eq("user_id", viewUser.id).order("created_at", { ascending: false }),
-    ]).then(([p, a, w]) => {
+      supabase.from("memberships" as any).select("*, subscriptions(*)").eq("user_id", viewUser.id).eq("status", "active").limit(1).maybeSingle(),
+    ]).then(([p, a, t, m]) => {
       setPurchases(p.data ?? []);
       setAttempts(a.data ?? []);
-      setTransactions(w.data ?? []);
+      setTransactions(t.data ?? []);
+      setActiveMembership(m.data ?? null);
       setLoadingDetails(false);
     });
   }, [viewUser]);
@@ -176,7 +179,11 @@ function UsersAdmin() {
               <div><strong>College:</strong> {viewUser?.college || "—"}</div>
               <div><strong>Tokens Balance:</strong> {viewUser?.tokens ?? 0} Tokens</div>
               <div><strong>Location:</strong> {[viewUser?.address, viewUser?.state, viewUser?.country].filter(Boolean).join(", ") || "—"}</div>
-              <div><strong>Subscription:</strong> {viewUser?.membership_status === "premium" ? "Premium" : "Basic Tier (Free)"}</div>
+              <div><strong>Subscription:</strong> {
+                activeMembership 
+                  ? `${activeMembership.subscriptions?.name || activeMembership.plan || 'Free'} (Valid until ${new Date(activeMembership.valid_until).toLocaleDateString()})` 
+                  : "Basic Tier (Free)"
+              }</div>
               <div><strong>Time spent:</strong> {viewUser?.total_time_spent ? `${Math.floor(viewUser.total_time_spent / 60)}h ${viewUser.total_time_spent % 60}m` : "0 mins"}</div>
             </div>
           </DialogHeader>

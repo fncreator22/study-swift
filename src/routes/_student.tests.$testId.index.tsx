@@ -40,7 +40,12 @@ function TestDetail() {
     if (t.tier === "free") setHasAccess(true);
     else {
       const { data: p } = await supabase.from("purchases").select("id").eq("user_id", user.id).eq("test_id", testId).maybeSingle();
-      setHasAccess(!!p);
+      let access = !!p;
+      if (!access) {
+        const { data: sub } = await supabase.rpc("has_test_access" as any, { _user_id: user.id, _test_id: testId });
+        access = !!sub;
+      }
+      setHasAccess(access);
     }
   }
 
