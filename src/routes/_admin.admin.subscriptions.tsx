@@ -73,7 +73,7 @@ function AdminSubs() {
   }
   
   function openEdit(p: Plan) { 
-    setEditing({ ...p, price_inr: p.price_inr ?? p.token_price * 10, original_price_inr: p.original_price_inr ?? 0, test_ids: p.test_ids ?? [], course_ids: p.course_ids ?? [] }); 
+    setEditing({ ...p, price_inr: p.price_inr ?? p.token_price * tokenPrice, original_price_inr: p.original_price_inr ?? 0, test_ids: p.test_ids ?? [], course_ids: p.course_ids ?? [] }); 
     setOpen(true); 
   }
 

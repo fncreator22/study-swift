@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Download, Upload, RotateCcw, ShieldAlert, Key, FileJson, LogOut, User } from "lucide-react";
+import { Download, Upload, RotateCcw, ShieldAlert, Key, FileJson, LogOut, User, Coins } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -23,8 +23,31 @@ function AdminSettings() {
   const { user, signOut } = useAuth();
   const nav = useNavigate();
   const [pwd, setPwd] = useState("");
+  const [tokenRate, setTokenRate] = useState<string>("10");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Fetch current token price setting
+    supabase.from("settings" as any).select("value").eq("key", "token_price").maybeSingle()
+      .then(({ data }) => {
+        if (data?.value?.inr) {
+          setTokenRate(data.value.inr.toString());
+        }
+      });
+  }, []);
+
+  async function updateTokenRate() {
+    const parsed = parseFloat(tokenRate);
+    if (isNaN(parsed) || parsed <= 0) return toast.error("Invalid token exchange rate");
+    setLoading(true);
+    const { error } = await supabase
+      .from("settings" as any)
+      .upsert({ key: "token_price", value: { inr: parsed } });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Token exchange rate updated successfully");
+  }
 
   async function changePwd() {
     if (pwd.length < 6) return toast.error("Password must be 6+ chars");
@@ -148,6 +171,24 @@ function AdminSettings() {
         </div>
 
         <div className="space-y-6">
+          {/* Token Exchange Rate Settings Card */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <h2 className="flex items-center gap-2 font-display text-lg font-semibold mb-2">
+              <Coins className="h-5 w-5 text-primary" /> Token Exchange Rate
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">Configure the exchange rate of INR per Token. Used for all student top-up calculations.</p>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Rate (INR per 1 Token)</Label>
+                <div className="relative">
+                  <Input type="number" value={tokenRate} onChange={(e) => setTokenRate(e.target.value)} placeholder="e.g. 10" />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">INR</div>
+                </div>
+              </div>
+              <Button onClick={updateTokenRate} disabled={loading} className="w-full rounded-xl">Save Exchange Rate</Button>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
             <h2 className="flex items-center gap-2 font-display text-lg font-semibold mb-2">
               <FileJson className="h-5 w-5 text-primary" /> Data Backup & Migration

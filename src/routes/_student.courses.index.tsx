@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PlayCircle, Star, BookOpen, GraduationCap, ChevronRight } from "lucide-react";
 
-export const Route = createFileRoute("/_student/courses")({ component: Courses });
+export const Route = createFileRoute("/_student/courses/")({ component: Courses });
 
 type Course = { 
   id: string; 
@@ -97,4 +97,3 @@ function Courses() {
     </div>
   );
 }
-

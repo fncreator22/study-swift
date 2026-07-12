@@ -80,8 +80,17 @@ function StudentLayout() {
   const viewEventLoggedRef = useRef<boolean>(false);
   const [campaignQueue, setCampaignQueue] = useState<any[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
+  const [rate, setRate] = useState<number>(10);
 
   useEffect(() => {
+    // Fetch token rate settings
+    supabase.from("settings" as any).select("value").eq("key", "token_price").maybeSingle()
+      .then(({ data }) => {
+        if (data?.value?.inr) {
+          setRate(data.value.inr);
+        }
+      });
+
     if (user) {
       Promise.all([
         supabase
@@ -489,7 +498,7 @@ function StudentLayout() {
                           </div>
                           <div>
                             <p className="text-xs font-bold text-foreground">Token Balance</p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">Value: ₹{tokens * 10}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Value: ₹{tokens * rate}</p>
                           </div>
                         </div>
                         <span className="font-display text-base font-black text-primary">{tokens}</span>

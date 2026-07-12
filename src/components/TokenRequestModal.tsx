@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,18 +23,28 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const [rate, setRate] = useState<number>(10);
   const [paymentSettings, setPaymentSettings] = useState<any>({ upi_id: 'examy@upi', bank_name: 'HDFC Bank', account_number: '50200012345678', ifsc_code: 'HDFC0000123' });
 
-  useState(() => {
+  useEffect(() => {
+    // 1. Fetch payment settings
     supabase.from("settings" as any).select("value").eq("key", "payment_settings").maybeSingle()
       .then(({ data }) => {
         if (data?.value) {
           setPaymentSettings(data.value);
         }
       });
-  });
+    
+    // 2. Fetch token price settings
+    supabase.from("settings" as any).select("value").eq("key", "token_price").maybeSingle()
+      .then(({ data }) => {
+        if (data?.value?.inr) {
+          setRate(data.value.inr);
+        }
+      });
+  }, []);
 
-  const inrValue = parseInt(amount || "0") * 10;
+  const inrValue = parseInt(amount || "0") * rate;
 
   async function handleSubmit() {
     if (submittingRef.current) return;
@@ -89,7 +99,7 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
                   <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>1 Token = ₹10</p>
+                  <p>1 Token = ₹{rate}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

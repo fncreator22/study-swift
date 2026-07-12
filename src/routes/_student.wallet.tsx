@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Coins, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react";
+import { Coins, ArrowUpRight, ArrowDownLeft, Clock, History } from "lucide-react";
 
 export const Route = createFileRoute("/_student/wallet")({ component: WalletPage });
 
@@ -16,20 +16,50 @@ type Transaction = {
   created_at: string;
 };
 
+type TokenRequest = {
+  id: string;
+  amount: number;
+  message: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+};
+
 function WalletPage() {
   const { user, tokens } = useAuth();
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [requests, setRequests] = useState<TokenRequest[]>([]);
+  const [rate, setRate] = useState<number>(10);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
+      // 1. Fetch token price rate from settings
+      const { data: settingsData } = await supabase
+        .from("settings" as any)
+        .select("value")
+        .eq("key", "token_price")
+        .maybeSingle();
+      if (settingsData?.value?.inr) {
+        setRate(settingsData.value.inr);
+      }
+
+      // 2. Fetch transactions
+      const { data: txsData } = await supabase
         .from("wallet_transactions")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      setTxs((data as Transaction[]) ?? []);
+
+      // 3. Fetch token purchase requests
+      const { data: reqsData } = await supabase
+        .from("token_requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      setTxs((txsData as Transaction[]) ?? []);
+      setRequests((reqsData as TokenRequest[]) ?? []);
       setLoading(false);
     })();
   }, [user]);
@@ -51,10 +81,58 @@ function WalletPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs opacity-80">1 Token = ₹10</p>
+            <p className="text-xs opacity-85">1 Token = ₹{rate}</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Token Purchase Requests */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <History className="h-5 w-5 text-muted-foreground" /> Token Purchase Requests
+          </CardTitle>
+          <CardDescription>Track the status of your payment verification requests.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="responsive-table-container">
+            <table className="w-full min-w-[520px] text-sm">
+              <thead className="bg-muted/50 text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
+                <tr>
+                  <th className="px-6 py-3">Amount</th>
+                  <th className="px-6 py-3">Message</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Date Requested</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {loading && (
+                  <tr><td colSpan={4} className="text-center py-8 text-muted-foreground">Loading...</td></tr>
+                )}
+                {!loading && requests.length === 0 && (
+                  <tr><td colSpan={4} className="text-center py-8 text-muted-foreground italic">No top-up requests yet</td></tr>
+                )}
+                {!loading && requests.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-6 py-4 font-semibold text-primary">
+                      {r.amount} Tokens <span className="text-xs text-muted-foreground font-normal">(₹{r.amount * rate})</span>
+                    </td>
+                    <td className="px-6 py-4 max-w-[240px] truncate" title={r.message}>{r.message || "—"}</td>
+                    <td className="px-6 py-4">
+                      <Badge variant={r.status === 'approved' ? 'success' : r.status === 'pending' ? 'secondary' : 'destructive'}>
+                        {r.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(r.created_at).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Transaction History */}
       <Card>
@@ -62,6 +140,7 @@ function WalletPage() {
           <CardTitle className="text-lg flex items-center gap-2">
             <Clock className="h-5 w-5 text-muted-foreground" /> Transaction History
           </CardTitle>
+          <CardDescription>Records of token unlocks, grants, and purchases.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {/* Mobile card view for small screens */}

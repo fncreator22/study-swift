@@ -22,11 +22,23 @@ type TokenRequest = {
 
 function AdminTokens() {
   const [requests, setRequests] = useState<TokenRequest[]>([]);
+  const [rate, setRate] = useState<number>(10);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
+    // 1. Fetch token price
+    const { data: settingsData } = await supabase
+      .from("settings" as any)
+      .select("value")
+      .eq("key", "token_price")
+      .maybeSingle();
+    if (settingsData?.value?.inr) {
+      setRate(settingsData.value.inr);
+    }
+
+    // 2. Fetch requests
     const { data, error } = await supabase
       .from("token_requests")
       .select("*, profiles(full_name, college)")
@@ -91,31 +103,31 @@ function AdminTokens() {
                 <TableCell>
                   <div className="flex flex-col">
                     <span className="font-semibold text-primary">{r.amount} Tokens</span>
-                    <span className="text-xs text-muted-foreground">₹{r.amount * 10}</span>
+                    <span className="text-xs text-muted-foreground">₹{r.amount * rate}</span>
                   </div>
                 </TableCell>
                 <TableCell className="max-w-[200px] truncate" title={r.message}>{r.message || "—"}</TableCell>
                 <TableCell>
                   {r.screenshot_url ? (
                     <a href={r.screenshot_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
-                      <ExternalLink className="h-3 w-3" /> View
+                      View Screenshot <ExternalLink className="h-3 w-3" />
                     </a>
                   ) : "—"}
                 </TableCell>
-                <TableCell className="text-xs">{new Date(r.created_at).toLocaleString()}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</TableCell>
                 <TableCell>
-                  <Badge variant={r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'destructive' : 'secondary'}>
+                  <Badge variant={r.status === 'approved' ? 'success' : r.status === 'pending' ? 'secondary' : 'destructive'}>
                     {r.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   {r.status === 'pending' && (
                     <div className="flex justify-end gap-2">
-                      <Button size="icon" variant="outline" disabled={processingId !== null} className="h-8 w-8 text-destructive" onClick={() => handleStatus(r.id, 'rejected')}>
-                        <X className="h-4 w-4" />
+                      <Button size="xs" variant="outline" onClick={() => handleStatus(r.id, 'approved')} className="text-success hover:bg-success/10 hover:text-success border-success/20">
+                        <Check className="mr-1 h-3.5 w-3.5" /> Approve
                       </Button>
-                      <Button size="icon" variant="outline" disabled={processingId !== null} className="h-8 w-8 text-success" onClick={() => handleStatus(r.id, 'approved')}>
-                        <Check className="h-4 w-4" />
+                      <Button size="xs" variant="outline" onClick={() => handleStatus(r.id, 'rejected')} className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20">
+                        <X className="mr-1 h-3.5 w-3.5" /> Reject
                       </Button>
                     </div>
                   )}
