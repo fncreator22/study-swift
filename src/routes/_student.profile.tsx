@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { LogOut, ShieldAlert, User, Key, BarChart3, Coins, CreditCard, Clock } from "lucide-react";
+import { LogOut, ShieldAlert, User, Key, BarChart3, Coins, CreditCard, Clock, Award } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { CertificateModal } from "@/components/CertificateModal";
 
 export const Route = createFileRoute("/_student/profile")({ component: Profile });
 
@@ -28,33 +29,41 @@ function Profile() {
   const [stats, setStats] = useState({ attempts: 0, purchases: 0, score: 0, avg: 0 });
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const [{ data: p }, { data: r }, { count: pc }, { data: mem }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-        supabase.from("rankings_view").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", user.id),
-        supabase.from("memberships" as any).select("*, subscriptions(*)").eq("user_id", user.id).eq("status", "active").order("valid_until", { ascending: false }).limit(1).maybeSingle()
-      ]);
-      setName(p?.full_name ?? ""); 
-      setCollege(p?.college ?? "");
-      setCountry(p?.country ?? "India");
-      setStateName(p?.state ?? "Delhi");
-      setAddress(p?.address ?? "");
-      setTimeSpent(p?.total_time_spent ?? 0);
-      
-      const isSubActive = mem && new Date(mem.valid_until) > new Date();
-      setActiveSub(isSubActive ? ((mem as any).subscriptions?.name || mem.plan || "Premium Tier") : "Basic Tier (Free)");
+  // Accomplishments state
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [selectedCert, setSelectedCert] = useState<any>(null);
+  const [certModalOpen, setCertModalOpen] = useState(false);
 
-      setStats({
-        attempts: r?.attempts_count ?? 0,
-        purchases: pc ?? 0,
-        score: r?.total_score ?? 0,
-        avg: r?.avg_percentage ?? 0,
-      });
-    })();
-  }, [user]);
+  async function loadData() {
+    if (!user) return;
+    const [{ data: p }, { data: r }, { count: pc }, { data: mem }, { data: certs }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase.from("rankings_view").select("*").eq("user_id", user.id).maybeSingle(),
+      supabase.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("memberships" as any).select("*, subscriptions(*)").eq("user_id", user.id).eq("status", "active").order("valid_until", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("certificates").select("*").eq("user_id", user.id).order("issued_at", { ascending: false })
+    ]);
+    
+    setName(p?.full_name ?? ""); 
+    setCollege(p?.college ?? "");
+    setCountry(p?.country ?? "India");
+    setStateName(p?.state ?? "Delhi");
+    setAddress(p?.address ?? "");
+    setTimeSpent(p?.total_time_spent ?? 0);
+    setCertificates(certs ?? []);
+    
+    const isSubActive = mem && new Date(mem.valid_until) > new Date();
+    setActiveSub(isSubActive ? ((mem as any).subscriptions?.name || mem.plan || "Premium Tier") : "Basic Tier (Free)");
+
+    setStats({
+      attempts: r?.attempts_count ?? 0,
+      purchases: pc ?? 0,
+      score: r?.total_score ?? 0,
+      avg: r?.avg_percentage ?? 0,
+    });
+  }
+
+  useEffect(() => { loadData(); }, [user]);
 
   async function save() {
     if (!user) return;
@@ -70,7 +79,6 @@ function Profile() {
     if (error) return toast.error(error.message);
     toast.success("Profile details saved successfully!");
     refreshProfile?.();
-    // Redirect to welcome subscription wizard
     nav({ to: "/welcome-subscription" });
   }
 
@@ -224,6 +232,55 @@ function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Accomplishments & Certificates List */}
+      <div className="mt-8 rounded-3xl border border-border bg-card p-6 shadow-soft">
+        <div className="flex items-center gap-2 mb-6">
+          <Award className="h-6 w-6 text-primary" />
+          <div>
+            <h2 className="font-display text-lg font-bold">Accomplishments & Certificates</h2>
+            <p className="text-xs text-muted-foreground">Download or share your verified course completion certificates.</p>
+          </div>
+        </div>
+        
+        {certificates.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground text-sm italic">
+            No certificates earned yet. Complete course certification exams to receive your verified accomplishments.
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {certificates.map((c) => {
+              const scorePct = c.total > 0 ? Math.round((c.score / c.total) * 100) : 0;
+              return (
+                <div key={c.id} className="flex flex-col justify-between p-5 rounded-2xl border border-border bg-muted/20 relative overflow-hidden group hover:border-primary/30 transition-all">
+                  <div className="space-y-1">
+                    <span className="inline-block rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                      Verified Certificate
+                    </span>
+                    <h3 className="font-serif font-bold text-slate-800 line-clamp-1 pt-2">{c.course_title}</h3>
+                    <p className="text-[10px] text-muted-foreground">Issued on {new Date(c.issued_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-slate-600 font-medium">Final Exam Grade: <span className="text-emerald-600 font-bold">{scorePct}%</span></p>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-border/50 flex justify-between items-center">
+                    <span className="text-[9px] font-mono text-slate-400">ID: {c.certificate_code}</span>
+                    <Button 
+                      size="xs" 
+                      onClick={() => { setSelectedCert(c); setCertModalOpen(true); }}
+                      className="rounded-lg bg-primary hover:bg-primary/95 text-white flex items-center gap-1.5"
+                    >
+                      <Award className="h-3 w-3" /> View Certificate
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selectedCert && (
+        <CertificateModal open={certModalOpen} onOpenChange={setCertModalOpen} certificate={selectedCert} />
+      )}
     </div>
   );
 }

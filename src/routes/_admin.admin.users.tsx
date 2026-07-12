@@ -29,6 +29,7 @@ function UsersAdmin() {
   const [purchases, setPurchases] = useState<any[]>([]);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]);
   const [activeMembership, setActiveMembership] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -45,11 +46,13 @@ function UsersAdmin() {
       supabase.from("test_attempts").select("id, started_at, submitted_at, score, total, is_reviewed, tests(title)").eq("user_id", viewUser.id).order("started_at", { ascending: false }),
       supabase.from("wallet_transactions").select("id, amount, type, description, created_at").eq("user_id", viewUser.id).order("created_at", { ascending: false }),
       supabase.from("memberships" as any).select("*, subscriptions(*)").eq("user_id", viewUser.id).eq("status", "active").limit(1).maybeSingle(),
-    ]).then(([p, a, t, m]) => {
+      supabase.from("certificates").select("*").eq("user_id", viewUser.id).order("issued_at", { ascending: false }),
+    ]).then(([p, a, t, m, certs]) => {
       setPurchases(p.data ?? []);
       setAttempts(a.data ?? []);
       setTransactions(t.data ?? []);
       setActiveMembership(m.data ?? null);
+      setCertificates(certs.data ?? []);
       setLoadingDetails(false);
     });
   }, [viewUser]);
@@ -192,11 +195,12 @@ function UsersAdmin() {
             <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground animate-pulse">Loading profile data...</div>
           ) : (
             <Tabs defaultValue="purchases" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-4 rounded-2xl bg-muted p-1">
-                <TabsTrigger value="purchases" className="rounded-xl py-2 font-semibold">Purchased Items ({purchases.length})</TabsTrigger>
-                <TabsTrigger value="attempts" className="rounded-xl py-2 font-semibold">Attempts History ({attempts.length})</TabsTrigger>
-                <TabsTrigger value="transactions" className="rounded-xl py-2 font-semibold">Wallet Transactions ({transactions.length})</TabsTrigger>
-                <TabsTrigger value="actions" className="rounded-xl py-2 font-semibold">Actions</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5 rounded-2xl bg-muted p-1">
+                <TabsTrigger value="purchases" className="rounded-xl py-2 font-semibold text-xs">Purchases ({purchases.length})</TabsTrigger>
+                <TabsTrigger value="attempts" className="rounded-xl py-2 font-semibold text-xs">Attempts ({attempts.length})</TabsTrigger>
+                <TabsTrigger value="transactions" className="rounded-xl py-2 font-semibold text-xs">Wallet ({transactions.length})</TabsTrigger>
+                <TabsTrigger value="certificates" className="rounded-xl py-2 font-semibold text-xs">Certificates ({certificates.length})</TabsTrigger>
+                <TabsTrigger value="actions" className="rounded-xl py-2 font-semibold text-xs">Actions</TabsTrigger>
               </TabsList>
 
               <div className="flex-1 min-h-0 mt-4 overflow-y-auto pr-1">
@@ -269,6 +273,29 @@ function UsersAdmin() {
                   )}
                 </TabsContent>
 
+                <TabsContent value="certificates" className="h-full">
+                  {certificates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-10">No certificates earned yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {certificates.map((c) => {
+                        const pct = c.total > 0 ? Math.round((c.score / c.total) * 100) : 0;
+                        return (
+                          <div key={c.id} className="rounded-2xl border border-border p-4 bg-card/50 flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-semibold">{c.course_title}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Code: {c.certificate_code} · Issued: {new Date(c.issued_at).toLocaleDateString()}</p>
+                            </div>
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[10px] font-bold">
+                              Grade Score: {pct}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+
                 <TabsContent value="actions" className="h-full">
                   <div className="space-y-4 max-w-sm py-4">
                     <h4 className="font-display font-bold text-sm">Security Settings</h4>
@@ -280,41 +307,37 @@ function UsersAdmin() {
                       <Input 
                         id="new-pass" 
                         type="password" 
-                        placeholder="Enter new password..." 
                         value={newPassword} 
                         onChange={(e) => setNewPassword(e.target.value)} 
+                        placeholder="At least 6 characters" 
                       />
                     </div>
                     <Button 
-                      disabled={resettingPassword || !newPassword} 
+                      disabled={resettingPassword} 
                       onClick={async () => {
-                        if (newPassword.length < 6) return toast.error("Password must be at least 6 characters.");
+                        if (newPassword.length < 6) return toast.error("Password must be 6+ characters");
+                        if (!viewUser?.email) return toast.error("User email not found");
                         setResettingPassword(true);
-                        try {
-                          const res = await adminResetUserPassword({ targetUserId: viewUser.id, newPassword });
-                          if (res.success) {
-                            toast.success("User password has been successfully reset.");
-                            setNewPassword("");
-                          }
-                        } catch (err: any) {
-                          toast.error(err.message || "Failed to reset password.");
-                        } finally {
-                          setResettingPassword(false);
+                        const { success, error } = await adminResetUserPassword({
+                          email: viewUser.email,
+                          password: newPassword,
+                        });
+                        setResettingPassword(false);
+                        if (success) {
+                          toast.success("Password updated successfully");
+                          setNewPassword("");
+                        } else {
+                          toast.error(error || "Failed to update password");
                         }
                       }}
-                      className="rounded-xl"
                     >
-                      {resettingPassword ? "Updating..." : "Reset Password"}
+                      {resettingPassword ? "Updating..." : "Update Password"}
                     </Button>
                   </div>
                 </TabsContent>
               </div>
             </Tabs>
           )}
-
-          <DialogFooter className="mt-4 border-t border-border pt-4">
-            <Button onClick={() => setViewUser(null)}>Close Profile</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

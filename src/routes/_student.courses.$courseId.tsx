@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -6,19 +6,25 @@ import { useServerFn } from "@tanstack/react-start";
 import { getVideoSignedUrl } from "@/lib/video.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2, Award, Calendar, CheckSquare, Square } from "lucide-react";
 import { toast } from "sonner";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
+import { CertificateModal } from "@/components/CertificateModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_student/courses/$courseId")({ component: CourseDetail });
 
 type Course = {
   id: string; title: string; description: string; tier: string; price: number;
   thumbnail_url: string; difficulty: string; instructor_name: string; instructor_bio: string; category: string;
+  completion_test_id: string | null;
 };
 type Video = {
   id: string; title: string; description: string;
   video_url: string | null; storage_path: string | null;
+  text_content: string | null;
 };
 type Comment = { id: string; body: string; created_at: string; user_id: string };
 
@@ -36,6 +42,7 @@ function CourseDetail() {
   const { courseId } = Route.useParams();
   const { user, tokens, refreshProfile } = useAuth();
   const signUrl = useServerFn(getVideoSignedUrl);
+  const navigate = useNavigate();
 
   const [course, setCourse] = useState<Course | null>(null);
   const [hasAccess, setHasAccess] = useState(false);
@@ -51,6 +58,17 @@ function CourseDetail() {
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const purchasingRef = useRef(false);
 
+  // Certification & Progression states
+  const [completedModules, setCompletedModules] = useState<Set<string>>(new Set());
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [certificate, setCertificate] = useState<any>(null);
+  const [completionAttempt, setCompletionAttempt] = useState<any>(null);
+  const [certDialogOpen, setCertDialogOpen] = useState(false);
+  const [certName, setCertName] = useState("");
+  const [certDob, setCertDob] = useState("");
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [savingCertInfo, setSavingCertInfo] = useState(false);
+
   async function load() {
     if (!user) return;
     setLoading(true);
@@ -61,6 +79,14 @@ function CourseDetail() {
       return;
     }
     setCourse(c as unknown as Course);
+
+    // Get user profile details
+    const { data: prof } = await supabase.from("profiles").select("full_name, date_of_birth").eq("id", user.id).maybeSingle();
+    setUserProfile(prof);
+    if (prof) {
+      setCertName(prof.full_name || "");
+      setCertDob(prof.date_of_birth || "");
+    }
 
     if (c.tier === "free") setHasAccess(true);
     else {
@@ -73,11 +99,28 @@ function CourseDetail() {
       setHasAccess(access);
     }
 
-    const { data: vs } = await supabase.from("videos").select("id,title,description,video_url,storage_path").eq("course_id", courseId).order("position");
+    // Load videos/modules
+    const { data: vs } = await supabase.from("videos").select("id,title,description,video_url,storage_path,text_content").eq("course_id", courseId).order("position");
     const list = (vs ?? []) as Video[];
     setVideos(list);
     if (list.length) setActiveVideo(list[0]);
 
+    // Load module progression
+    const { data: prog } = await supabase.from("module_progress").select("video_id").eq("user_id", user.id);
+    const completedSet = new Set((prog ?? []).map((p: any) => p.video_id));
+    setCompletedModules(completedSet);
+
+    // Fetch certification & attempt if test linked
+    if (c.completion_test_id) {
+      const [{ data: cert }, { data: att }] = await Promise.all([
+        supabase.from("certificates").select("*").eq("user_id", user.id).eq("course_id", courseId).maybeSingle(),
+        supabase.from("test_attempts").select("id, score, total, is_reviewed").eq("user_id", user.id).eq("test_id", c.completion_test_id).eq("is_reviewed", true).order("created_at", { ascending: false }).limit(1).maybeSingle()
+      ]);
+      setCertificate(cert);
+      setCompletionAttempt(att);
+    }
+
+    // Comments load
     const { data: cs } = await supabase.from("comments").select("*").eq("course_id", courseId).order("created_at", { ascending: false });
     setComments((cs as Comment[]) ?? []);
     const uIds = Array.from(new Set((cs ?? []).map((c: any) => c.user_id)));
@@ -94,6 +137,10 @@ function CourseDetail() {
   // Fetch signed URL whenever active video / access changes
   useEffect(() => {
     if (!hasAccess || !activeVideo) { setSignedUrl(""); return; }
+    if (activeVideo.text_content && !activeVideo.video_url && !activeVideo.storage_path) {
+      setSignedUrl("");
+      return; // Text only module
+    }
     setLoadingVideo(true);
     signUrl({ data: { videoId: activeVideo.id } })
       .then((r) => setSignedUrl(r.url))
@@ -122,10 +169,71 @@ function CourseDetail() {
         toast.success("Course unlocked successfully");
         setHasAccess(true);
         refreshProfile();
+        load();
       }
     } finally {
       purchasingRef.current = false;
       setPurchasing(false);
+    }
+  }
+
+  async function toggleModuleProgress(videoId: string) {
+    if (!hasAccess) return;
+    const isCompleted = completedModules.has(videoId);
+    if (isCompleted) {
+      const { error } = await supabase.from("module_progress").delete().eq("user_id", user?.id).eq("video_id", videoId);
+      if (error) return toast.error(error.message);
+      const updated = new Set(completedModules);
+      updated.delete(videoId);
+      setCompletedModules(updated);
+    } else {
+      const { error } = await supabase.from("module_progress").insert({ user_id: user?.id, video_id: videoId });
+      if (error) return toast.error(error.message);
+      const updated = new Set(completedModules);
+      updated.add(videoId);
+      setCompletedModules(updated);
+    }
+  }
+
+  async function markCompletedAndNext() {
+    if (!activeVideo) return;
+    await toggleModuleProgress(activeVideo.id);
+    const currentIndex = videos.findIndex(v => v.id === activeVideo.id);
+    if (currentIndex < videos.length - 1) {
+      setActiveVideo(videos[currentIndex + 1]);
+    } else {
+      toast.success("All modules completed! You can now start the Certification Exam.");
+      load();
+    }
+  }
+
+  async function handleStartExam() {
+    if (!userProfile?.full_name || !userProfile?.date_of_birth) {
+      setCertDialogOpen(true);
+    } else {
+      if (course?.completion_test_id) {
+        navigate({ to: "/tests/$testId", params: { testId: course.completion_test_id } });
+      }
+    }
+  }
+
+  async function saveCertificateDetails() {
+    if (!certName.trim()) return toast.error("Please enter your official full name");
+    if (!certDob) return toast.error("Please select your date of birth");
+
+    setSavingCertInfo(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name: certName.trim(), date_of_birth: certDob })
+      .eq("id", user?.id);
+
+    setSavingCertInfo(false);
+    if (error) return toast.error(error.message);
+
+    setCertDialogOpen(false);
+    toast.success("Certification details registered. Redirecting to Exam...");
+    if (course?.completion_test_id) {
+      navigate({ to: "/tests/$testId", params: { testId: course.completion_test_id } });
     }
   }
 
@@ -140,6 +248,13 @@ function CourseDetail() {
   if (!course) return <div className="p-8 text-center"><p className="text-muted-foreground">Course not found.</p><Link to="/courses" className="mt-4 inline-block text-primary font-bold">Back to courses</Link></div>;
 
   const isExternal = activeVideo && !activeVideo.storage_path && activeVideo.video_url;
+  const isTextModule = activeVideo && activeVideo.text_content && !activeVideo.storage_path && !activeVideo.video_url;
+  
+  // Progression percentage
+  const totalModules = videos.length;
+  const completedCount = completedModules.size;
+  const progressPercent = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
+  const allCompleted = progressPercent === 100 && totalModules > 0;
 
   return (
     <div className="mx-auto max-w-6xl pb-20">
@@ -150,10 +265,26 @@ function CourseDetail() {
       <div className="mt-6 grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {hasAccess && activeVideo ? (
-            <div className="overflow-hidden rounded-3xl border border-border bg-black shadow-2xl">
-              <div className="aspect-video w-full relative">
+            <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
+              <div className="aspect-video w-full relative bg-black">
                 {loadingVideo ? (
                   <div className="grid h-full w-full place-items-center text-white"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                ) : isTextModule ? (
+                  <div className="h-full w-full bg-[#fcfbfa] p-8 overflow-y-auto text-slate-800 flex flex-col justify-between">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600">
+                        <BookOpen className="h-4 w-4" /> Reading Section
+                      </div>
+                      <h2 className="font-serif text-2xl font-bold text-[#1e293b]">{activeVideo.title}</h2>
+                      <div className="w-12 h-0.5 bg-primary mt-2"></div>
+                      <p className="whitespace-pre-line text-slate-700 leading-relaxed font-sans text-sm md:text-base pt-4">
+                        {activeVideo.text_content}
+                      </p>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground italic border-t border-slate-100 pt-4 mt-6">
+                      Read the section completely then mark it completed.
+                    </div>
+                  </div>
                 ) : isExternal ? (
                   <iframe src={toEmbed(signedUrl)} className="h-full w-full" allowFullScreen title={activeVideo.title} />
                 ) : signedUrl ? (
@@ -164,11 +295,23 @@ function CourseDetail() {
                     onContextMenu={(e) => e.preventDefault()}
                     className="h-full w-full bg-black"
                   />
-                ) : null}
+                ) : (
+                  <div className="grid h-full w-full place-items-center text-muted-foreground text-sm">No video source specified.</div>
+                )}
               </div>
-              <div className="bg-card p-6">
-                <h1 className="font-display text-2xl font-bold">{activeVideo.title}</h1>
-                <p className="mt-2 text-sm text-muted-foreground">{activeVideo.description}</p>
+              <div className="bg-card p-6 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1">
+                  <h1 className="font-display text-2xl font-bold">{activeVideo.title}</h1>
+                  <p className="mt-2 text-sm text-muted-foreground">{activeVideo.description}</p>
+                </div>
+                {hasAccess && (
+                  <Button 
+                    onClick={markCompletedAndNext}
+                    className="rounded-xl shrink-0 font-bold bg-primary text-primary-foreground hover:bg-primary/95 flex items-center gap-2"
+                  >
+                    {completedModules.has(activeVideo.id) ? "Completed (Next)" : "Mark Completed & Next"}
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
@@ -233,33 +376,146 @@ function CourseDetail() {
           </div>
         </div>
 
+        {/* Sidebar course contents & certification */}
         <div className="space-y-6">
           <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
-            <h3 className="font-display font-bold">Course Content</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{videos.length} video modules</p>
-            <div className="mt-6 space-y-2">
-              {videos.map((v, i) => (
-                <button key={v.id} disabled={!hasAccess} onClick={() => setActiveVideo(v)}
-                  className={`flex w-full items-center gap-4 rounded-2xl p-3 text-left transition-all ${activeVideo?.id === v.id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "hover:bg-muted"} ${!hasAccess && 'opacity-60 grayscale cursor-not-allowed'}`}>
-                  <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border font-mono text-xs font-bold ${activeVideo?.id === v.id ? 'border-primary-foreground/30 bg-primary-foreground/10' : 'border-border bg-muted'}`}>{i + 1}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-bold leading-tight">{v.title}</p>
-                    <p className={`mt-0.5 truncate text-[10px] font-medium ${activeVideo?.id === v.id ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>Module {i + 1}</p>
+            <div className="flex items-center justify-between mb-4 border-b border-border/50 pb-4">
+              <div>
+                <h3 className="font-display font-bold">Course Progression</h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{completedCount} of {totalModules} completed</p>
+              </div>
+              <span className="text-lg font-black text-primary">{progressPercent}%</span>
+            </div>
+
+            {/* Progression Bar */}
+            <div className="w-full bg-muted h-2 rounded-full overflow-hidden mb-6">
+              <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }}></div>
+            </div>
+
+            <div className="space-y-2">
+              {videos.map((v, i) => {
+                const isCompleted = completedModules.has(v.id);
+                return (
+                  <div 
+                    key={v.id} 
+                    className={`flex items-center gap-2 rounded-2xl p-2 transition-all ${activeVideo?.id === v.id ? "bg-primary/5 border border-primary/20" : ""}`}
+                  >
+                    {/* Checkbox button */}
+                    <button 
+                      disabled={!hasAccess}
+                      onClick={() => toggleModuleProgress(v.id)}
+                      className={`text-primary shrink-0 transition-transform active:scale-95 ${!hasAccess && "cursor-not-allowed opacity-40"}`}
+                    >
+                      {isCompleted ? <CheckSquare className="h-5 w-5 fill-primary text-primary-foreground" /> : <Square className="h-5 w-5 text-muted-foreground" />}
+                    </button>
+
+                    <button 
+                      disabled={!hasAccess} 
+                      onClick={() => setActiveVideo(v)}
+                      className={`flex-1 flex items-center gap-3 text-left transition-all ${activeVideo?.id === v.id ? "font-semibold" : "hover:text-primary"} ${!hasAccess && 'opacity-60 grayscale cursor-not-allowed'}`}
+                    >
+                      <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border font-mono text-xs font-bold ${activeVideo?.id === v.id ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-muted'}`}>{i + 1}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-xs font-bold leading-tight">{v.title}</p>
+                        <p className="mt-0.5 truncate text-[9px] text-muted-foreground flex items-center gap-1">
+                          {v.text_content ? <><BookOpen className="h-2.5 w-2.5" /> Reading</> : <><PlayCircle className="h-2.5 w-2.5" /> Video</>}
+                        </p>
+                      </div>
+                      {!hasAccess && <Lock className="h-3 w-3 text-muted-foreground/60" />}
+                    </button>
                   </div>
-                  {!hasAccess && <Lock className="h-3 w-3" />}
-                  {hasAccess && activeVideo?.id === v.id && <CheckCircle2 className="h-4 w-4" />}
-                </button>
-              ))}
+                );
+              })}
             </div>
           </div>
-          <div className="rounded-3xl border border-primary/20 bg-primary/5 p-6 text-center">
-            <Trophy className="mx-auto h-8 w-8 text-primary" />
-            <h4 className="mt-4 font-display font-bold">Certificate of Completion</h4>
-            <p className="mt-2 text-xs text-muted-foreground">Unlock this course to earn a shareable certificate upon completion.</p>
-          </div>
+
+          {/* Certification Card */}
+          {course.completion_test_id && (
+            <div className="rounded-3xl border border-primary/20 bg-primary/5 p-6 text-center space-y-4">
+              <Trophy className="mx-auto h-8 w-8 text-primary" />
+              <h4 className="font-display font-bold">Professional Certification</h4>
+              
+              {!hasAccess ? (
+                <p className="text-xs text-muted-foreground">Unlock this course to gain certificate access.</p>
+              ) : !allCompleted ? (
+                <p className="text-xs text-muted-foreground">
+                  Complete all {totalModules} modules (currently at {progressPercent}%) to unlock the certification exam.
+                </p>
+              ) : certificate ? (
+                <div className="space-y-3">
+                  <div className="rounded-2xl bg-emerald-500/10 p-3 border border-emerald-500/20 text-emerald-700 text-xs font-semibold">
+                    🎉 Certified! Score: {completionAttempt ? Math.round((completionAttempt.score / completionAttempt.total) * 100) : 100}%
+                  </div>
+                  <Button onClick={() => setCertModalOpen(true)} className="w-full rounded-2xl bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2">
+                    <Award className="h-4 w-4" /> View Certificate
+                  </Button>
+                </div>
+              ) : completionAttempt ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Exam submitted successfully! Score: {Math.round((completionAttempt.score / completionAttempt.total) * 100)}%. Certificate will be issued upon final grading.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    You have finished all course modules. Pass the certification exam to generate your official certificate.
+                  </p>
+                  <Button onClick={handleStartExam} className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/10">
+                    <PlayCircle className="h-4 w-4" /> Start Certification Exam
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Verification details modal for certificates */}
+      <Dialog open={certDialogOpen} onOpenChange={setCertDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-primary" /> Certificate Registration
+            </DialogTitle>
+            <DialogDescription>
+              Please review and write your official credentials. These details will be printed on your final stamp-authorized certificate.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="cert-name">Official Full Name</Label>
+              <Input 
+                id="cert-name" 
+                value={certName} 
+                onChange={(e) => setCertName(e.target.value)} 
+                placeholder="e.g. John Doe" 
+              />
+              <p className="text-[10px] text-muted-foreground">Use uppercase initials as needed. First name and Last name.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cert-dob">Date of Birth</Label>
+              <Input 
+                id="cert-dob" 
+                type="date" 
+                value={certDob} 
+                onChange={(e) => setCertDob(e.target.value)} 
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCertDialogOpen(false)}>Cancel</Button>
+            <Button onClick={saveCertificateDetails} disabled={savingCertInfo}>
+              {savingCertInfo ? "Saving..." : "Confirm & Proceed"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <TokenRequestModal open={purchaseOpen} onOpenChange={setPurchaseOpen} />
+      {certificate && (
+        <CertificateModal open={certModalOpen} onOpenChange={setCertModalOpen} certificate={certificate} />
+      )}
     </div>
   );
 }
