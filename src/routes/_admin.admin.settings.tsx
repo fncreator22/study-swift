@@ -27,6 +27,17 @@ function AdminSettings() {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Category Manager states
+  const [categoriesList, setCategoriesList] = useState<any[]>([]);
+  const [newCatName, setNewCatName] = useState("");
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatName, setEditingCatName] = useState("");
+
+  async function loadCategories() {
+    const { data } = await supabase.from("categories").select("*").order("name");
+    setCategoriesList(data ?? []);
+  }
+
   useEffect(() => {
     // Fetch current token price setting
     supabase.from("settings" as any).select("value").eq("key", "token_price").maybeSingle()
@@ -35,6 +46,7 @@ function AdminSettings() {
           setTokenRate(data.value.inr.toString());
         }
       });
+    loadCategories();
   }, []);
 
   async function updateTokenRate() {
@@ -120,6 +132,39 @@ function AdminSettings() {
       toast.error("Reset failed: " + err.message);
     }
     setLoading(false);
+  }
+
+  async function addCategory() {
+    if (!newCatName.trim()) return toast.error("Category name cannot be empty");
+    setLoading(true);
+    const { error } = await supabase.from("categories").insert({ name: newCatName.trim(), type: "both" });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Category added successfully");
+    setNewCatName("");
+    loadCategories();
+  }
+
+  async function deleteCategory(id: string) {
+    if (confirm("Are you sure you want to delete this category?")) {
+      setLoading(true);
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      setLoading(false);
+      if (error) return toast.error(error.message);
+      toast.success("Category deleted");
+      loadCategories();
+    }
+  }
+
+  async function updateCategory() {
+    if (!editingCatName.trim()) return toast.error("Category name cannot be empty");
+    setLoading(true);
+    const { error } = await supabase.from("categories").update({ name: editingCatName.trim() }).eq("id", editingCatId);
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Category updated");
+    setEditingCatId(null);
+    loadCategories();
   }
 
   async function handleLogout() {
@@ -254,6 +299,72 @@ function AdminSettings() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Management Card */}
+      <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-soft">
+        <h2 className="flex items-center gap-2 font-display text-lg font-bold mb-2">
+          <BookOpen className="h-5 w-5 text-primary" /> Category Management
+        </h2>
+        <p className="text-sm text-muted-foreground mb-6">Create, modify, and delete categories. These categories populate filters for courses and mock tests.</p>
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Add Category Form */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Add New Category</Label>
+              <div className="flex gap-2">
+                <Input value={newCatName} onChange={(e) => setNewCatName(e.target.value)} placeholder="e.g. Artificial Intelligence" />
+                <Button onClick={addCategory} disabled={loading} className="rounded-xl">Add</Button>
+              </div>
+            </div>
+            
+            {editingCatId && (
+              <div className="space-y-2 p-4 rounded-xl border border-border bg-muted/20">
+                <Label className="text-xs font-bold text-slate-500 uppercase">Edit Category</Label>
+                <div className="flex gap-2">
+                  <Input value={editingCatName} onChange={(e) => setEditingCatName(e.target.value)} />
+                  <Button onClick={updateCategory} size="sm" className="rounded-xl">Save</Button>
+                  <Button variant="outline" size="sm" onClick={() => setEditingCatId(null)} className="rounded-xl">Cancel</Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Categories List */}
+          <div className="rounded-xl border border-border/60 bg-muted/10 p-4 max-h-[220px] overflow-y-auto space-y-2">
+            {categoriesList.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic text-center py-8">No categories added yet.</p>
+            ) : (
+              categoriesList.map((cat) => (
+                <div key={cat.id} className="flex items-center justify-between p-2 rounded-lg bg-card border border-border/40 text-sm">
+                  <span className="font-medium text-slate-800">{cat.name}</span>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setEditingCatId(cat.id);
+                        setEditingCatName(cat.name);
+                      }} 
+                      className="h-7 px-2 text-xs text-primary hover:bg-primary/5 rounded"
+                    >
+                      Rename
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => deleteCategory(cat.id)} 
+                      className="h-7 px-2 text-xs text-destructive hover:bg-destructive/5 rounded"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

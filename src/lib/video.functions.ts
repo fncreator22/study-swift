@@ -19,9 +19,24 @@ export const getVideoSignedUrl = createServerFn({ method: "POST" })
 
     if (vErr || !video) throw new Error("Video not found");
 
+    // Check parent course tier first
+    let isFree = false;
+    if (video.course_id) {
+      const { data: course } = await supabase
+        .from("courses")
+        .select("tier")
+        .eq("id", video.course_id)
+        .maybeSingle();
+      if (course?.tier === "free") {
+        isFree = true;
+      }
+    }
+
     // External URL fallback (still gated by course access)
     if (!video.storage_path) {
-      if (!video.course_id) return { url: video.video_url ?? "", expiresIn: 0 };
+      if (!video.course_id || isFree) {
+        return { url: video.video_url ?? "", expiresIn: 0 };
+      }
       const { data: access } = await supabase.rpc("has_course_access", {
         _user_id: userId, _course_id: video.course_id,
       });
@@ -29,7 +44,7 @@ export const getVideoSignedUrl = createServerFn({ method: "POST" })
       return { url: video.video_url ?? "", expiresIn: 0 };
     }
 
-    if (video.course_id) {
+    if (video.course_id && !isFree) {
       const { data: access } = await supabase.rpc("has_course_access", {
         _user_id: userId, _course_id: video.course_id,
       });

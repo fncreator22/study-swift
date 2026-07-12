@@ -24,20 +24,23 @@ function AdminCourses() {
   const [courses, setCourses] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [tests, setTests] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("none");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(empty);
   const [editing, setEditing] = useState<string | null>(null);
 
   async function load() {
-    const [{ data: cs }, { data: subs }, { data: ts }] = await Promise.all([
+    const [{ data: cs }, { data: subs }, { data: ts }, { data: cats }] = await Promise.all([
       supabase.from("courses").select("*").order("created_at", { ascending: false }),
       supabase.from("subscriptions" as any).select("id, name, course_ids"),
       supabase.from("tests").select("id, title, test_type").order("title"),
+      supabase.from("categories").select("*").order("name"),
     ]);
     setCourses(cs ?? []);
     setSubscriptions(subs ?? []);
     setTests(ts ?? []);
+    setCategories(cats ?? []);
   }
   useEffect(() => { load(); }, []);
 
@@ -148,7 +151,19 @@ function AdminCourses() {
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Category</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <select 
+                  value={form.category} 
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="space-y-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

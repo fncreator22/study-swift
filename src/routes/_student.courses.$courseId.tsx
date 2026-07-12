@@ -63,6 +63,7 @@ function CourseDetail() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [certificate, setCertificate] = useState<any>(null);
   const [completionAttempt, setCompletionAttempt] = useState<any>(null);
+  const [resolvedTestId, setResolvedTestId] = useState<string | null>(null);
   const [certDialogOpen, setCertDialogOpen] = useState(false);
   const [certName, setCertName] = useState("");
   const [certDob, setCertDob] = useState("");
@@ -110,11 +111,25 @@ function CourseDetail() {
     const completedSet = new Set((prog ?? []).map((p: any) => p.video_id));
     setCompletedModules(completedSet);
 
-    // Fetch certification & attempt if test linked
-    if (c.completion_test_id) {
+    // Fetch certification & attempt if test linked or fallback to matching test category
+    let targetTestId = c.completion_test_id;
+    if (!targetTestId) {
+      // Query tests to find one matching this course category
+      const { data: matchedTest } = await supabase.from("tests").select("id").eq("category", c.category).limit(1).maybeSingle();
+      if (matchedTest) {
+        targetTestId = matchedTest.id;
+      } else {
+        // Fallback to the first available test in the database
+        const { data: firstTest } = await supabase.from("tests").select("id").limit(1).maybeSingle();
+        if (firstTest) targetTestId = firstTest.id;
+      }
+    }
+    setResolvedTestId(targetTestId);
+
+    if (targetTestId) {
       const [{ data: cert }, { data: att }] = await Promise.all([
         supabase.from("certificates").select("*").eq("user_id", user.id).eq("course_id", courseId).maybeSingle(),
-        supabase.from("test_attempts").select("id, score, total, is_reviewed").eq("user_id", user.id).eq("test_id", c.completion_test_id).eq("is_reviewed", true).order("created_at", { ascending: false }).limit(1).maybeSingle()
+        supabase.from("test_attempts").select("id, score, total, is_reviewed").eq("user_id", user.id).eq("test_id", targetTestId).eq("is_reviewed", true).order("created_at", { ascending: false }).limit(1).maybeSingle()
       ]);
       setCertificate(cert);
       setCompletionAttempt(att);
@@ -220,8 +235,8 @@ function CourseDetail() {
     if (!userProfile?.full_name || !userProfile?.date_of_birth) {
       setCertDialogOpen(true);
     } else {
-      if (course?.completion_test_id) {
-        navigate({ to: "/tests/$testId", params: { testId: course.completion_test_id } });
+      if (resolvedTestId) {
+        navigate({ to: "/tests/$testId", params: { testId: resolvedTestId } });
       }
     }
   }
@@ -241,8 +256,8 @@ function CourseDetail() {
 
     setCertDialogOpen(false);
     toast.success("Certification details registered. Redirecting to Exam...");
-    if (course?.completion_test_id) {
-      navigate({ to: "/tests/$testId", params: { testId: course.completion_test_id } });
+    if (resolvedTestId) {
+      navigate({ to: "/tests/$testId", params: { testId: resolvedTestId } });
     }
   }
 
@@ -283,8 +298,13 @@ function CourseDetail() {
           {hasAccess && activeVideo ? (
             <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
               <div className="aspect-video w-full relative bg-black">
-                {loadingVideo ? (
-                  <div className="grid h-full w-full place-items-center text-white"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                {loadingVideo || (!signedUrl && !isTextModule) ? (
+                  <div className="grid h-full w-full place-items-center text-white">
+                    <div className="text-center space-y-2">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <span className="text-xs text-slate-400 block font-medium">Loading content stream...</span>
+                    </div>
+                  </div>
                 ) : isTextModule ? (
                   <div className="h-full w-full bg-[#fcfbfa] p-8 overflow-y-auto text-slate-800 flex flex-col justify-between">
                     <div className="space-y-4">
@@ -487,7 +507,7 @@ function CourseDetail() {
           </div>
 
           {/* Certification Card / Coursera Demo Preview Box */}
-          {course.completion_test_id && (
+          {resolvedTestId && (
             <div className="space-y-6">
               <div className="rounded-3xl border border-primary/20 bg-primary/5 p-6 text-center space-y-4">
                 <Trophy className="mx-auto h-8 w-8 text-primary" />

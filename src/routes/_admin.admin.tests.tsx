@@ -23,11 +23,13 @@ const empty = {
   word_limit: 500,
   instructions: "",
   thumbnail_url: "",
+  category: "Development",
 };
 
 function TestsAdmin() {
   const [tests, setTests] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("none");
   const [open, setOpen] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);
@@ -37,12 +39,14 @@ function TestsAdmin() {
 
   async function load() {
     setLoading(true);
-    const [{ data: ts }, { data: subs }] = await Promise.all([
+    const [{ data: ts }, { data: subs }, { data: cats }] = await Promise.all([
       supabase.from("tests").select("*").order("created_at", { ascending: false }),
       supabase.from("subscriptions" as any).select("id, name, test_ids"),
+      supabase.from("categories").select("*").order("name"),
     ]);
     setTests(ts ?? []);
     setSubscriptions(subs ?? []);
+    setCategories(cats ?? []);
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -181,7 +185,22 @@ function TestsAdmin() {
             </DialogTitle>
           </DialogHeader>
           <div className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1">
-            <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+              <div>
+                <Label>Category</Label>
+                <select 
+                  value={form.category || ""} 
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div><Label>Thumbnail Image URL</Label><Input value={form.thumbnail_url || ""} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} placeholder="https://images.unsplash.com/..." /></div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
