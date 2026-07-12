@@ -68,6 +68,11 @@ function StudentLayout() {
   const [submittingCampaignReceipt, setSubmittingCampaignReceipt] = useState(false);
   // Notifications
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  
+  // Marketing plans selector / custom info
+  const [allSubscriptions, setAllSubscriptions] = useState<any[]>([]);
+  const [selectedPlanForCampaign, setSelectedPlanForCampaign] = useState<any>(null);
+  const [customRequestText, setCustomRequestText] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -129,6 +134,18 @@ function StudentLayout() {
             setActiveCampaign(data);
             setCampaignOpen(true);
             sessionStorage.setItem(sessionKey, "true");
+
+            if (data.plan_mode === 'all') {
+              supabase.from("subscriptions" as any)
+                .select("*")
+                .eq("is_active", true)
+                .then(({ data: subs }) => {
+                  setAllSubscriptions(subs ?? []);
+                  if (subs && subs.length > 0) {
+                    setSelectedPlanForCampaign(subs[0]);
+                  }
+                });
+            }
           }
         }
       });
@@ -184,7 +201,7 @@ function StudentLayout() {
   }
 
   async function handleCampaignReceiptSubmit() {
-    if (!activeCampaign?.subscriptions || !campaignReceiptFile || submittingCampaignReceipt) return;
+    if (!campaignReceiptFile || submittingCampaignReceipt) return;
     setSubmittingCampaignReceipt(true);
     try {
       const fileExt = campaignReceiptFile.name.split('.').pop();
@@ -196,12 +213,17 @@ function StudentLayout() {
       
       const { data: { publicUrl } } = supabase.storage.from('receipts').getPublicUrl(filePath);
 
+      const targetSubId = activeCampaign?.plan_mode === 'specific'
+        ? activeCampaign?.subscription_id
+        : (activeCampaign?.plan_mode === 'all' ? selectedPlanForCampaign?.id : null);
+
       // Insert subscription request
       const { error: reqError } = await supabase.from("subscription_requests").insert({
         user_id: user.id,
-        subscription_id: activeCampaign.subscription_id,
+        subscription_id: targetSubId,
         receipt_url: publicUrl,
-        status: "pending"
+        status: "pending",
+        custom_details: activeCampaign?.plan_mode === 'custom' ? customRequestText : null
       });
       if (reqError) throw reqError;
 
@@ -213,6 +235,7 @@ function StudentLayout() {
       toast.success("Upgrade request submitted successfully! Admin will audit the receipt.");
       setCampaignReceiptOpen(false);
       setCampaignReceiptFile(null);
+      setCustomRequestText("");
     } catch (err: any) {
       toast.error(err.message || "Failed to submit receipt");
     } finally {
@@ -475,7 +498,7 @@ function StudentLayout() {
 
       {/* Marketing Campaign Pop-up */}
       <Dialog open={campaignOpen} onOpenChange={setCampaignOpen}>
-        <DialogContent className="sm:max-w-[450px] rounded-3xl">
+        <DialogContent className="sm:max-w-[460px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
@@ -489,7 +512,8 @@ function StudentLayout() {
           <div className="py-2 space-y-4">
             <p className="text-sm text-foreground font-medium">{activeCampaign?.description}</p>
             
-            {activeCampaign?.subscriptions && (
+            {/* Specific Plan Mode */}
+            {activeCampaign?.plan_mode === 'specific' && activeCampaign?.subscriptions && (
               <div className="rounded-2xl border p-4 bg-muted/20 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-foreground">{activeCampaign.subscriptions.name}</span>
@@ -500,17 +524,75 @@ function StudentLayout() {
                 </p>
               </div>
             )}
+
+            {/* All Plans Mode */}
+            {activeCampaign?.plan_mode === 'all' && (
+              <div className="space-y-3">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Select a Subscription Package</Label>
+                <div className="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                  {allSubscriptions.map(s => {
+                    const isSelected = selectedPlanForCampaign?.id === s.id;
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => setSelectedPlanForCampaign(s)}
+                        className={`cursor-pointer rounded-xl border p-3 flex items-center justify-between transition-all ${
+                          isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/40"
+                        }`}
+                      >
+                        <div>
+                          <p className="font-bold text-xs text-foreground">{s.name}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{s.token_price} tokens · {s.duration_days} days</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-xs text-primary">₹{s.price_inr}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Custom Plan Mode */}
+            {activeCampaign?.plan_mode === 'custom' && (
+              <div className="space-y-3">
+                {activeCampaign?.custom_description && (
+                  <div className="rounded-2xl border p-3 bg-muted/20 text-xs text-muted-foreground space-y-1">
+                    {activeCampaign.custom_description.split(/•|\n/).map(x => x.trim()).filter(Boolean).map((pt, i) => (
+                      <p key={i} className="flex items-start gap-1">
+                        <span>•</span>
+                        <span>{pt}</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Specify Your Requirements / Request Details</Label>
+                  <textarea
+                    value={customRequestText}
+                    onChange={(e) => setCustomRequestText(e.target.value)}
+                    placeholder="Enter what you would like to request (e.g. special pricing, custom duration, etc.)"
+                    className="w-full min-h-[80px] rounded-xl border border-input bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setCampaignOpen(false)} className="rounded-xl">Close</Button>
-            <Button onClick={handleCampaignClick} className="rounded-xl bg-primary text-primary-foreground font-bold">
+            <Button 
+              onClick={handleCampaignClick} 
+              disabled={activeCampaign?.plan_mode === 'custom' && !customRequestText.trim()}
+              className="rounded-xl bg-primary text-primary-foreground font-bold"
+            >
               Upgrade Now <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      
       {/* Marketing Receipt Upload Dialog */}
       <Dialog open={campaignReceiptOpen} onOpenChange={(o) => { if(!o) { setCampaignReceiptOpen(false); setCampaignReceiptFile(null); } }}>
         <DialogContent className="sm:max-w-[450px] rounded-3xl">
@@ -520,14 +602,34 @@ function StudentLayout() {
               <span>Submit Payment Receipt</span>
             </DialogTitle>
             <DialogDescription>
-              Upload payment screenshot to request activation for {activeCampaign?.subscriptions?.name}.
+              {activeCampaign?.plan_mode === 'custom' ? (
+                "Upload receipt screenshot to request custom activation."
+              ) : (
+                `Upload payment screenshot to request activation for ${
+                  activeCampaign?.plan_mode === 'specific' 
+                    ? activeCampaign?.subscriptions?.name 
+                    : selectedPlanForCampaign?.name
+                }.`
+              )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4 text-sm">
             <div className="rounded-2xl border p-4 bg-muted/30 space-y-2">
               <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Payment Details</p>
-              <p className="text-xs text-foreground font-medium">Please transfer <strong>₹{activeCampaign?.subscriptions?.price_inr}</strong> using UPI or Bank details:</p>
+              <p className="text-xs text-foreground font-medium">
+                {activeCampaign?.plan_mode === 'custom' ? (
+                  "Please transfer the custom amount discussed with the administrator using UPI or Bank details:"
+                ) : (
+                  <>
+                    Please transfer <strong>₹{
+                      activeCampaign?.plan_mode === 'specific' 
+                        ? activeCampaign?.subscriptions?.price_inr 
+                        : selectedPlanForCampaign?.price_inr
+                    }</strong> using UPI or Bank details:
+                  </>
+                )}
+              </p>
               <div className="bg-card p-3 rounded-xl border border-border/50 font-mono text-[11px] text-muted-foreground space-y-1">
                 <div><strong>UPI ID:</strong> examy@upi</div>
                 <div><strong>Bank:</strong> HDFC Bank</div>
