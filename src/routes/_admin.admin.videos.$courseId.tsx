@@ -1,20 +1,25 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Upload, Film, Link as LinkIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Film, Link as LinkIcon, Loader2, Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_admin/admin/videos/$courseId")({ component: VideosAdmin });
+export const Route = createFileRoute("/_admin/admin/videos/$courseId")({
+  component: VideosAdmin,
+});
 
 type Video = {
-  id: string; title: string; description: string;
-  video_url: string | null; storage_path: string | null;
-  position: number; duration_sec: number;
+  id: string;
+  title: string;
+  description: string;
+  video_url: string;
+  storage_path: string | null;
+  position: number;
 };
 
 function VideosAdmin() {
@@ -30,6 +35,7 @@ function VideosAdmin() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
@@ -45,34 +51,65 @@ function VideosAdmin() {
   function reset() {
     setTitle(""); setDescription(""); setExternalUrl("");
     setFile(null); setProgress(0); setMode("upload");
+    setEditingVideo(null);
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function openEditForm(v: Video) {
+    setEditingVideo(v);
+    setTitle(v.title || "");
+    setDescription(v.description || "");
+    setMode(v.storage_path ? "upload" : "external");
+    setExternalUrl(v.video_url || "");
+    setFile(null);
+    setProgress(0);
+    setOpen(true);
   }
 
   async function save() {
     if (!title.trim()) return toast.error("Title required");
     setBusy(true);
     try {
-      let storage_path: string | null = null;
-      let video_url: string = "";
+      let storage_path: string | null = editingVideo?.storage_path ?? null;
+      let video_url: string = editingVideo?.video_url ?? "";
+      
       if (mode === "upload") {
-        if (!file) { setBusy(false); return toast.error("Choose a video file"); }
-        const ext = file.name.split(".").pop() || "mp4";
-        const path = `${courseId}/${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("course-videos").upload(path, file, {
-          contentType: file.type || "video/mp4",
-        });
-        if (upErr) throw upErr;
-        storage_path = path;
+        if (file) {
+          if (editingVideo?.storage_path) {
+            await supabase.storage.from("course-videos").remove([editingVideo.storage_path]);
+          }
+          const ext = file.name.split(".").pop() || "mp4";
+          const path = `${courseId}/${crypto.randomUUID()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from("course-videos").upload(path, file, {
+            contentType: file.type || "video/mp4",
+          });
+          if (upErr) throw upErr;
+          storage_path = path;
+          video_url = "";
+        }
       } else {
         if (!externalUrl.trim()) { setBusy(false); return toast.error("Paste a URL"); }
         video_url = externalUrl.trim();
+        if (editingVideo?.storage_path) {
+          await supabase.storage.from("course-videos").remove([editingVideo.storage_path]);
+          storage_path = null;
+        }
       }
-      const { error } = await supabase.from("videos").insert({
-        course_id: courseId, title, description,
-        storage_path, video_url, position: videos.length,
-      });
-      if (error) throw error;
-      toast.success("Video added");
+
+      if (editingVideo) {
+        const { error } = await supabase.from("videos").update({
+          title, description, storage_path, video_url
+        }).eq("id", editingVideo.id);
+        if (error) throw error;
+        toast.success("Video updated");
+      } else {
+        const { error } = await supabase.from("videos").insert({
+          course_id: courseId, title, description,
+          storage_path, video_url, position: videos.length,
+        });
+        if (error) throw error;
+        toast.success("Video added");
+      }
       setOpen(false); reset(); load();
     } catch (e: any) {
       toast.error(e.message || "Upload failed");
@@ -110,17 +147,24 @@ function VideosAdmin() {
             <div className="flex-1 min-w-0">
               <p className="truncate font-semibold">{v.title}</p>
               <p className="truncate text-xs text-muted-foreground flex items-center gap-1">
-                {v.storage_path ? <><Film className="h-3 w-3" /> Secure upload</> : <><LinkIcon className="h-3 w-3" /> External URL</>}
+                {v.storage_path ? (
+                  <><Film className="h-3 w-3" /> Secure upload</>
+                ) : (
+                  <><LinkIcon className="h-3 w-3" /> {v.video_url || "No URL specified"}</>
+                )}
               </p>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => remove(v)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" onClick={() => openEditForm(v)}><Pencil className="h-3 w-3 text-muted-foreground" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => remove(v)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
+            </div>
           </div>
         ))}
       </div>
 
       <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New video</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingVideo ? "Edit video" : "New video"}</DialogTitle></DialogHeader>
           <div className="grid gap-3">
             <div className="flex gap-2">
               <Button type="button" size="sm" variant={mode === "upload" ? "default" : "outline"} onClick={() => setMode("upload")}><Upload className="mr-2 h-3 w-3" /> Upload</Button>
@@ -144,7 +188,7 @@ function VideosAdmin() {
             )}
           </div>
           <DialogFooter>
-            <Button onClick={save} disabled={busy}>{busy ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : null}Add video</Button>
+            <Button onClick={save} disabled={busy}>{busy ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : null}{editingVideo ? "Save changes" : "Add video"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
