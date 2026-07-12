@@ -23,7 +23,9 @@ type Campaign = {
   is_active: boolean;
   views_count: number;
   clicks_count: number;
+  closes_count: number;
   conversions_count: number;
+  display_trigger: string;
   created_at: string;
   subscriptions?: { name: string; price_inr: number; token_price: number; duration_days: number };
 };
@@ -42,7 +44,12 @@ function AdminMarketing() {
   const [selectedSubId, setSelectedSubId] = useState("");
   const [planMode, setPlanMode] = useState<"specific" | "all" | "custom">("specific");
   const [customDesc, setCustomDesc] = useState("");
+  const [displayTrigger, setDisplayTrigger] = useState("dashboard");
   const [submitting, setSubmitting] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<any[]>([
+    { name: "Close Popup", seconds: 0 },
+    { name: "Upgrade Click", seconds: 0 }
+  ]);
 
   async function loadData() {
     setLoading(true);
@@ -53,10 +60,36 @@ function AdminMarketing() {
         supabase.from("test_attempts").select("*, tests(category)")
       ]);
 
-      setCampaigns((camps as any) ?? []);
+      const campList = (camps as any) ?? [];
+      setCampaigns(campList);
       setSubscriptions(subs ?? []);
       if (subs && subs.length > 0 && !selectedSubId) {
         setSelectedSubId(subs[0].id);
+      }
+
+      // Fetch campaign events analytics for the active campaign
+      const active = campList.find((c: any) => c.is_active);
+      if (active) {
+        const { data: evs } = await supabase.from("campaign_events")
+          .select("*")
+          .eq("campaign_id", active.id);
+        
+        const eventsData = evs ?? [];
+        const clicks = eventsData.filter(e => e.event_type === 'click');
+        const closes = eventsData.filter(e => e.event_type === 'close');
+        
+        const avgClick = clicks.length > 0 ? Math.round(clicks.reduce((acc, c) => acc + c.seconds_spent, 0) / clicks.length) : 0;
+        const avgClose = closes.length > 0 ? Math.round(closes.reduce((acc, c) => acc + c.seconds_spent, 0) / closes.length) : 0;
+
+        setAnalyticsData([
+          { name: "Close Popup", seconds: avgClose },
+          { name: "Upgrade Click", seconds: avgClick }
+        ]);
+      } else {
+        setAnalyticsData([
+          { name: "Close Popup", seconds: 0 },
+          { name: "Upgrade Click", seconds: 0 }
+        ]);
       }
 
       const counts: Record<string, number> = { "MCQ": 0, "Written": 0, "Hybrid": 0 };
@@ -87,6 +120,7 @@ function AdminMarketing() {
     setPlanMode("specific");
     setCustomDesc("");
     setSelectedSubId(subscriptions[0]?.id || "");
+    setDisplayTrigger("dashboard");
     setFormOpen(true);
   }
 
@@ -97,6 +131,7 @@ function AdminMarketing() {
     setPlanMode((camp.plan_mode as any) || "specific");
     setCustomDesc(camp.custom_description || "");
     setSelectedSubId(camp.subscription_id || subscriptions[0]?.id || "");
+    setDisplayTrigger(camp.display_trigger || "dashboard");
     setFormOpen(true);
   }
 
@@ -135,6 +170,7 @@ function AdminMarketing() {
         plan_mode: planMode,
         subscription_id: planMode === "specific" ? selectedSubId : null,
         custom_description: planMode === "custom" ? customDesc : null,
+        display_trigger: displayTrigger,
         is_active: false
       };
 
@@ -186,15 +222,20 @@ function AdminMarketing() {
         </CardHeader>
         <CardContent className="space-y-6">
           {activeCampaign ? (
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <div className="bg-muted/40 p-4 rounded-2xl border">
                 <div className="flex justify-center mb-1 text-muted-foreground"><Eye className="h-4 w-4" /></div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Pop-up Views (25s+)</p>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Views (5s+)</p>
                 <p className="font-display text-2xl font-extrabold mt-1">{activeCampaign.views_count}</p>
               </div>
               <div className="bg-muted/40 p-4 rounded-2xl border">
-                <div className="flex justify-center mb-1 text-muted-foreground"><MousePointerClick className="h-4 w-4" /></div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">CTR ({ctr}%)</p>
+                <div className="flex justify-center mb-1 text-muted-foreground"><X className="h-4 w-4 text-destructive" /></div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Closes</p>
+                <p className="font-display text-2xl font-extrabold mt-1">{activeCampaign.closes_count}</p>
+              </div>
+              <div className="bg-muted/40 p-4 rounded-2xl border">
+                <div className="flex justify-center mb-1 text-muted-foreground"><MousePointerClick className="h-4 w-4 text-primary" /></div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Clicks (CTR {ctr}%)</p>
                 <p className="font-display text-2xl font-extrabold mt-1">{activeCampaign.clicks_count}</p>
               </div>
               <div className="bg-muted/40 p-4 rounded-2xl border text-emerald-600 bg-emerald-500/5 border-emerald-500/10">
@@ -268,13 +309,18 @@ function AdminMarketing() {
                       <td className="px-4 py-3">
                         <div className="font-semibold">{camp.title}</div>
                         <div className="text-[10px] text-muted-foreground font-normal max-w-[150px] truncate">{camp.description}</div>
-                        <div className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${camp.is_active ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
-                          {camp.is_active ? "● Active" : "○ Inactive"}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${camp.is_active ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+                            {camp.is_active ? "● Active" : "○ Inactive"}
+                          </span>
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold bg-primary/10 text-primary capitalize">
+                            {camp.display_trigger || 'dashboard'}
+                          </span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         <div className="text-[10px] space-y-0.5">
-                          <div>{camp.views_count} views</div>
+                          <div>{camp.views_count} views · {camp.closes_count} closes</div>
                           <div>{campCtr}% CTR · {campConv}% conv.</div>
                         </div>
                       </td>
@@ -305,6 +351,32 @@ function AdminMarketing() {
         </Card>
       </div>
 
+      {/* Campaign Duration Analysis chart */}
+      <Card className="rounded-3xl border border-border shadow-soft">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base font-bold">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <span>Avg. Time Spent Before Interaction (seconds)</span>
+          </CardTitle>
+          <CardDescription>Tracks duration telemetry for the active campaign to analyze conversion friction.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={analyticsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" fontSize={11} tickLine={false} />
+              <YAxis fontSize={11} tickLine={false} axisLine={false} />
+              <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} />
+              <Bar dataKey="seconds" radius={[6, 6, 0, 0]}>
+                {analyticsData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={index === 0 ? "#f43f5e" : "#10b981"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
       {/* Create / Edit Campaign Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-[480px] rounded-3xl">
@@ -320,6 +392,18 @@ function AdminMarketing() {
             <div className="space-y-1">
               <Label>Campaign Title</Label>
               <Input required value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Summer Sale" />
+            </div>
+            <div className="space-y-1">
+              <Label>Display Location / Trigger</Label>
+              <select
+                value={displayTrigger}
+                onChange={(e) => setDisplayTrigger(e.target.value)}
+                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs focus:outline-none"
+              >
+                <option value="dashboard">Student Dashboard (After Login)</option>
+                <option value="landing">Landing Page (Public)</option>
+                <option value="welcome">Welcome Page (After Registration)</option>
+              </select>
             </div>
             <div className="space-y-1">
               <Label>Description / Call-to-action</Label>

@@ -23,6 +23,16 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const [paymentSettings, setPaymentSettings] = useState<any>({ upi_id: 'examy@upi', bank_name: 'HDFC Bank', account_number: '50200012345678', ifsc_code: 'HDFC0000123' });
+
+  useState(() => {
+    supabase.from("settings" as any).select("value").eq("key", "payment_settings").maybeSingle()
+      .then(({ data }) => {
+        if (data?.value) {
+          setPaymentSettings(data.value);
+        }
+      });
+  });
 
   const inrValue = parseInt(amount || "0") * 10;
 
@@ -95,9 +105,11 @@ export function TokenRequestModal({ open, onOpenChange, requiredTokens = 0 }: To
               <QrCode className="h-4 w-4" /> Payment Info
             </h4>
             <div className="space-y-1 text-xs text-muted-foreground">
-              <p>UPI ID: <span className="font-mono font-medium text-foreground">sagarm2201@okaxis</span></p>
-              <p>Name: <span className="font-medium text-foreground">Sagar M</span></p>
-              <p className="mt-2 italic">Instructions: Complete payment using UPI or QR code, then upload the payment screenshot and submit the request for admin verification.</p>
+              <p>UPI ID: <span className="font-mono font-medium text-foreground">{paymentSettings.upi_id}</span></p>
+              <p>Bank: <span className="font-medium text-foreground">{paymentSettings.bank_name}</span></p>
+              <p>A/c Number: <span className="font-mono font-medium text-foreground">{paymentSettings.account_number}</span></p>
+              <p>IFSC Code: <span className="font-mono font-medium text-foreground">{paymentSettings.ifsc_code}</span></p>
+              <p className="mt-2 italic">Instructions: Complete payment using UPI or bank transfer, then upload the payment screenshot and submit the request for admin verification.</p>
             </div>
           </div>
 

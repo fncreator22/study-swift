@@ -64,7 +64,7 @@ function Courses() {
               )}
               <div className="absolute top-3 left-3">
                 <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm ${c.tier === 'free' ? 'bg-success text-success-foreground' : 'bg-primary text-primary-foreground'}`}>
-                  {c.tier === 'free' ? 'Free' : `₹${c.price}`}
+                  {c.tier === 'free' ? 'Free' : `${c.price} Tokens`}
                 </span>
               </div>
             </div>

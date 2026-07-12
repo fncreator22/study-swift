@@ -22,6 +22,7 @@ const empty = {
   total_marks: 0,
   word_limit: 500,
   instructions: "",
+  thumbnail_url: "",
 };
 
 function TestsAdmin() {
@@ -133,7 +134,7 @@ function TestsAdmin() {
                   {t.test_type === "written" ? "Written" : "MCQ"}
                 </span>
               </div>
-              <span className="text-sm font-semibold">{t.tier === "free" ? "Free" : `₹${t.price}`}</span>
+              <span className="text-sm font-semibold">{t.tier === "free" ? "Free" : `${t.price} Tokens`}</span>
             </div>
             <h3 className="mt-3 font-display text-lg font-semibold">{t.title}</h3>
             <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{t.description}</p>
@@ -181,6 +182,7 @@ function TestsAdmin() {
           </DialogHeader>
           <div className="grid max-h-[70vh] gap-3 overflow-y-auto pr-1">
             <div><Label>Title</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+            <div><Label>Thumbnail Image URL</Label><Input value={form.thumbnail_url || ""} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} placeholder="https://images.unsplash.com/..." /></div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div><Label>Tier</Label>
@@ -193,7 +195,7 @@ function TestsAdmin() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Price (₹)</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
+              <div><Label>Price (in Tokens)</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
               <div><Label>Duration (min)</Label><Input type="number" value={form.duration_min} onChange={(e) => setForm({ ...form, duration_min: e.target.value })} /></div>
             </div>
             <div>

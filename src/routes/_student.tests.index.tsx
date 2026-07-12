@@ -65,8 +65,8 @@ function TestsList() {
             <SelectContent>
               <SelectItem value="new">Newest</SelectItem>
               <SelectItem value="old">Oldest</SelectItem>
-              <SelectItem value="price_asc">Price ↑</SelectItem>
-              <SelectItem value="price_desc">Price ↓</SelectItem>
+              <SelectItem value="price_asc">Tokens ↑</SelectItem>
+              <SelectItem value="price_desc">Tokens ↓</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -83,7 +83,7 @@ function TestsList() {
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${t.tier === 'free' ? 'bg-success/10 text-success' : 'bg-accent text-accent-foreground'}`}>{t.tier}</span>
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">{t.test_type === 'written' ? 'Written' : 'MCQ'}</span>
                 </div>
-                <span className="text-sm font-semibold">{t.tier === 'free' ? 'Free' : `₹${t.price}`}</span>
+                <span className="text-sm font-semibold">{t.tier === 'free' ? 'Free' : `${t.price} Tokens`}</span>
               </div>
               <h3 className="font-display text-lg font-semibold">{t.title}</h3>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{t.description}</p>

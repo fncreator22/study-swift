@@ -104,7 +104,7 @@ function CourseDetail() {
   async function purchase() {
     if (purchasingRef.current) return;
     if (!user || !course) return;
-    const tokenCost = Math.ceil(course.price / 10);
+    const tokenCost = course.price;
 
     if (tokens < tokenCost) {
       toast.error(`Insufficient tokens. This course requires ${tokenCost} tokens.`);
@@ -185,7 +185,7 @@ function CourseDetail() {
                     disabled={purchasing}
                     className="mt-8 h-14 rounded-2xl px-10 text-base shadow-lg shadow-primary/20"
                   >
-                    {purchasing ? "Unlocking..." : `Purchase for ₹${course.price}`}
+                    {purchasing ? "Unlocking..." : `Unlock for ${course.price} Tokens`}
                   </Button>
                 )}
               </div>

@@ -19,6 +19,7 @@ type Plan = {
   description: string;
   token_price: number;
   price_inr?: number;
+  original_price_inr?: number;
   duration_days: number;
   test_ids: string[];
   course_ids: string[];
@@ -48,10 +49,11 @@ function SubscriptionsPage() {
   const [uploadingPlan, setUploadingPlan] = useState<Plan | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submittingReq, setSubmittingReq] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<any>({ upi_id: 'examy@upi', bank_name: 'HDFC Bank', account_number: '50200012345678', ifsc_code: 'HDFC0000123' });
 
   async function load() {
     setLoading(true);
-    const [{ data: ps }, { data: ms }, { data: setting }, { data: req }] = await Promise.all([
+    const [{ data: ps }, { data: ms }, { data: setting }, { data: req }, { data: paySetting }] = await Promise.all([
       supabase.from("subscriptions" as any).select("*").eq("is_active", true).order("token_price"),
       user
         ? supabase.from("memberships" as any).select("*").eq("user_id", user.id).eq("status", "active").order("valid_until", { ascending: false }).limit(1).maybeSingle()
@@ -59,13 +61,15 @@ function SubscriptionsPage() {
       supabase.from("settings" as any).select("value").eq("key", "token_price").maybeSingle(),
       user
         ? supabase.from("subscription_requests").select("*, subscriptions(*)").eq("user_id", user.id).eq("status", "pending").maybeSingle()
-        : Promise.resolve({ data: null })
+        : Promise.resolve({ data: null }),
+      supabase.from("settings" as any).select("value").eq("key", "payment_settings").maybeSingle(),
     ]);
     setPlans((ps as any) ?? []);
     setActive((ms as any) ?? null);
     setPendingReq(req ?? null);
     const v = (setting as any)?.value;
     if (v && typeof v.inr === "number") setTokenPrice(v.inr);
+    if (paySetting?.value) setPaymentSettings(paySetting.value);
     setLoading(false);
   }
 
@@ -217,8 +221,11 @@ function SubscriptionsPage() {
                 )}
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-4">
-                <div className="flex items-baseline gap-1">
+                <div className="flex items-baseline gap-1.5 flex-wrap">
                   <span className="font-display text-3xl font-bold">₹{p.price_inr ?? p.token_price * tokenPrice}</span>
+                  {p.original_price_inr && p.original_price_inr > (p.price_inr ?? 0) && (
+                    <span className="text-xs text-muted-foreground line-through font-medium">₹{p.original_price_inr}</span>
+                  )}
                   {p.token_price > 0 && (
                     <span className="text-xs text-muted-foreground">({p.token_price} tokens included)</span>
                   )}
@@ -286,10 +293,10 @@ function SubscriptionsPage() {
               <p className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Admin Payment Details</p>
               <p className="text-xs text-foreground font-medium">Please transfer <strong className="text-primary font-bold text-sm">₹{uploadingPlan?.price_inr}</strong> using UPI or Bank details:</p>
               <div className="bg-card p-3 rounded-xl border border-border/50 font-mono text-[11px] text-muted-foreground space-y-1">
-                <div><strong>UPI ID:</strong> examy@upi</div>
-                <div><strong>Bank:</strong> HDFC Bank</div>
-                <div><strong>A/c Number:</strong> 50200012345678</div>
-                <div><strong>IFSC Code:</strong> HDFC0000123</div>
+                <div><strong>UPI ID:</strong> {paymentSettings.upi_id}</div>
+                <div><strong>Bank:</strong> {paymentSettings.bank_name}</div>
+                <div><strong>A/c Number:</strong> {paymentSettings.account_number}</div>
+                <div><strong>IFSC Code:</strong> {paymentSettings.ifsc_code}</div>
               </div>
             </div>
 

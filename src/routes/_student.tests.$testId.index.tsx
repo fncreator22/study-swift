@@ -51,7 +51,7 @@ function TestDetail() {
   async function purchase() {
     if (purchasingRef.current) return;
     if (!user || !test) return;
-    const tokenCost = Math.ceil(test.price / 10);
+    const tokenCost = test.price;
 
     if (tokens < tokenCost) {
       toast.error(`Insufficient tokens. This test requires ${tokenCost} tokens.`);
@@ -92,7 +92,7 @@ function TestDetail() {
           <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${test.tier === 'free' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}`}>
             {test.tier}
           </span>
-          <span className="font-display text-2xl font-black">{test.tier === "free" ? "FREE" : `₹${test.price}`}</span>
+          <span className="font-display text-2xl font-black">{test.tier === "free" ? "FREE" : `${test.price} Tokens`}</span>
         </div>
         
         <h1 className="mt-6 font-display text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">{test.title}</h1>
@@ -129,7 +129,7 @@ function TestDetail() {
             </Button>
           ) : (
             <Button size="lg" disabled={purchasing} className="h-14 rounded-2xl px-10 text-base font-bold shadow-lg shadow-primary/20" onClick={purchase}>
-              {purchasing ? "Unlocking..." : <><Lock className="mr-2 h-4 w-4" /> Unlock for ₹{test.price}</>}
+              {purchasing ? "Unlocking..." : <><Lock className="mr-2 h-4 w-4" /> Unlock for {test.price} Tokens</>}
             </Button>
           )}
           <p className="mt-4 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">

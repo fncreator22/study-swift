@@ -1,16 +1,31 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { PlayCircle, BookOpen, GraduationCap, ArrowRight, Star, ShieldCheck, Zap, BarChart3, Clock, Trophy, Users, MessageSquare, Mail } from "lucide-react";
+import { PlayCircle, BookOpen, GraduationCap, ArrowRight, Star, ShieldCheck, Zap, BarChart3, Clock, Trophy, Users, MessageSquare, Mail, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/")({ component: Landing });
 
 function Landing() {
   const { user } = useAuth();
+  const nav = useNavigate();
   const [tests, setTests] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+
+  // Campaign popup states, queue, and analytics refs
+  const [activeCampaign, setActiveCampaign] = useState<any>(null);
+  const [campaignOpen, setCampaignOpen] = useState(false);
+  const [campaignQueue, setCampaignQueue] = useState<any[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
+  const [allSubscriptions, setAllSubscriptions] = useState<any[]>([]);
+  const [selectedPlanForCampaign, setSelectedPlanForCampaign] = useState<any>(null);
+  
+  const openedAtRef = useRef<number>(0);
+  const hasLoggedClickOrCloseForActiveCampaignRef = useRef<boolean>(false);
+  const viewEventLoggedRef = useRef<boolean>(false);
 
   useEffect(() => {
     Promise.all([
@@ -21,6 +36,118 @@ function Landing() {
       setCourses(c.data ?? []);
     });
   }, []);
+
+  const handleCampaignDismiss = (isUpgradeClick = false) => {
+    if (!activeCampaign) return;
+    const secondsSpent = Math.round((Date.now() - openedAtRef.current) / 1000);
+    
+    if (!hasLoggedClickOrCloseForActiveCampaignRef.current) {
+      hasLoggedClickOrCloseForActiveCampaignRef.current = true;
+      const metric = isUpgradeClick ? 'click' : 'close';
+      supabase.rpc("increment_campaign_metric", {
+        _campaign_id: activeCampaign.id,
+        _metric: metric,
+        _seconds: secondsSpent
+      }).then(() => {});
+    }
+
+    setCampaignOpen(false);
+
+    // Schedule next campaign in queue after a 10s gap to prevent stacking
+    const nextIdx = queueIndex + 1;
+    if (nextIdx < campaignQueue.length) {
+      setTimeout(() => {
+        const nextCampaign = campaignQueue[nextIdx];
+        setQueueIndex(nextIdx);
+        setActiveCampaign(nextCampaign);
+        setCampaignOpen(true);
+        sessionStorage.setItem(`shown_campaign_${nextCampaign.id}`, "true");
+
+        if (nextCampaign.plan_mode === 'all') {
+          supabase.from("subscriptions" as any)
+            .select("*")
+            .eq("is_active", true)
+            .then(({ data: subs }) => {
+              setAllSubscriptions(subs ?? []);
+              if (subs && subs.length > 0) {
+                setSelectedPlanForCampaign(subs[0]);
+              }
+            });
+        }
+      }, 10000);
+    }
+  };
+
+  async function handleCampaignClick() {
+    if (!activeCampaign) return;
+    handleCampaignDismiss(true);
+    nav({ to: "/signup" });
+  }
+
+  // Load landing trigger campaigns
+  useEffect(() => {
+    supabase.from("marketing_campaigns")
+      .select("*, subscriptions(*)")
+      .eq("is_active", true)
+      .eq("display_trigger", "landing")
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const unshown = data.filter(c => !sessionStorage.getItem(`shown_campaign_${c.id}`));
+          if (unshown.length > 0) {
+            setCampaignQueue(unshown);
+            setQueueIndex(0);
+            
+            const first = unshown[0];
+            setActiveCampaign(first);
+            setCampaignOpen(true);
+            sessionStorage.setItem(`shown_campaign_${first.id}`, "true");
+
+            if (first.plan_mode === 'all') {
+              supabase.from("subscriptions" as any)
+                .select("*")
+                .eq("is_active", true)
+                .then(({ data: subs }) => {
+                  setAllSubscriptions(subs ?? []);
+                  if (subs && subs.length > 0) {
+                    setSelectedPlanForCampaign(subs[0]);
+                  }
+                });
+            }
+          }
+        }
+      });
+  }, []);
+
+  // Campaign 35s auto-dismiss + view-count at 5s
+  useEffect(() => {
+    if (campaignOpen && activeCampaign) {
+      openedAtRef.current = Date.now();
+      hasLoggedClickOrCloseForActiveCampaignRef.current = false;
+      viewEventLoggedRef.current = false;
+
+      // View count recorded after 5 seconds of opening
+      const viewTimer = setTimeout(async () => {
+        if (!viewEventLoggedRef.current) {
+          viewEventLoggedRef.current = true;
+          await supabase.rpc("increment_campaign_metric", {
+            _campaign_id: activeCampaign.id,
+            _metric: 'view',
+            _seconds: 5
+          });
+        }
+      }, 5000);
+
+      // Auto-dismiss at 35s
+      const closeTimer = setTimeout(() => {
+        handleCampaignDismiss(false);
+      }, 35000);
+
+      return () => {
+        clearTimeout(viewTimer);
+        clearTimeout(closeTimer);
+      };
+    }
+  }, [campaignOpen, activeCampaign]);
 
   const MarqueeRow = ({ title, items, type }: { title: string, items: any[], type: 'test' | 'course' }) => (
     <div className="mt-16 overflow-hidden">
@@ -317,6 +444,89 @@ function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Marketing Campaign Pop-up */}
+      <Dialog open={campaignOpen} onOpenChange={(open) => { if (!open) handleCampaignDismiss(false); }}>
+        <DialogContent className="sm:max-w-[460px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
+              <span>{activeCampaign?.title}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Exclusive promotional offer.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 space-y-4">
+            <p className="text-sm text-foreground font-medium">{activeCampaign?.description}</p>
+            
+            {/* Specific Plan Mode */}
+            {activeCampaign?.plan_mode === 'specific' && activeCampaign?.subscriptions && (
+              <div className="rounded-2xl border p-4 bg-muted/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-foreground">{activeCampaign.subscriptions.name}</span>
+                  <span className="font-bold text-primary text-sm">₹{activeCampaign.subscriptions.price_inr}</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Includes {activeCampaign.subscriptions.token_price} tokens and unlocks premium features for {activeCampaign.subscriptions.duration_days} days.
+                </p>
+              </div>
+            )}
+
+            {/* All Plans Mode */}
+            {activeCampaign?.plan_mode === 'all' && (
+              <div className="space-y-3">
+                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Select a Subscription Package</Label>
+                <div className="grid gap-2 max-h-48 overflow-y-auto pr-1">
+                  {allSubscriptions.map(s => {
+                    const isSelected = selectedPlanForCampaign?.id === s.id;
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => setSelectedPlanForCampaign(s)}
+                        className={`cursor-pointer rounded-xl border p-3 flex items-center justify-between transition-all ${
+                          isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:bg-muted/40"
+                        }`}
+                      >
+                        <div>
+                          <p className="font-bold text-xs text-foreground">{s.name}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{s.token_price} tokens · {s.duration_days} days</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-xs text-primary">₹{s.price_inr}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Custom Plan Mode */}
+            {activeCampaign?.plan_mode === 'custom' && activeCampaign?.custom_description && (
+              <div className="rounded-2xl border p-3 bg-muted/20 text-xs text-muted-foreground space-y-1">
+                {activeCampaign.custom_description.split(/•|\n/).map(x => x.trim()).filter(Boolean).map((pt, i) => (
+                  <p key={i} className="flex items-start gap-1">
+                    <span>•</span>
+                    <span>{pt}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => handleCampaignDismiss(false)} className="rounded-xl">Close</Button>
+            <Button 
+              onClick={handleCampaignClick} 
+              className="rounded-xl bg-primary text-primary-foreground font-bold"
+            >
+              Sign Up & Upgrade Now <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -352,7 +562,7 @@ const ItemCard = ({ item, type, isLoggedIn }: { item: any, type: 'test' | 'cours
           <h3 className="font-display font-bold text-base sm:text-xl leading-tight group-hover:text-primary transition-colors line-clamp-1">{item.title}</h3>
           <p className="mt-2 line-clamp-2 text-sm text-muted-foreground leading-relaxed">{item.description}</p>
           <div className="mt-4 sm:mt-6 flex items-center justify-between border-t border-border pt-3 sm:pt-4">
-            <span className="text-base font-black text-foreground">{item.tier === 'free' ? 'FREE' : `₹${item.price}`}</span>
+            <span className="text-base font-black text-foreground">{item.tier === 'free' ? 'FREE' : `${item.price} Tokens`}</span>
             <Button size="sm" variant="ghost" className="rounded-xl font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all px-3 sm:px-4">
               View <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Button>

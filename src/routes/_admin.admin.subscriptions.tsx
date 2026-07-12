@@ -21,13 +21,14 @@ type Plan = {
   description: string;
   token_price: number;
   price_inr: number;
+  original_price_inr?: number;
   duration_days: number;
   test_ids: string[];
   course_ids: string[];
   is_active: boolean;
 };
 
-const EMPTY: Plan = { name: "", description: "", token_price: 100, price_inr: 1000, duration_days: 30, test_ids: [], course_ids: [], is_active: true };
+const EMPTY: Plan = { name: "", description: "", token_price: 100, price_inr: 1000, original_price_inr: 0, duration_days: 30, test_ids: [], course_ids: [], is_active: true };
 
 function AdminSubs() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -72,7 +73,7 @@ function AdminSubs() {
   }
   
   function openEdit(p: Plan) { 
-    setEditing({ ...p, price_inr: p.price_inr ?? p.token_price * 10, test_ids: p.test_ids ?? [], course_ids: p.course_ids ?? [] }); 
+    setEditing({ ...p, price_inr: p.price_inr ?? p.token_price * 10, original_price_inr: p.original_price_inr ?? 0, test_ids: p.test_ids ?? [], course_ids: p.course_ids ?? [] }); 
     setOpen(true); 
   }
 
@@ -154,7 +155,11 @@ function AdminSubs() {
                   )}
                   <div className="text-sm text-muted-foreground space-y-1 pt-2">
                     <div>
-                      <b className="text-foreground">₹{p.price_inr ?? p.token_price * tokenPrice}</b> ({p.token_price} tokens) · <b className="text-foreground">{p.duration_days}</b> days
+                      <b className="text-foreground">₹{p.price_inr ?? p.token_price * tokenPrice}</b>
+                      {p.original_price_inr && p.original_price_inr > (p.price_inr ?? 0) && (
+                        <span className="text-xs text-muted-foreground line-through ml-1.5 font-medium">₹{p.original_price_inr}</span>
+                      )}
+                      {" "} ({p.token_price} tokens) · <b className="text-foreground">{p.duration_days}</b> days
                     </div>
                     <div>{p.test_ids?.length ?? 0} tests · {p.course_ids?.length ?? 0} courses</div>
                   </div>
@@ -176,9 +181,18 @@ function AdminSubs() {
             <div className="space-y-4">
               <div className="space-y-2"><Label>Name</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
               <div className="space-y-2"><Label>Description (separate lines or • for pointers)</Label><Textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Price (₹)</Label>
+                  <Label>Original Price (₹) <span className="text-[10px] text-muted-foreground font-normal">(optional strike-through)</span></Label>
+                  <Input 
+                    type="number" 
+                    min={0} 
+                    value={editing.original_price_inr ?? 0} 
+                    onChange={(e) => setEditing({ ...editing, original_price_inr: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Discounted / Current Price (₹)</Label>
                   <Input 
                     type="number" 
                     min={0} 
@@ -193,9 +207,12 @@ function AdminSubs() {
                     }} 
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Tokens Cost</Label>
+                    <Label>Tokens Included</Label>
                     <button
                       type="button"
                       title={autoConvert ? "Auto-convert ON: tokens calculated from price" : "Auto-convert OFF: enter tokens manually"}

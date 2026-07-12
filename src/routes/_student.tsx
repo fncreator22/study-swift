@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +74,13 @@ function StudentLayout() {
   const [selectedPlanForCampaign, setSelectedPlanForCampaign] = useState<any>(null);
   const [customRequestText, setCustomRequestText] = useState("");
 
+  // Refs & Queue states for sequential campaign popups and analytics
+  const openedAtRef = useRef<number>(0);
+  const hasLoggedClickOrCloseForActiveCampaignRef = useRef<boolean>(false);
+  const viewEventLoggedRef = useRef<boolean>(false);
+  const [campaignQueue, setCampaignQueue] = useState<any[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
+
   useEffect(() => {
     if (user) {
       Promise.all([
@@ -118,24 +125,70 @@ function StudentLayout() {
     return () => clearInterval(interval);
   }, [user]);
 
+  const handleCampaignDismiss = (isUpgradeClick = false) => {
+    if (!activeCampaign) return;
+    const secondsSpent = Math.round((Date.now() - openedAtRef.current) / 1000);
+    
+    if (!hasLoggedClickOrCloseForActiveCampaignRef.current) {
+      hasLoggedClickOrCloseForActiveCampaignRef.current = true;
+      const metric = isUpgradeClick ? 'click' : 'close';
+      supabase.rpc("increment_campaign_metric", {
+        _campaign_id: activeCampaign.id,
+        _metric: metric,
+        _seconds: secondsSpent
+      }).then(() => {});
+    }
+
+    setCampaignOpen(false);
+
+    // Schedule next campaign in queue after a 10s gap to prevent overlapping/stacking
+    const nextIdx = queueIndex + 1;
+    if (nextIdx < campaignQueue.length) {
+      setTimeout(() => {
+        const nextCampaign = campaignQueue[nextIdx];
+        setQueueIndex(nextIdx);
+        setActiveCampaign(nextCampaign);
+        setCampaignOpen(true);
+        sessionStorage.setItem(`shown_campaign_${nextCampaign.id}`, "true");
+
+        if (nextCampaign.plan_mode === 'all') {
+          supabase.from("subscriptions" as any)
+            .select("*")
+            .eq("is_active", true)
+            .then(({ data: subs }) => {
+              setAllSubscriptions(subs ?? []);
+              if (subs && subs.length > 0) {
+                setSelectedPlanForCampaign(subs[0]);
+              }
+            });
+        }
+      }, 10000);
+    }
+  };
+
   // Marketing Campaign triggers and analytics
   useEffect(() => {
-    if (!user || isBlocked || isAdmin || isExamMode || path === "/welcome-subscription") return;
+    if (!user || isBlocked || isAdmin || isExamMode) return;
     
+    const trigger = path === "/welcome-subscription" ? "welcome" : "dashboard";
+
     supabase.from("marketing_campaigns")
       .select("*, subscriptions(*)")
       .eq("is_active", true)
-      .limit(1)
-      .maybeSingle()
+      .eq("display_trigger", trigger)
       .then(({ data }) => {
-        if (data) {
-          const sessionKey = `shown_campaign_${data.id}`;
-          if (!sessionStorage.getItem(sessionKey)) {
-            setActiveCampaign(data);
+        if (data && data.length > 0) {
+          const unshown = data.filter(c => !sessionStorage.getItem(`shown_campaign_${c.id}`));
+          if (unshown.length > 0) {
+            setCampaignQueue(unshown);
+            setQueueIndex(0);
+            
+            const first = unshown[0];
+            setActiveCampaign(first);
             setCampaignOpen(true);
-            sessionStorage.setItem(sessionKey, "true");
+            sessionStorage.setItem(`shown_campaign_${first.id}`, "true");
 
-            if (data.plan_mode === 'all') {
+            if (first.plan_mode === 'all') {
               supabase.from("subscriptions" as any)
                 .select("*")
                 .eq("is_active", true)
@@ -173,30 +226,40 @@ function StudentLayout() {
       });
   }, [user, path]);
 
-  // Campaign 35s auto-dismiss + view-count at 25s
+  // Campaign 35s auto-dismiss + view-count at 5s (view metric triggered at 5s)
   useEffect(() => {
     if (campaignOpen && activeCampaign) {
-      // View count at 25s
+      openedAtRef.current = Date.now();
+      hasLoggedClickOrCloseForActiveCampaignRef.current = false;
+      viewEventLoggedRef.current = false;
+
+      // View count recorded after 5 seconds of opening
       const viewTimer = setTimeout(async () => {
-        const { data } = await supabase.from("marketing_campaigns").select("views_count").eq("id", activeCampaign.id).maybeSingle();
-        const views = data?.views_count ?? 0;
-        await supabase.from("marketing_campaigns").update({ views_count: views + 1 }).eq("id", activeCampaign.id);
-      }, 25000);
+        if (!viewEventLoggedRef.current) {
+          viewEventLoggedRef.current = true;
+          await supabase.rpc("increment_campaign_metric", {
+            _campaign_id: activeCampaign.id,
+            _metric: 'view',
+            _seconds: 5
+          });
+        }
+      }, 5000);
+
       // Auto-dismiss at 35s
-      const closeTimer = setTimeout(() => { setCampaignOpen(false); }, 35000);
-      return () => { clearTimeout(viewTimer); clearTimeout(closeTimer); };
+      const closeTimer = setTimeout(() => {
+        handleCampaignDismiss(false);
+      }, 35000);
+
+      return () => {
+        clearTimeout(viewTimer);
+        clearTimeout(closeTimer);
+      };
     }
   }, [campaignOpen, activeCampaign]);
 
   async function handleCampaignClick() {
     if (!activeCampaign) return;
-    
-    // Increment clicks_count
-    const { data } = await supabase.from("marketing_campaigns").select("clicks_count").eq("id", activeCampaign.id).maybeSingle();
-    const clicks = data?.clicks_count ?? 0;
-    await supabase.from("marketing_campaigns").update({ clicks_count: clicks + 1 }).eq("id", activeCampaign.id);
-
-    setCampaignOpen(false);
+    handleCampaignDismiss(true);
     setCampaignReceiptOpen(true);
   }
 
@@ -497,7 +560,7 @@ function StudentLayout() {
       {!isExamMode && <TokenRequestModal open={purchaseOpen} onOpenChange={setPurchaseOpen} />}
 
       {/* Marketing Campaign Pop-up */}
-      <Dialog open={campaignOpen} onOpenChange={setCampaignOpen}>
+      <Dialog open={campaignOpen} onOpenChange={(open) => { if (!open) handleCampaignDismiss(false); }}>
         <DialogContent className="sm:max-w-[460px] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
@@ -581,7 +644,7 @@ function StudentLayout() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setCampaignOpen(false)} className="rounded-xl">Close</Button>
+            <Button variant="outline" onClick={() => handleCampaignDismiss(false)} className="rounded-xl">Close</Button>
             <Button 
               onClick={handleCampaignClick} 
               disabled={activeCampaign?.plan_mode === 'custom' && !customRequestText.trim()}

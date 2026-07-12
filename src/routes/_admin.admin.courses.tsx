@@ -106,7 +106,7 @@ function CoursesAdmin() {
               <h3 className="font-display font-semibold line-clamp-1">{c.title}</h3>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{c.description}</p>
               <div className="mt-4 flex items-center justify-between">
-                <span className="text-sm font-bold">{c.tier === 'free' ? 'Free' : `₹${c.price}`}</span>
+                <span className="text-sm font-bold">{c.tier === 'free' ? 'Free' : `${c.price} Tokens`}</span>
                 <div className="flex gap-1">
                   <Link to="/admin/videos/$courseId" params={{ courseId: c.id }}>
                     <Button size="sm" variant="outline"><Film className="mr-1 h-3 w-3" /> Videos</Button>
@@ -141,7 +141,7 @@ function CoursesAdmin() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Price (in Tokens)</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
               <div className="space-y-2">
                 <Label>Difficulty</Label>
                 <Select value={form.difficulty} onValueChange={(v) => setForm({ ...form, difficulty: v })}>
