@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PlayCircle, BookOpen, GraduationCap, ArrowRight, Star, ShieldCheck, Zap, BarChart3, Clock, Trophy, Users, MessageSquare, Mail } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({ component: Landing });
 
 function Landing() {
+  const { user } = useAuth();
   const [tests, setTests] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
 
@@ -33,7 +35,7 @@ function Landing() {
         <div className="marquee-content">
           {(items.length > 0 ? [...items, ...items, ...items] : []).map((it, i) => (
             <div key={`${it.id}-${i}`} className="w-[280px] sm:w-[340px] shrink-0 px-2">
-              <ItemCard item={it} type={type} />
+              <ItemCard item={it} type={type} isLoggedIn={!!user} />
             </div>
           ))}
           {items.length === 0 && <p className="py-10 text-sm text-muted-foreground italic pl-10">New content arriving soon...</p>}
@@ -319,36 +321,44 @@ function Landing() {
   );
 }
 
-const ItemCard = ({ item, type }: { item: any, type: 'test' | 'course' }) => (
-  <div className="group overflow-hidden rounded-[28px] sm:rounded-[32px] border border-border bg-card shadow-soft transition-all hover:-translate-y-1 hover:border-primary/20 hover:shadow-card active:scale-[0.98]">
-    <div className="relative aspect-video w-full bg-muted">
-      {item.thumbnail_url ? (
-        <img src={item.thumbnail_url} alt={item.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-primary/10">
-          {type === 'test' ? <BookOpen className="h-12 w-12 sm:h-16 sm:w-16" /> : <PlayCircle className="h-12 w-12 sm:h-16 sm:w-16" />}
+const ItemCard = ({ item, type, isLoggedIn }: { item: any, type: 'test' | 'course', isLoggedIn: boolean }) => {
+  const targetUrl = isLoggedIn
+    ? (type === 'test' ? `/tests/${item.id}` : `/courses/${item.id}`)
+    : '/signup';
+
+  return (
+    <Link to={targetUrl as any} className="block text-left">
+      <div className="group overflow-hidden rounded-[28px] sm:rounded-[32px] border border-border bg-card shadow-soft transition-all hover:-translate-y-1 hover:border-primary/20 hover:shadow-card active:scale-[0.98] cursor-pointer">
+        <div className="relative aspect-video w-full bg-muted">
+          {item.thumbnail_url ? (
+            <img src={item.thumbnail_url} alt={item.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-primary/10">
+              {type === 'test' ? <BookOpen className="h-12 w-12 sm:h-16 sm:w-16" /> : <PlayCircle className="h-12 w-12 sm:h-16 sm:w-16" />}
+            </div>
+          )}
+          <div className="absolute top-3 left-3">
+            <span className="rounded-full bg-background/90 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest backdrop-blur">
+              {item.tier}
+            </span>
+          </div>
         </div>
-      )}
-      <div className="absolute top-3 left-3">
-        <span className="rounded-full bg-background/90 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest backdrop-blur">
-          {item.tier}
-        </span>
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+            <span>{item.category || (type === 'test' ? 'Academic' : 'Professional')}</span>
+            <span className="h-1 w-1 rounded-full bg-border" />
+            <span>{item.difficulty || 'All Levels'}</span>
+          </div>
+          <h3 className="font-display font-bold text-base sm:text-xl leading-tight group-hover:text-primary transition-colors line-clamp-1">{item.title}</h3>
+          <p className="mt-2 line-clamp-2 text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+          <div className="mt-4 sm:mt-6 flex items-center justify-between border-t border-border pt-3 sm:pt-4">
+            <span className="text-base font-black text-foreground">{item.tier === 'free' ? 'FREE' : `₹${item.price}`}</span>
+            <Button size="sm" variant="ghost" className="rounded-xl font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all px-3 sm:px-4">
+              View <ArrowRight className="ml-1 h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
-    <div className="p-4 sm:p-6">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-        <span>{item.category || (type === 'test' ? 'Academic' : 'Professional')}</span>
-        <span className="h-1 w-1 rounded-full bg-border" />
-        <span>{item.difficulty || 'All Levels'}</span>
-      </div>
-      <h3 className="font-display font-bold text-base sm:text-xl leading-tight group-hover:text-primary transition-colors line-clamp-1">{item.title}</h3>
-      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground leading-relaxed">{item.description}</p>
-      <div className="mt-4 sm:mt-6 flex items-center justify-between border-t border-border pt-3 sm:pt-4">
-        <span className="text-base font-black text-foreground">{item.tier === 'free' ? 'FREE' : `₹${item.price}`}</span>
-        <Button size="sm" variant="ghost" className="rounded-xl font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all px-3 sm:px-4">
-          View <ArrowRight className="ml-1 h-3.5 w-3.5" />
-        </Button>
-      </div>
-    </div>
-  </div>
-);
+    </Link>
+  );
+};
