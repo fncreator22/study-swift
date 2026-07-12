@@ -91,16 +91,13 @@ function CourseDetail() {
       setCertDob(prof.date_of_birth || "");
     }
 
-    if (c.tier === "free") setHasAccess(true);
-    else {
-      const { data: p } = await supabase.from("purchases").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
-      let access = !!p;
-      if (!access) {
-        const { data: sub } = await supabase.rpc("has_course_access" as any, { _user_id: user.id, _course_id: courseId });
-        access = !!sub;
-      }
-      setHasAccess(access);
+    const { data: p } = await supabase.from("purchases").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
+    let access = !!p;
+    if (!access) {
+      const { data: sub } = await supabase.rpc("has_course_access" as any, { _user_id: user.id, _course_id: courseId });
+      access = !!sub;
     }
+    setHasAccess(access);
 
     // Load videos/modules
     const { data: vs } = await supabase.from("videos").select("id,title,description,video_url,storage_path,text_content").eq("course_id", courseId).order("position");
