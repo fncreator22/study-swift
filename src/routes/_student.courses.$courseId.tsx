@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2, Award, Calendar, CheckSquare, Square } from "lucide-react";
+import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2, Award, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
 import { CertificateModal } from "@/components/CertificateModal";
@@ -197,7 +197,16 @@ function CourseDetail() {
 
   async function markCompletedAndNext() {
     if (!activeVideo) return;
-    await toggleModuleProgress(activeVideo.id);
+    
+    // Only insert progression row if not already marked completed
+    if (!completedModules.has(activeVideo.id)) {
+      const { error } = await supabase.from("module_progress").insert({ user_id: user?.id, video_id: activeVideo.id });
+      if (error) return toast.error(error.message);
+      const updated = new Set(completedModules);
+      updated.add(activeVideo.id);
+      setCompletedModules(updated);
+    }
+    
     const currentIndex = videos.findIndex(v => v.id === activeVideo.id);
     if (currentIndex < videos.length - 1) {
       setActiveVideo(videos[currentIndex + 1]);
@@ -256,6 +265,13 @@ function CourseDetail() {
   const progressPercent = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
   const allCompleted = progressPercent === 100 && totalModules > 0;
 
+  // Skills learning items
+  const skillsList = course.category === "Development" || course.title.toLowerCase().includes("programming") 
+    ? ["Software Engineering", "Clean Code", "Implementation", "Debugging", "Data Structures"]
+    : course.title.toLowerCase().includes("docker") || course.title.toLowerCase().includes("kubernetes")
+    ? ["DevOps", "Containerization", "Cloud Architecture", "System Deployments", "Scaling"]
+    : ["Mastery", "Core Fundamentals", "Industry Best Practices", "Advanced Theory", "Problem Solving"];
+
   return (
     <div className="mx-auto max-w-6xl pb-20">
       <Link to="/courses" className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
@@ -282,7 +298,7 @@ function CourseDetail() {
                       </p>
                     </div>
                     <div className="text-[10px] text-muted-foreground italic border-t border-slate-100 pt-4 mt-6">
-                      Read the section completely then mark it completed.
+                      Read the section completely then click the mark completed button.
                     </div>
                   </div>
                 ) : isExternal ? (
@@ -309,7 +325,7 @@ function CourseDetail() {
                     onClick={markCompletedAndNext}
                     className="rounded-xl shrink-0 font-bold bg-primary text-primary-foreground hover:bg-primary/95 flex items-center gap-2"
                   >
-                    {completedModules.has(activeVideo.id) ? "Completed (Next)" : "Mark Completed & Next"}
+                    {completedModules.has(activeVideo.id) ? "Next Module" : "Mark Completed & Next"}
                   </Button>
                 )}
               </div>
@@ -335,22 +351,71 @@ function CourseDetail() {
             </div>
           )}
 
-          <div className="mt-10">
+          {/* Core description details */}
+          <div className="mt-10 space-y-4">
             <h2 className="font-display text-2xl font-bold">About this course</h2>
-            <p className="mt-4 whitespace-pre-line text-muted-foreground leading-relaxed">{course.description}</p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><GraduationCap className="h-5 w-5" /></div>
-                <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Instructor</p><p className="font-bold">{course.instructor_name || 'Expert Educator'}</p></div>
-              </div>
-              <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/10 text-accent-foreground"><BookOpen className="h-5 w-5" /></div>
-                <div><p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Difficulty</p><p className="font-bold">{course.difficulty}</p></div>
+            <p className="whitespace-pre-line text-muted-foreground leading-relaxed">{course.description}</p>
+            
+            {/* Skills Gain badges */}
+            <div className="mt-6 pt-4 border-t border-border/50">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Skills you will gain</h3>
+              <div className="flex flex-wrap gap-2">
+                {skillsList.map((sk) => (
+                  <span key={sk} className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold">
+                    {sk}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="mt-12">
+          {/* Detailed Curriculum Section (Syllabus) */}
+          <div className="mt-10 border-t border-border pt-10">
+            <h2 className="font-display text-2xl font-bold mb-6">Course Curriculum</h2>
+            <div className="space-y-3">
+              {videos.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Syllabus modules are currently being added. Check back soon!</p>
+              ) : (
+                videos.map((v, i) => (
+                  <div key={v.id} className="flex items-center justify-between p-4 rounded-2xl border border-border bg-card shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-700 font-mono text-xs font-bold">{i + 1}</div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold">{v.title}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">{v.description || "Module description details."}</p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-slate-500">
+                      {v.text_content ? "Reading" : "Video"}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Instructor profile description */}
+          <div className="mt-10 border-t border-border pt-10 grid gap-6 sm:grid-cols-2">
+            <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><GraduationCap className="h-6 w-6" /></div>
+              <div className="text-left">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Publisher / Instructor</p>
+                <p className="font-bold text-base mt-0.5">{course.instructor_name || 'Expert Educator'}</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-normal">{course.instructor_bio || 'Experienced engineering educator specializing in high scale platform development.'}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent-foreground"><BookOpen className="h-6 w-6" /></div>
+              <div className="text-left">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Course difficulty</p>
+                <p className="font-bold text-base mt-0.5">{course.difficulty}</p>
+                <p className="text-xs text-muted-foreground mt-1 leading-normal">Designed for engineers aiming to master dynamic problem solving patterns.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Community Discussion Section */}
+          <div className="mt-12 border-t border-border pt-10">
             <div className="flex items-center gap-2 mb-6"><MessageSquare className="h-5 w-5 text-primary" /><h2 className="font-display text-xl font-bold">Community Discussion</h2></div>
             {hasAccess ? (
               <div className="flex flex-col gap-4">
@@ -376,7 +441,7 @@ function CourseDetail() {
           </div>
         </div>
 
-        {/* Sidebar course contents & certification */}
+        {/* Sidebar details */}
         <div className="space-y-6">
           <div className="rounded-3xl border border-border bg-card p-6 shadow-soft">
             <div className="flex items-center justify-between mb-4 border-b border-border/50 pb-4">
@@ -396,74 +461,104 @@ function CourseDetail() {
               {videos.map((v, i) => {
                 const isCompleted = completedModules.has(v.id);
                 return (
-                  <div 
+                  <button 
                     key={v.id} 
-                    className={`flex items-center gap-2 rounded-2xl p-2 transition-all ${activeVideo?.id === v.id ? "bg-primary/5 border border-primary/20" : ""}`}
+                    disabled={!hasAccess} 
+                    onClick={() => setActiveVideo(v)}
+                    className={`w-full flex items-center gap-3 text-left p-3 rounded-2xl transition-all ${activeVideo?.id === v.id ? "bg-primary/5 border border-primary/20 font-semibold" : "hover:text-primary"} ${!hasAccess && 'opacity-60 grayscale cursor-not-allowed'}`}
                   >
-                    {/* Checkbox button */}
-                    <button 
-                      disabled={!hasAccess}
-                      onClick={() => toggleModuleProgress(v.id)}
-                      className={`text-primary shrink-0 transition-transform active:scale-95 ${!hasAccess && "cursor-not-allowed opacity-40"}`}
-                    >
-                      {isCompleted ? <CheckSquare className="h-5 w-5 fill-primary text-primary-foreground" /> : <Square className="h-5 w-5 text-muted-foreground" />}
-                    </button>
-
-                    <button 
-                      disabled={!hasAccess} 
-                      onClick={() => setActiveVideo(v)}
-                      className={`flex-1 flex items-center gap-3 text-left transition-all ${activeVideo?.id === v.id ? "font-semibold" : "hover:text-primary"} ${!hasAccess && 'opacity-60 grayscale cursor-not-allowed'}`}
-                    >
-                      <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border font-mono text-xs font-bold ${activeVideo?.id === v.id ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-muted'}`}>{i + 1}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-xs font-bold leading-tight">{v.title}</p>
-                        <p className="mt-0.5 truncate text-[9px] text-muted-foreground flex items-center gap-1">
-                          {v.text_content ? <><BookOpen className="h-2.5 w-2.5" /> Reading</> : <><PlayCircle className="h-2.5 w-2.5" /> Video</>}
-                        </p>
-                      </div>
-                      {!hasAccess && <Lock className="h-3 w-3 text-muted-foreground/60" />}
-                    </button>
-                  </div>
+                    {/* Circle status indicator instead of checkbox */}
+                    {isCompleted ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                    ) : (
+                      <div className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] font-mono font-bold ${activeVideo?.id === v.id ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-muted'}`}>{i + 1}</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-xs font-bold leading-tight">{v.title}</p>
+                      <p className="mt-0.5 truncate text-[9px] text-muted-foreground flex items-center gap-1">
+                        {v.text_content ? <><BookOpen className="h-2.5 w-2.5" /> Reading</> : <><PlayCircle className="h-2.5 w-2.5" /> Video</>}
+                      </p>
+                    </div>
+                    {!hasAccess && <Lock className="h-3 w-3 text-muted-foreground/60" />}
+                  </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Certification Card */}
+          {/* Certification Card / Coursera Demo Preview Box */}
           {course.completion_test_id && (
-            <div className="rounded-3xl border border-primary/20 bg-primary/5 p-6 text-center space-y-4">
-              <Trophy className="mx-auto h-8 w-8 text-primary" />
-              <h4 className="font-display font-bold">Professional Certification</h4>
-              
-              {!hasAccess ? (
-                <p className="text-xs text-muted-foreground">Unlock this course to gain certificate access.</p>
-              ) : !allCompleted ? (
-                <p className="text-xs text-muted-foreground">
-                  Complete all {totalModules} modules (currently at {progressPercent}%) to unlock the certification exam.
-                </p>
-              ) : certificate ? (
-                <div className="space-y-3">
-                  <div className="rounded-2xl bg-emerald-500/10 p-3 border border-emerald-500/20 text-emerald-700 text-xs font-semibold">
-                    🎉 Certified! Score: {completionAttempt ? Math.round((completionAttempt.score / completionAttempt.total) * 100) : 100}%
+            <div className="space-y-6">
+              <div className="rounded-3xl border border-primary/20 bg-primary/5 p-6 text-center space-y-4">
+                <Trophy className="mx-auto h-8 w-8 text-primary" />
+                <h4 className="font-display font-bold">Professional Certification</h4>
+                
+                {!hasAccess ? (
+                  <p className="text-xs text-muted-foreground">Unlock this course to gain certificate access.</p>
+                ) : !allCompleted ? (
+                  <p className="text-xs text-muted-foreground">
+                    Complete all {totalModules} modules (currently at {progressPercent}%) to unlock the certification exam.
+                  </p>
+                ) : certificate ? (
+                  <div className="space-y-3">
+                    <div className="rounded-2xl bg-emerald-500/10 p-3 border border-emerald-500/20 text-emerald-700 text-xs font-semibold">
+                      🎉 Certified! Score: {completionAttempt ? Math.round((completionAttempt.score / completionAttempt.total) * 100) : 100}%
+                    </div>
+                    <Button onClick={() => setCertModalOpen(true)} className="w-full rounded-2xl bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2">
+                      <Award className="h-4 w-4" /> View Certificate
+                    </Button>
                   </div>
-                  <Button onClick={() => setCertModalOpen(true)} className="w-full rounded-2xl bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2">
-                    <Award className="h-4 w-4" /> View Certificate
-                  </Button>
-                </div>
-              ) : completionAttempt ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    Exam submitted successfully! Score: {Math.round((completionAttempt.score / completionAttempt.total) * 100)}%. Certificate will be issued upon final grading.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    You have finished all course modules. Pass the certification exam to generate your official certificate.
-                  </p>
-                  <Button onClick={handleStartExam} className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/10">
-                    <PlayCircle className="h-4 w-4" /> Start Certification Exam
-                  </Button>
+                ) : completionAttempt ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      Exam submitted successfully! Score: {Math.round((completionAttempt.score / completionAttempt.total) * 100)}%. Certificate will be issued upon final grading.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      You have finished all course modules. Pass the certification exam to generate your official certificate.
+                    </p>
+                    <Button onClick={handleStartExam} className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/10">
+                      <PlayCircle className="h-4 w-4" /> Start Certification Exam
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Gold border Coursera style certificate preview box */}
+              {!certificate && (
+                <div className="rounded-3xl border-2 border-double border-slate-300 bg-[#faf8f5] p-6 text-center space-y-4 shadow-sm relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <span className="text-[7px] font-black text-slate-800 tracking-wider">EXAMLY ACADEMY</span>
+                    <span className="text-[7px] font-bold text-slate-400">DEMO PREVIEW</span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-serif text-xs font-bold text-slate-700 uppercase tracking-tighter">Course Certificate</h4>
+                    <div className="w-12 h-0.5 bg-amber-400 mx-auto"></div>
+                  </div>
+
+                  <div className="space-y-1 py-1">
+                    <p className="text-[8px] italic text-slate-400">presented to</p>
+                    <p className="font-serif text-xs font-bold text-slate-800 border-b border-dashed border-slate-300 pb-1 max-w-[120px] mx-auto">
+                      {userProfile?.full_name || "[Your Name]"}
+                    </p>
+                  </div>
+
+                  <p className="text-[8px] font-bold text-[#1d4ed8] line-clamp-1">{course.title}</p>
+
+                  <div className="flex justify-between items-end text-[6px] text-slate-400">
+                    <div className="text-left scale-90">
+                      <p className="font-serif italic font-bold">Jules White</p>
+                      <div className="w-10 h-px bg-slate-200"></div>
+                      <p>Dean of Computer Science</p>
+                    </div>
+                    {/* Double-ring stamp visual */}
+                    <div className="w-8 h-8 rounded-full border-2 border-double border-slate-300 bg-white flex items-center justify-center">
+                      <span className="text-[4px] font-bold text-slate-400">STAMP</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
