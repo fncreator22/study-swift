@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2, Award, Calendar, AlertCircle, RotateCcw } from "lucide-react";
+import { PlayCircle, Lock, ArrowLeft, Clock, BookOpen, GraduationCap, MessageSquare, CheckCircle2, Trophy, Loader2, Award, Calendar, AlertCircle, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { TokenRequestModal } from "@/components/TokenRequestModal";
 import { CertificateModal } from "@/components/CertificateModal";
@@ -41,7 +41,7 @@ function toEmbed(url: string) {
 
 function CourseDetail() {
   const { courseId } = Route.useParams();
-  const { user, tokens, refreshProfile } = useAuth();
+  const { user, session, tokens, refreshProfile } = useAuth();
   const signUrl = useServerFn(getVideoSignedUrl);
   const navigate = useNavigate();
 
@@ -71,6 +71,19 @@ function CourseDetail() {
   const [certDob, setCertDob] = useState("");
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [savingCertInfo, setSavingCertInfo] = useState(false);
+
+  // In-page Exam Engine States
+  const [examMode, setExamMode] = useState(false);
+  const [examTest, setExamTest] = useState<{ test_type: "mcq" | "written"; duration_min: number } | null>(null);
+  const [examQuestions, setExamQuestions] = useState<any[]>([]);
+  const [examAnswers, setExamAnswers] = useState<Record<string, string>>({});
+  const [examAttemptId, setExamAttemptId] = useState<string | null>(null);
+  const [examRemaining, setExamRemaining] = useState(0);
+  const [examSubmitting, setExamSubmitting] = useState(false);
+  const [examSyncing, setExamSyncing] = useState(false);
+  const [examQuestionIdx, setExamQuestionIdx] = useState(0);
+  const [examLoading, setExamLoading] = useState(false);
+  const examSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   async function load() {
     if (!user) return;
@@ -128,7 +141,7 @@ function CourseDetail() {
     if (targetTestId) {
       const [{ data: cert }, { data: att }] = await Promise.all([
         supabase.from("certificates").select("*").eq("user_id", user.id).eq("course_id", courseId).maybeSingle(),
-        supabase.from("test_attempts").select("id, score, total, is_reviewed").eq("user_id", user.id).eq("test_id", targetTestId).eq("is_reviewed", true).order("submitted_at", { ascending: false }).maybeSingle()
+        supabase.from("test_attempts").select("id, score, total, is_reviewed").eq("user_id", user.id).eq("test_id", targetTestId).order("submitted_at", { ascending: false }).limit(1).maybeSingle()
       ]);
       setCertificate(cert);
       setCompletionAttempt(att);
@@ -162,7 +175,13 @@ function CourseDetail() {
     }
     setLoadingVideo(true);
     setVideoError(null);
-    signUrl({ data: { videoId: activeVideo.id } })
+    const token = session?.access_token || "";
+    signUrl({ 
+      data: { videoId: activeVideo.id },
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
       .then((r) => {
         setSignedUrl(r.url);
         if (!r.url) {
@@ -256,12 +275,160 @@ function CourseDetail() {
     }
   }
 
+  async function startInPageExam(testId: string) {
+    setExamMode(true);
+    setExamLoading(true);
+    try {
+      const { data: t, error: tErr } = await supabase.from("tests").select("test_type,duration_min").eq("id", testId).maybeSingle();
+      if (tErr) throw tErr;
+      if (!t) {
+        toast.error("Certification test configuration not found.");
+        setExamMode(false);
+        return;
+      }
+      setExamTest(t as any);
+
+      const sessKey = `attempt_${testId}`;
+      const sessAttempt = typeof window !== "undefined" ? sessionStorage.getItem(sessKey) : null;
+      let aId: string | undefined;
+      let startedAt: number | null = null;
+
+      if (sessAttempt) {
+        const { data: existing } = await supabase
+          .from("test_attempts")
+          .select("id, started_at, submitted_at")
+          .eq("id", sessAttempt)
+          .eq("user_id", user?.id)
+          .is("submitted_at", null)
+          .maybeSingle();
+        if (existing) {
+          aId = existing.id;
+          startedAt = new Date(existing.started_at).getTime();
+        }
+      }
+
+      if (!aId) {
+        const { data: newId, error: rpcErr } = await supabase.rpc("start_fresh_attempt" as any, { _test_id: testId });
+        if (rpcErr) throw rpcErr;
+        aId = newId as string;
+        startedAt = Date.now();
+        if (typeof window !== "undefined") sessionStorage.setItem(sessKey, aId);
+      }
+
+      setExamAttemptId(aId);
+      if (startedAt) {
+        const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+        setExamRemaining(Math.max(0, t.duration_min * 60 - elapsed));
+      } else {
+        setExamRemaining(t.duration_min * 60);
+      }
+
+      // Load previous answers
+      const { data: prevAns } = await supabase
+        .from("test_answers")
+        .select("question_id, selected_option, written_answer")
+        .eq("attempt_id", aId);
+      const ansMap: Record<string, string> = {};
+      (prevAns ?? []).forEach(a => {
+        ansMap[a.question_id] = a.selected_option || a.written_answer || "";
+      });
+      setExamAnswers(ansMap);
+
+      // Fetch questions
+      const { data: qs, error: qErr } = await supabase
+        .from("test_questions_secure" as any)
+        .select("id,question,question_type,option_a,option_b,option_c,option_d,max_words,position")
+        .eq("test_id", testId)
+        .order("position");
+      if (qErr) throw qErr;
+
+      const questionsList = (qs as any[]) ?? [];
+      setExamQuestions(questionsList);
+      setExamQuestionIdx(0);
+
+      if (questionsList.length === 0) {
+        toast.error("This certification exam has no questions configured.");
+        setExamMode(false);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to initialize exam");
+      setExamMode(false);
+    } finally {
+      setExamLoading(false);
+    }
+  }
+
+  const syncExamAnswer = async (qId: string, val: string) => {
+    if (!examAttemptId) return;
+    setExamSyncing(true);
+    const q = examQuestions.find(x => x.id === qId);
+    const payload = {
+      attempt_id: examAttemptId,
+      question_id: qId,
+      selected_option: q?.question_type === "mcq" ? val : null,
+      written_answer: q?.question_type === "written" ? val : null,
+    };
+    await supabase.from("test_answers").upsert(payload, { onConflict: "attempt_id,question_id" });
+    setExamSyncing(false);
+  };
+
+  const handleExamAnswerChange = (qId: string, val: string) => {
+    setExamAnswers(prev => ({ ...prev, [qId]: val }));
+    if (examSyncTimeoutRef.current) clearTimeout(examSyncTimeoutRef.current);
+    examSyncTimeoutRef.current = setTimeout(() => syncExamAnswer(qId, val), 1000);
+  };
+
+  async function submitInPageExam() {
+    if (!examAttemptId || examSubmitting || !examTest) return;
+    setExamSubmitting(true);
+
+    if (examSyncTimeoutRef.current) {
+      clearTimeout(examSyncTimeoutRef.current);
+      const lastQId = examQuestions[examQuestionIdx].id;
+      await syncExamAnswer(lastQId, examAnswers[lastQId] || "");
+    }
+
+    const { error } = await supabase.from("test_attempts").update({
+      submitted_at: new Date().toISOString(),
+    }).eq("id", examAttemptId);
+
+    if (error) {
+      toast.error("Failed to submit exam: " + error.message);
+      setExamSubmitting(false);
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(`attempt_${resolvedTestId}`);
+    }
+    toast.success("Exam submitted successfully!");
+    setExamMode(false);
+    setExamAttemptId(null);
+    setExamQuestions([]);
+    load();
+  }
+
+  useEffect(() => {
+    if (!examMode || examRemaining <= 0) return;
+    const interval = setInterval(() => {
+      setExamRemaining(r => {
+        if (r <= 1) {
+          clearInterval(interval);
+          submitInPageExam();
+          return 0;
+        }
+        return r - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [examMode, examRemaining > 0]);
+
   async function handleStartExam() {
     if (!userProfile?.full_name || !userProfile?.date_of_birth) {
       setCertDialogOpen(true);
     } else {
       if (resolvedTestId) {
-        navigate({ to: "/tests/$testId", params: { testId: resolvedTestId } });
+        startInPageExam(resolvedTestId);
       }
     }
   }
@@ -280,9 +447,9 @@ function CourseDetail() {
     if (error) return toast.error(error.message);
 
     setCertDialogOpen(false);
-    toast.success("Certification details registered. Redirecting to Exam...");
+    toast.success("Certification details registered. Starting exam...");
     if (resolvedTestId) {
-      navigate({ to: "/tests/$testId", params: { testId: resolvedTestId } });
+      startInPageExam(resolvedTestId);
     }
   }
 
@@ -320,214 +487,374 @@ function CourseDetail() {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          {hasAccess && activeVideo ? (
-            <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
-              <div className="aspect-video w-full relative bg-black">
-                {videoError ? (
-                  <div className="h-full w-full bg-slate-950 p-8 flex flex-col items-center justify-center text-center text-white space-y-4">
-                    <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
-                      <AlertCircle className="h-6 w-6" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-display font-bold text-sm tracking-tight">Unable to load media content</h3>
-                      <p className="text-xs text-slate-400 max-w-sm mx-auto leading-normal">
-                        We encountered an issue loading this module's media content. The diagnostics have been reported to the administration team.
-                      </p>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Link to="/courses">
-                        <Button size="sm" variant="outline" className="border-slate-800 text-slate-300 hover:bg-slate-900 rounded-xl h-8 text-xs font-bold px-3">
-                          <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Go Back
-                        </Button>
-                      </Link>
-                      <Button 
-                        size="sm" 
-                        onClick={() => {
-                          const v = activeVideo;
-                          setActiveVideo(null);
-                          setTimeout(() => setActiveVideo(v), 50);
-                        }} 
-                        className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl h-8 text-xs px-3"
-                      >
-                        <RotateCcw className="mr-1 h-3.5 w-3.5" /> Retry
-                      </Button>
-                    </div>
-                  </div>
-                ) : loadingVideo || (!signedUrl && !isTextModule) ? (
-                  <div className="grid h-full w-full place-items-center text-white">
-                    <div className="text-center space-y-2">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                      <span className="text-xs text-slate-400 block font-medium">Loading content stream...</span>
-                    </div>
-                  </div>
-                ) : isTextModule ? (
-                  <div className="h-full w-full bg-[#fcfbfa] p-8 overflow-y-auto text-slate-800 flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600">
-                        <BookOpen className="h-4 w-4" /> Reading Section
-                      </div>
-                      <h2 className="font-serif text-2xl font-bold text-[#1e293b]">{activeVideo.title}</h2>
-                      <div className="w-12 h-0.5 bg-primary mt-2"></div>
-                      <p className="whitespace-pre-line text-slate-700 leading-relaxed font-sans text-sm md:text-base pt-4">
-                        {activeVideo.text_content}
-                      </p>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground italic border-t border-slate-100 pt-4 mt-6">
-                      Read the section completely then click the mark completed button.
-                    </div>
-                  </div>
-                ) : isExternal ? (
-                  <iframe src={toEmbed(signedUrl)} className="h-full w-full" allowFullScreen title={activeVideo.title} />
-                ) : signedUrl ? (
-                  <video
-                    src={signedUrl}
-                    controls
-                    controlsList="nodownload"
-                    onContextMenu={(e) => e.preventDefault()}
-                    className="h-full w-full bg-black"
-                  />
-                ) : (
-                  <div className="grid h-full w-full place-items-center text-muted-foreground text-sm">No video source specified.</div>
-                )}
+          {examMode ? (
+            examLoading ? (
+              <div className="rounded-3xl border border-border bg-card p-12 text-center space-y-4">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground font-semibold">Loading certification exam...</p>
               </div>
-              <div className="bg-card p-6 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1">
-                  <h1 className="font-display text-2xl font-bold">{activeVideo.title}</h1>
-                  <p className="mt-2 text-sm text-muted-foreground">{activeVideo.description}</p>
-                </div>
-                {hasAccess && (
-                  <Button 
-                    onClick={markCompletedAndNext}
-                    className="rounded-xl shrink-0 font-bold bg-primary text-primary-foreground hover:bg-primary/95 flex items-center gap-2"
-                  >
-                    {completedModules.has(activeVideo.id) ? "Next Module" : "Mark Completed & Next"}
-                  </Button>
-                )}
+            ) : examQuestions.length === 0 ? (
+              <div className="rounded-3xl border border-border bg-card p-12 text-center space-y-3">
+                <p className="text-sm font-bold text-foreground">No questions configured.</p>
+                <Button onClick={() => setExamMode(false)} variant="outline" className="rounded-xl">Go Back</Button>
               </div>
-            </div>
-          ) : (
-            <div className="relative w-full overflow-hidden rounded-3xl border border-border bg-muted/50 min-h-[340px] md:aspect-video">
-              {course.thumbnail_url && <img src={course.thumbnail_url} className="h-full w-full object-cover blur-sm opacity-50" />}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
-                <div className="grid h-16 w-16 place-items-center rounded-2xl bg-background shadow-xl"><Lock className="h-8 w-8 text-primary" /></div>
-                <h2 className="mt-6 font-display text-2xl font-bold">This content is locked</h2>
-                <p className="mt-2 max-w-sm text-sm text-muted-foreground">Enroll in this course to gain full access to all video modules and community discussion.</p>
-                {!hasAccess && (
-                  <Button 
-                    size="lg" 
-                    onClick={purchase} 
-                    disabled={purchasing}
-                    className="mt-8 h-14 rounded-2xl px-10 text-base shadow-lg shadow-primary/20"
-                  >
-                    {purchasing ? "Unlocking..." : `Unlock for ${course.price} Tokens`}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+            ) : (() => {
+              const m = Math.floor(examRemaining / 60);
+              const s = examRemaining % 60;
+              const q = examQuestions[examQuestionIdx];
+              const isLast = examQuestionIdx === examQuestions.length - 1;
+              const written = q.question_type === "written";
+              const wordCount = written ? (examAnswers[q.id]?.trim() ? examAnswers[q.id].trim().split(/\s+/).length : 0) : 0;
+              const overLimit = written && q.max_words ? wordCount > q.max_words : false;
 
-          {/* Core description details */}
-          <div className="mt-10 space-y-4">
-            <h2 className="font-display text-2xl font-bold">About this course</h2>
-            <p className="whitespace-pre-line text-muted-foreground leading-relaxed">{course.description}</p>
-            
-            {/* Skills Gain badges */}
-            <div className="mt-6 pt-4 border-t border-border/50">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Skills you will gain</h3>
-              <div className="flex flex-wrap gap-2">
-                {skillsList.map((sk) => (
-                  <span key={sk} className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold">
-                    {sk}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Detailed Curriculum Section (Syllabus) */}
-          <div className="mt-10 border-t border-border pt-10">
-            <h2 className="font-display text-2xl font-bold mb-6">Course Curriculum</h2>
-            <div className="space-y-3">
-              {videos.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Syllabus modules are currently being added. Check back soon!</p>
-              ) : (
-                videos.map((v, i) => (
-                  <button 
-                    key={v.id} 
-                    onClick={() => {
-                      if (hasAccess) {
-                        setActiveVideo(v);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      } else {
-                        toast.error("Please enroll to access this module");
-                      }
-                    }}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${!hasAccess ? 'opacity-65 cursor-not-allowed bg-muted/40 border-border' : 'bg-card border-border hover:border-primary/20 hover:bg-primary/5'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-700 font-mono text-xs font-bold">Module {i + 1}</div>
+              return (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 text-left">
+                  {/* Exam details header */}
+                  <div className="rounded-3xl border border-border bg-card p-6 shadow-soft space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/50 pb-4">
                       <div>
-                        <p className="text-sm font-bold text-slate-900">{v.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{v.description || "Module description details."}</p>
+                        <h2 className="font-display font-extrabold text-lg text-foreground">Certification Exam</h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">{course.title}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {examSyncing && (
+                          <span className="flex items-center gap-1 text-[10px] text-muted-foreground animate-pulse">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+                          </span>
+                        )}
+                        <span className="rounded-full bg-slate-950 px-3 py-1 font-mono text-sm font-bold text-slate-100 border border-slate-800">
+                          {m}:{s.toString().padStart(2, "0")}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-slate-500">
-                        {v.text_content ? "Reading" : "Video"}
-                      </span>
-                      {!hasAccess && <Lock className="h-3.5 w-3.5 text-muted-foreground/60" />}
+
+                    {/* Question navigation pager */}
+                    <div className="responsive-table-container pb-2">
+                      <div className="flex w-max gap-1.5 px-0.5">
+                        {examQuestions.map((_, i) => {
+                          const isCurrent = i === examQuestionIdx;
+                          const hasAns = !!(examAnswers[examQuestions[i].id] && examAnswers[examQuestions[i].id].toString().trim());
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => setExamQuestionIdx(i)}
+                              className={`h-9 w-9 shrink-0 rounded-xl border text-xs font-bold transition-all active:scale-95 ${
+                                isCurrent ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                : hasAns ? "border-success bg-success/10 text-success"
+                                : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                              }`}
+                            >
+                              {i + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Instructor profile description */}
-          <div className="mt-10 border-t border-border pt-10 grid gap-6 sm:grid-cols-2">
-            <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><GraduationCap className="h-6 w-6" /></div>
-              <div className="text-left">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Publisher / Instructor</p>
-                <p className="font-bold text-base mt-0.5">{course.instructor_name || 'Expert Educator'}</p>
-                <p className="text-xs text-muted-foreground mt-1 leading-normal">{course.instructor_bio || 'Experienced engineering educator specializing in high scale platform development.'}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent-foreground"><BookOpen className="h-6 w-6" /></div>
-              <div className="text-left">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Course difficulty</p>
-                <p className="font-bold text-base mt-0.5">{course.difficulty}</p>
-                <p className="text-xs text-muted-foreground mt-1 leading-normal">Designed for engineers aiming to master dynamic problem solving patterns.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Community Discussion Section */}
-          <div className="mt-12 border-t border-border pt-10">
-            <div className="flex items-center gap-2 mb-6"><MessageSquare className="h-5 w-5 text-primary" /><h2 className="font-display text-xl font-bold">Community Discussion</h2></div>
-            {hasAccess ? (
-              <div className="flex flex-col gap-4">
-                <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="What did you think of this module?" className="rounded-2xl min-h-[100px]" />
-                <Button onClick={postComment} className="self-end rounded-xl px-8">Post comment</Button>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-                <p className="text-sm text-muted-foreground font-medium">Join the course to participate in the discussion.</p>
-              </div>
-            )}
-            <div className="mt-8 space-y-4">
-              {comments.map((c) => (
-                <div key={c.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold">{names[c.user_id] ?? "Student"}</span>
-                    <span className="text-[10px] font-medium text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
                   </div>
-                  <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{c.body}</p>
+
+                  {/* Active Question body */}
+                  <div className="rounded-3xl border border-border bg-card p-6 shadow-soft md:p-8">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Question {examQuestionIdx + 1} of {examQuestions.length}
+                    </p>
+                    <h3 className="mt-2 font-display text-lg font-semibold leading-snug md:text-xl">
+                      {q.question}
+                    </h3>
+
+                    {written ? (
+                      <div className="mt-6">
+                        <Textarea
+                          rows={10}
+                          value={examAnswers[q.id] || ""}
+                          onChange={(e) => handleExamAnswerChange(q.id, e.target.value)}
+                          placeholder="Write your exam response here..."
+                          className="min-h-[220px] rounded-2xl bg-muted/50 focus:bg-card transition-colors"
+                        />
+                        <div className="mt-3 flex items-center justify-between text-xs font-medium">
+                          <span className={overLimit ? "text-destructive" : "text-muted-foreground"}>
+                            {wordCount} / {q.max_words ?? "—"} words
+                          </span>
+                          {overLimit && <span className="flex items-center gap-1 text-destructive animate-pulse"><Loader2 className="h-3 w-3" /> Over limit</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-6 grid gap-3">
+                        {(["a", "b", "c", "d"] as const).map((k) => (
+                          <button
+                            key={k}
+                            type="button"
+                            onClick={() => handleExamAnswerChange(q.id, k)}
+                            className={`flex items-center gap-4 rounded-2xl border px-5 py-4 text-left text-sm transition-all active:scale-[0.98] ${
+                              examAnswers[q.id] === k ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card hover:border-primary/40"
+                            }`}
+                          >
+                            <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-xs font-bold uppercase transition-colors ${examAnswers[q.id] === k ? "border-primary bg-primary text-primary-foreground" : "border-border bg-muted text-muted-foreground"}`}>{k}</span>
+                            <span className="font-medium leading-tight">{(q as any)["option_" + k]}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Exam controls actions */}
+                  <div className="flex items-center justify-between gap-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (confirm("Are you sure you want to pause and exit the exam? Your progress will be saved.")) {
+                          setExamMode(false);
+                        }
+                      }}
+                      className="rounded-2xl font-bold border-destructive/20 text-destructive hover:bg-destructive/5"
+                    >
+                      Exit Exam
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setExamQuestionIdx(i => Math.max(0, i - 1))}
+                        disabled={examQuestionIdx === 0}
+                        className="rounded-2xl font-bold"
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                      </Button>
+                      {isLast ? (
+                        <Button
+                          onClick={submitInPageExam}
+                          disabled={examSubmitting || examSyncing}
+                          className="rounded-2xl font-bold bg-primary text-primary-foreground min-w-[120px]"
+                        >
+                          {examSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : "Submit Exam"}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => setExamQuestionIdx(i => Math.min(examQuestions.length - 1, i + 1))}
+                          className="rounded-2xl font-bold min-w-[100px]"
+                        >
+                          Next <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              );
+            })()
+          ) : (
+            <>
+              {hasAccess && activeVideo ? (
+                <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
+                  <div className="aspect-video w-full relative bg-black">
+                    {videoError ? (
+                      <div className="h-full w-full bg-slate-950 p-8 flex flex-col items-center justify-center text-center text-white space-y-4">
+                        <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive border border-destructive/20">
+                          <AlertCircle className="h-6 w-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="font-display font-bold text-sm tracking-tight">Unable to load media content</h3>
+                          <p className="text-xs text-slate-400 max-w-sm mx-auto leading-normal">
+                            We encountered an issue loading this module's media content. The diagnostics have been reported to the administration team.
+                          </p>
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                          <Link to="/courses">
+                            <Button size="sm" variant="outline" className="border-slate-800 text-slate-300 hover:bg-slate-900 rounded-xl h-8 text-xs font-bold px-3">
+                              <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Go Back
+                            </Button>
+                          </Link>
+                          <Button 
+                            size="sm" 
+                            onClick={() => {
+                              const v = activeVideo;
+                              setActiveVideo(null);
+                              setTimeout(() => setActiveVideo(v), 50);
+                            }} 
+                            className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl h-8 text-xs px-3"
+                          >
+                            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Retry
+                          </Button>
+                        </div>
+                      </div>
+                    ) : loadingVideo || (!signedUrl && !isTextModule) ? (
+                      <div className="grid h-full w-full place-items-center text-white">
+                        <div className="text-center space-y-2">
+                          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                          <span className="text-xs text-slate-400 block font-medium">Loading content stream...</span>
+                        </div>
+                      </div>
+                    ) : isTextModule ? (
+                      <div className="h-full w-full bg-[#fcfbfa] p-8 overflow-y-auto text-slate-800 flex flex-col justify-between">
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600">
+                            <BookOpen className="h-4 w-4" /> Reading Section
+                          </div>
+                          <h2 className="font-serif text-2xl font-bold text-[#1e293b]">{activeVideo.title}</h2>
+                          <div className="w-12 h-0.5 bg-primary mt-2"></div>
+                          <p className="whitespace-pre-line text-slate-700 leading-relaxed font-sans text-sm md:text-base pt-4">
+                            {activeVideo.text_content}
+                          </p>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground italic border-t border-slate-100 pt-4 mt-6">
+                          Read the section completely then click the mark completed button.
+                        </div>
+                      </div>
+                    ) : isExternal ? (
+                      <iframe src={toEmbed(signedUrl)} className="h-full w-full" allowFullScreen title={activeVideo.title} />
+                    ) : signedUrl ? (
+                      <video
+                        src={signedUrl}
+                        controls
+                        controlsList="nodownload"
+                        onContextMenu={(e) => e.preventDefault()}
+                        className="h-full w-full bg-black"
+                      />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-muted-foreground text-sm">No video source specified.</div>
+                    )}
+                  </div>
+                  <div className="bg-card p-6 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex-1">
+                      <h1 className="font-display text-2xl font-bold">{activeVideo.title}</h1>
+                      <p className="mt-2 text-sm text-muted-foreground">{activeVideo.description}</p>
+                    </div>
+                    {hasAccess && (
+                      <Button 
+                        onClick={markCompletedAndNext}
+                        className="rounded-xl shrink-0 font-bold bg-primary text-primary-foreground hover:bg-primary/95 flex items-center gap-2"
+                      >
+                        {completedModules.has(activeVideo.id) ? "Next Module" : "Mark Completed & Next"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="relative w-full overflow-hidden rounded-3xl border border-border bg-muted/50 min-h-[340px] md:aspect-video">
+                  {course.thumbnail_url && <img src={course.thumbnail_url} className="h-full w-full object-cover blur-sm opacity-50" />}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+                    <div className="grid h-16 w-16 place-items-center rounded-2xl bg-background shadow-xl"><Lock className="h-8 w-8 text-primary" /></div>
+                    <h2 className="mt-6 font-display text-2xl font-bold">This content is locked</h2>
+                    <p className="mt-2 max-w-sm text-sm text-muted-foreground">Enroll in this course to gain full access to all video modules and community discussion.</p>
+                    {!hasAccess && (
+                      <Button 
+                        size="lg" 
+                        onClick={purchase} 
+                        disabled={purchasing}
+                        className="mt-8 h-14 rounded-2xl px-10 text-base shadow-lg shadow-primary/20"
+                      >
+                        {purchasing ? "Unlocking..." : `Unlock for ${course.price} Tokens`}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Core description details */}
+              <div className="mt-10 space-y-4">
+                <h2 className="font-display text-2xl font-bold">About this course</h2>
+                <p className="whitespace-pre-line text-muted-foreground leading-relaxed">{course.description}</p>
+                
+                {/* Skills Gain badges */}
+                <div className="mt-6 pt-4 border-t border-border/50">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Skills you will gain</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {skillsList.map((sk) => (
+                      <span key={sk} className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold">
+                        {sk}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Curriculum Section (Syllabus) */}
+              <div className="mt-10 border-t border-border pt-10">
+                <h2 className="font-display text-2xl font-bold mb-6">Course Curriculum</h2>
+                <div className="space-y-3">
+                  {videos.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">Syllabus modules are currently being added. Check back soon!</p>
+                  ) : (
+                    videos.map((v, i) => (
+                      <button 
+                        key={v.id} 
+                        onClick={() => {
+                          if (examMode) {
+                            toast.error("Finish or exit the active exam session before switching modules.");
+                            return;
+                          }
+                          if (hasAccess) {
+                            setActiveVideo(v);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          } else {
+                            toast.error("Please enroll to access this module");
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left ${!hasAccess ? 'opacity-65 cursor-not-allowed bg-muted/40 border-border' : 'bg-card border-border hover:border-primary/20 hover:bg-primary/5'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-700 font-mono text-xs font-bold">Module {i + 1}</div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{v.title}</p>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{v.description || "Module description details."}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-slate-500">
+                            {v.text_content ? "Reading" : "Video"}
+                          </span>
+                          {!hasAccess && <Lock className="h-3.5 w-3.5 text-muted-foreground/60" />}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Instructor profile description */}
+              <div className="mt-10 border-t border-border pt-10 grid gap-6 sm:grid-cols-2">
+                <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><GraduationCap className="h-6 w-6" /></div>
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Publisher / Instructor</p>
+                    <p className="font-bold text-base mt-0.5">{course.instructor_name || 'Expert Educator'}</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-normal">{course.instructor_bio || 'Experienced engineering educator specializing in high scale platform development.'}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent-foreground"><BookOpen className="h-6 w-6" /></div>
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Course difficulty</p>
+                    <p className="font-bold text-base mt-0.5">{course.difficulty}</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-normal">Designed for engineers aiming to master dynamic problem solving patterns.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Community Discussion Section */}
+              <div className="mt-12 border-t border-border pt-10">
+                <div className="flex items-center gap-2 mb-6"><MessageSquare className="h-5 w-5 text-primary" /><h2 className="font-display text-xl font-bold">Community Discussion</h2></div>
+                {hasAccess ? (
+                  <div className="flex flex-col gap-4">
+                    <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="What did you think of this module?" className="rounded-2xl min-h-[100px]" />
+                    <Button onClick={postComment} className="self-end rounded-xl px-8">Post comment</Button>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+                    <p className="text-sm text-muted-foreground font-medium">Join the course to participate in the discussion.</p>
+                  </div>
+                )}
+                <div className="mt-8 space-y-4">
+                  {comments.map((c) => (
+                    <div key={c.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold">{names[c.user_id] ?? "Student"}</span>
+                        <span className="text-[10px] font-medium text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{c.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Sidebar details */}
@@ -553,8 +880,14 @@ function CourseDetail() {
                   <button 
                     key={v.id} 
                     disabled={!hasAccess} 
-                    onClick={() => setActiveVideo(v)}
-                    className={`w-full flex items-center gap-3 text-left p-3 rounded-2xl transition-all ${activeVideo?.id === v.id ? "bg-primary/5 border border-primary/20 font-semibold" : "hover:text-primary"} ${!hasAccess && 'opacity-60 grayscale cursor-not-allowed'}`}
+                    onClick={() => {
+                      if (examMode) {
+                        toast.error("Finish or exit the active exam session before switching modules.");
+                        return;
+                      }
+                      setActiveVideo(v);
+                    }}
+                    className={`w-full flex items-center gap-3 text-left p-3 rounded-2xl transition-all ${activeVideo?.id === v.id ? "bg-primary/5 border border-primary/20 font-semibold" : "hover:text-primary"} ${(examMode || !hasAccess) && 'opacity-60 grayscale cursor-not-allowed'}`}
                   >
                     {/* Circle status indicator instead of checkbox */}
                     {isCompleted ? (
@@ -588,6 +921,10 @@ function CourseDetail() {
                   <p className="text-xs text-muted-foreground">
                     Complete all {totalModules} modules (currently at {progressPercent}%) to unlock the certification exam.
                   </p>
+                ) : examMode ? (
+                  <div className="rounded-2xl bg-amber-500/10 p-3.5 border border-amber-500/20 text-amber-700 text-xs font-bold animate-pulse">
+                    ✍️ Exam in progress. Navigate and respond in the left-hand panel.
+                  </div>
                 ) : certificate ? (
                   <div className="space-y-3">
                     <div className="rounded-2xl bg-emerald-500/10 p-3 border border-emerald-500/20 text-emerald-700 text-xs font-semibold">
@@ -597,11 +934,23 @@ function CourseDetail() {
                       <Award className="h-4 w-4" /> View Certificate
                     </Button>
                   </div>
-                ) : completionAttempt ? (
+                ) : completionAttempt && !completionAttempt.is_reviewed ? (
                   <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">
-                      Exam submitted successfully! Score: {Math.round((completionAttempt.score / completionAttempt.total) * 100)}%. Certificate will be issued upon final grading.
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      ✍️ Written exam submitted successfully! Current Score: {Math.round((completionAttempt.score / completionAttempt.total) * 100)}%. Your certificate will be issued after the final instructor grading review.
                     </p>
+                  </div>
+                ) : completionAttempt && completionAttempt.is_reviewed && Math.round((completionAttempt.score / completionAttempt.total) * 100) < 60 ? (
+                  <div className="space-y-3">
+                    <div className="rounded-2xl bg-rose-500/10 p-3 border border-rose-500/20 text-rose-700 text-xs font-semibold">
+                      ❌ Score: {Math.round((completionAttempt.score / completionAttempt.total) * 100)}% (Passing: 60%)
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      You did not meet the required passing mark. You can review your topics and retake the exam below.
+                    </p>
+                    <Button onClick={handleStartExam} className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/10">
+                      <PlayCircle className="h-4 w-4" /> Retake Certification Exam
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-3">
