@@ -35,27 +35,49 @@ function Courses() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      // Fetch all courses
-      supabase.from("courses").select("*").order("created_at", { ascending: false }),
-      // Fetch dynamic categories
-      supabase.from("categories").select("name").order("name"),
-      // Fetch user's purchased course IDs
-      user ? supabase.from("purchases").select("course_id").eq("user_id", user.id) : Promise.resolve({ data: [] })
-    ]).then(([cRes, catRes, pRes]) => {
+    
+    const loadAll = async () => {
+      const [cRes, catRes, pRes] = await Promise.all([
+        supabase.from("courses_v2").select("*, difficulty:difficulty_level, price:pricing_tokens").order("created_at", { ascending: false }),
+        supabase.from("categories").select("name").order("name"),
+        user ? supabase.from("purchases").select("course_id").eq("user_id", user.id) : Promise.resolve({ data: [] })
+      ]);
+
       const courseList = (cRes.data as unknown as Course[]) ?? [];
       setCourses(courseList);
 
-      // Unique categories list
       const cats = (catRes.data ?? []).map((c: any) => c.name);
       setCategories(["All", ...cats]);
 
-      // Set of purchased course IDs
-      const pSet = new Set((pRes.data ?? []).map((p: any) => p.course_id));
-      setPurchasedIds(pSet);
+      const unlockedSet = new Set((pRes.data ?? []).map((p: any) => p.course_id));
 
+      // Fetch active subscription course IDs if user is logged in
+      if (user) {
+        const { data: membership } = await supabase
+          .from("memberships" as any)
+          .select("subscription_id")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .gt("valid_until", new Date().toISOString())
+          .maybeSingle();
+
+        if (membership?.subscription_id) {
+          const { data: subCourses } = await supabase
+            .from("subscription_courses" as any)
+            .select("course_id")
+            .eq("subscription_id", membership.subscription_id);
+
+          if (subCourses) {
+            subCourses.forEach((sc: any) => unlockedSet.add(sc.course_id));
+          }
+        }
+      }
+
+      setPurchasedIds(unlockedSet);
       setLoading(false);
-    });
+    };
+
+    loadAll();
   }, [user]);
 
   // Apply filters client-side

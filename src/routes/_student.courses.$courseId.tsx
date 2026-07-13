@@ -32,6 +32,7 @@ type Comment = { id: string; body: string; created_at: string; user_id: string }
 function toEmbed(url: string) {
   try {
     const u = new URL(url);
+    if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) return `https://www.youtube.com/embed/${u.pathname.split("/")[2]}`;
     if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) return `https://www.youtube.com/embed/${u.searchParams.get("v")}`;
     if (u.hostname === "youtu.be") return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
     if (u.hostname.includes("vimeo.com")) return `https://player.vimeo.com/video/${u.pathname.slice(1)}`;
@@ -59,6 +60,7 @@ function CourseDetail() {
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const purchasingRef = useRef(false);
+  const syncingProgressRef = useRef(false);
 
   // Certification & Progression states
   const [completedModules, setCompletedModules] = useState<Set<string>>(new Set());
@@ -89,7 +91,7 @@ function CourseDetail() {
     if (!user) return;
     setLoading(true);
     
-    const { data: c } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle();
+    const { data: c } = await supabase.from("courses_v2").select("*, difficulty:difficulty_level, price:pricing_tokens").eq("id", courseId).maybeSingle();
     if (!c) {
       setLoading(false);
       return;
@@ -107,20 +109,36 @@ function CourseDetail() {
     const { data: p } = await supabase.from("purchases").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
     let access = !!p;
     if (!access) {
-      const { data: sub } = await supabase.rpc("has_course_access" as any, { _user_id: user.id, _course_id: courseId });
+      const { data: sub } = await supabase.rpc("has_course_access_v2" as any, { _user_id: user.id, _course_id: courseId });
       access = !!sub;
     }
     setHasAccess(access);
 
-    // Load videos/modules
-    const { data: vs } = await supabase.from("videos").select("id,title,description,video_url,storage_path,text_content").eq("course_id", courseId).order("position");
-    const list = (vs ?? []) as Video[];
+    // Load videos/modules from V2 schema
+    const { data: modules } = await supabase.from("course_modules_v2").select("id").eq("course_id", courseId);
+    const moduleIds = (modules ?? []).map((m: any) => m.id);
+    const { data: vs } = moduleIds.length > 0
+      ? await supabase.from("course_lessons_v2").select("id, title, video_url, video_provider, text_content").in("module_id", moduleIds).order("order_index")
+      : { data: [] };
+
+    const list: Video[] = (vs ?? []).map((v: any) => ({
+      id: v.id,
+      title: v.title,
+      description: v.text_content ? "Reading module" : "Video module",
+      video_url: v.video_url,
+      storage_path: v.video_provider === "s3" ? v.video_url : null,
+      text_content: v.text_content
+    }));
     setVideos(list);
     if (list.length) setActiveVideo(list[0]);
 
-    // Load module progression
-    const { data: prog } = await supabase.from("module_progress").select("video_id").eq("user_id", user.id);
-    const completedSet = new Set((prog ?? []).map((p: any) => p.video_id));
+    // Load module progression from V2 schema
+    const { data: enrollment } = await supabase.from("course_enrollments_v2").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
+    let completedSet = new Set<string>();
+    if (enrollment) {
+      const { data: prog } = await supabase.from("course_progress_v2").select("lesson_id").eq("enrollment_id", enrollment.id);
+      completedSet = new Set((prog ?? []).map((p: any) => p.lesson_id));
+    }
     setCompletedModules(completedSet);
 
     // Fetch certification & attempt if test linked or fallback to matching test category
@@ -138,24 +156,57 @@ function CourseDetail() {
     }
     setResolvedTestId(targetTestId);
 
-    if (targetTestId) {
+    if (enrollment) {
       const [{ data: cert }, { data: att }] = await Promise.all([
-        supabase.from("certificates").select("*").eq("user_id", user.id).eq("course_id", courseId).maybeSingle(),
-        supabase.from("test_attempts").select("id, score, total, is_reviewed").eq("user_id", user.id).eq("test_id", targetTestId).order("submitted_at", { ascending: false }).limit(1).maybeSingle()
+        supabase.from("course_certificates_v2").select("*").eq("enrollment_id", enrollment.id).maybeSingle(),
+        supabase.from("course_assessment_attempts_v2").select("id, score, passed").eq("enrollment_id", enrollment.id).order("started_at", { ascending: false }).limit(1).maybeSingle()
       ]);
-      setCertificate(cert);
-      setCompletionAttempt(att);
+      if (cert) {
+        setCertificate({
+          id: cert.id,
+          recipient_name: cert.recipient_name,
+          date_of_birth: cert.date_of_birth,
+          issue_date: cert.issued_at,
+          score: cert.final_score,
+          verification_number: cert.certificate_number
+        });
+      } else {
+        setCertificate(null);
+      }
+      if (att) {
+        setCompletionAttempt({
+          id: att.id,
+          score: att.score,
+          total: 100,
+          is_reviewed: true
+        });
+      } else {
+        setCompletionAttempt(null);
+      }
+    } else {
+      setCertificate(null);
+      setCompletionAttempt(null);
     }
 
-    // Comments load
-    const { data: cs } = await supabase.from("comments").select("*").eq("course_id", courseId).order("created_at", { ascending: false });
-    setComments((cs as Comment[]) ?? []);
-    const uIds = Array.from(new Set((cs ?? []).map((c: any) => c.user_id)));
-    if (uIds.length) {
-      const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", uIds);
-      const m: Record<string, string> = {};
-      (profs ?? []).forEach((p: any) => { m[p.id] = p.full_name || "Student"; });
-      setNames(m);
+    // Comments load from lesson_comments_v2
+    const activeLessonId = activeVideo?.id || (list.length ? list[0].id : null);
+    if (activeLessonId) {
+      const { data: cs } = await supabase.from("lesson_comments_v2").select("*").eq("lesson_id", activeLessonId).order("created_at", { ascending: false });
+      const mappedComments = (cs ?? []).map((c: any) => ({
+        id: c.id,
+        course_id: courseId,
+        user_id: c.user_id,
+        body: c.body,
+        created_at: c.created_at
+      }));
+      setComments(mappedComments);
+      const uIds = Array.from(new Set((cs ?? []).map((c: any) => c.user_id)));
+      if (uIds.length) {
+        const { data: profs } = await supabase.from("profiles").select("id,full_name").in("id", uIds);
+        const m: Record<string, string> = {};
+        (profs ?? []).forEach((p: any) => { m[p.id] = p.full_name || "Student"; });
+        setNames(m);
+      }
     }
     setLoading(false);
   }
@@ -173,15 +224,16 @@ function CourseDetail() {
       setVideoError(null);
       return; // Text only module
     }
+    if (activeVideo.video_url && !activeVideo.storage_path) {
+      setSignedUrl(activeVideo.video_url);
+      setVideoError(null);
+      setLoadingVideo(false);
+      return;
+    }
     setLoadingVideo(true);
     setVideoError(null);
     const token = session?.access_token || "";
-    signUrl({ 
-      data: { videoId: activeVideo.id },
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+    signUrl({ videoId: activeVideo.id })
       .then((r) => {
         setSignedUrl(r.url);
         if (!r.url) {
@@ -237,41 +289,75 @@ function CourseDetail() {
   }
 
   async function toggleModuleProgress(videoId: string) {
-    if (!hasAccess) return;
-    const isCompleted = completedModules.has(videoId);
-    if (isCompleted) {
-      const { error } = await supabase.from("module_progress").delete().eq("user_id", user?.id).eq("video_id", videoId);
-      if (error) return toast.error(error.message);
-      const updated = new Set(completedModules);
-      updated.delete(videoId);
-      setCompletedModules(updated);
-    } else {
-      const { error } = await supabase.from("module_progress").insert({ user_id: user?.id, video_id: videoId });
-      if (error) return toast.error(error.message);
-      const updated = new Set(completedModules);
-      updated.add(videoId);
-      setCompletedModules(updated);
+    if (!hasAccess || syncingProgressRef.current || !user) return;
+    syncingProgressRef.current = true;
+    try {
+      // Resolve active enrollment
+      let { data: enrollment } = await supabase.from("course_enrollments_v2").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
+      if (!enrollment) {
+        const { data: newEnr, error: enrErr } = await supabase.from("course_enrollments_v2").insert({ user_id: user.id, course_id: courseId }).select("id").single();
+        if (enrErr) return toast.error(enrErr.message);
+        enrollment = newEnr;
+      }
+
+      const isCompleted = completedModules.has(videoId);
+      if (isCompleted) {
+        const { error } = await supabase.from("course_progress_v2").delete().eq("enrollment_id", enrollment.id).eq("lesson_id", videoId);
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        const updated = new Set(completedModules);
+        updated.delete(videoId);
+        setCompletedModules(updated);
+      } else {
+        const { error } = await supabase.from("course_progress_v2").insert({ enrollment_id: enrollment.id, lesson_id: videoId });
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        const updated = new Set(completedModules);
+        updated.add(videoId);
+        setCompletedModules(updated);
+      }
+    } finally {
+      syncingProgressRef.current = false;
     }
   }
 
   async function markCompletedAndNext() {
-    if (!activeVideo) return;
-    
-    // Only insert progression row if not already marked completed
-    if (!completedModules.has(activeVideo.id)) {
-      const { error } = await supabase.from("module_progress").insert({ user_id: user?.id, video_id: activeVideo.id });
-      if (error) return toast.error(error.message);
-      const updated = new Set(completedModules);
-      updated.add(activeVideo.id);
-      setCompletedModules(updated);
-    }
-    
-    const currentIndex = videos.findIndex(v => v.id === activeVideo.id);
-    if (currentIndex < videos.length - 1) {
-      setActiveVideo(videos[currentIndex + 1]);
-    } else {
-      toast.success("All modules completed! You can now start the Certification Exam.");
-      load();
+    if (!activeVideo || syncingProgressRef.current || !user) return;
+    syncingProgressRef.current = true;
+    try {
+      // Resolve active enrollment
+      let { data: enrollment } = await supabase.from("course_enrollments_v2").select("id").eq("user_id", user.id).eq("course_id", courseId).maybeSingle();
+      if (!enrollment) {
+        const { data: newEnr, error: enrErr } = await supabase.from("course_enrollments_v2").insert({ user_id: user.id, course_id: courseId }).select("id").single();
+        if (enrErr) return toast.error(enrErr.message);
+        enrollment = newEnr;
+      }
+
+      // Only insert progression row if not already marked completed
+      if (!completedModules.has(activeVideo.id)) {
+        const { error } = await supabase.from("course_progress_v2").insert({ enrollment_id: enrollment.id, lesson_id: activeVideo.id });
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+        const updated = new Set(completedModules);
+        updated.add(activeVideo.id);
+        setCompletedModules(updated);
+      }
+      
+      const currentIndex = videos.findIndex(v => v.id === activeVideo.id);
+      if (currentIndex < videos.length - 1) {
+        setActiveVideo(videos[currentIndex + 1]);
+      } else {
+        toast.success("All modules completed! You can now start the Certification Exam.");
+        load();
+      }
+    } finally {
+      syncingProgressRef.current = false;
     }
   }
 
@@ -454,8 +540,8 @@ function CourseDetail() {
   }
 
   async function postComment() {
-    if (!body.trim() || !user) return;
-    const { error } = await supabase.from("comments").insert({ course_id: courseId, user_id: user.id, body: body.trim() });
+    if (!body.trim() || !user || !activeVideo) return;
+    const { error } = await supabase.from("lesson_comments_v2").insert({ lesson_id: activeVideo.id, user_id: user.id, body: body.trim() });
     if (error) return toast.error(error.message);
     setBody(""); load();
   }

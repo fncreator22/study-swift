@@ -95,7 +95,38 @@ function WalletPage() {
           <CardDescription>Track the status of your payment verification requests.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="responsive-table-container">
+          {/* Mobile card view for small screens */}
+          <div className="sm:hidden divide-y divide-border">
+            {loading && (
+              <p className="text-center py-8 text-sm text-muted-foreground">Loading...</p>
+            )}
+            {!loading && requests.length === 0 && (
+              <p className="text-center py-8 text-sm text-muted-foreground italic">No top-up requests yet</p>
+            )}
+            {!loading && requests.map((r) => (
+              <div key={r.id} className="flex flex-col gap-2 px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-primary">
+                    {r.amount} Tokens <span className="text-xs text-muted-foreground font-normal">(₹{r.amount * rate})</span>
+                  </span>
+                  <Badge variant={r.status === 'approved' ? 'success' : r.status === 'pending' ? 'secondary' : 'destructive'}>
+                    {r.status}
+                  </Badge>
+                </div>
+                {r.message && (
+                  <p className="text-xs text-foreground bg-muted/30 rounded-lg p-2 leading-normal break-all">
+                    {r.message}
+                  </p>
+                )}
+                <span className="text-[10px] text-muted-foreground">
+                  {new Date(r.created_at).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="responsive-table-container hidden sm:block">
             <table className="w-full min-w-[520px] text-sm">
               <thead className="bg-muted/50 text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border">
                 <tr>

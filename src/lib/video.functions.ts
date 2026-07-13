@@ -11,32 +11,34 @@ export const getVideoSignedUrl = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    const { data: video, error: vErr } = await supabase
-      .from("videos")
-      .select("id, course_id, storage_path, video_url")
+    const { data: lesson, error: lErr } = await supabase
+      .from("course_lessons_v2")
+      .select("id, module_id, video_url, video_provider, course_modules_v2(course_id)")
       .eq("id", data.videoId)
       .maybeSingle();
 
-    if (vErr || !video) throw new Error("Video not found");
+    if (lErr || !lesson) throw new Error("Lesson not found");
 
-    // Gate all videos (storage & external links) by course access
-    if (video.course_id) {
-      const { data: access } = await supabase.rpc("has_course_access", {
-        _user_id: userId, _course_id: video.course_id,
+    const courseId = (lesson.course_modules_v2 as any)?.course_id;
+
+    // Gate all videos by V2 course access
+    if (courseId) {
+      const { data: access } = await supabase.rpc("has_course_access_v2", {
+        _user_id: userId, _course_id: courseId,
       });
       if (!access) throw new Error("Access denied. Please enroll in the course to access its modules.");
     }
 
     // External URL fallback
-    if (!video.storage_path) {
-      return { url: video.video_url ?? "", expiresIn: 0 };
+    if (lesson.video_provider !== "s3") {
+      return { url: lesson.video_url ?? "", expiresIn: 0 };
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: signed, error: sErr } = await supabaseAdmin
       .storage
       .from("course-videos")
-      .createSignedUrl(video.storage_path, 60 * 30); // 30 min
+      .createSignedUrl(lesson.video_url, 60 * 30); // 30 min
 
     if (sErr || !signed) throw new Error(sErr?.message || "Failed to sign URL");
     return { url: signed.signedUrl, expiresIn: 1800 };

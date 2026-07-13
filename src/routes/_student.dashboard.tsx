@@ -24,11 +24,11 @@ function Dashboard() {
       const [{ count: tests }, { data: rank }, { count: courses }, { data: prof }, { data: atts }, { data: lt }, { data: lc }] = await Promise.all([
         supabase.from("tests").select("id", { count: "exact", head: true }),
         supabase.from("rankings_view").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("courses").select("id", { count: "exact", head: true }),
+        supabase.from("courses_v2").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("full_name,membership_status,subscription_expiry").eq("id", user.id).maybeSingle(),
         supabase.from("test_attempts").select("id,score,total,submitted_at,tests(title,test_type)").eq("user_id", user.id).not("submitted_at", "is", null).order("submitted_at", { ascending: false }).limit(3),
         supabase.from("tests").select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
-        supabase.from("courses" as any).select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
+        supabase.from("courses_v2").select("id,title,tier,category").order("created_at", { ascending: false }).limit(10),
       ]);
       setStats({
         tests: tests ?? 0,
@@ -75,7 +75,7 @@ function Dashboard() {
             <Link 
               key={`${it.id}-${i}`} 
               to={(type === 'test' ? `/tests/${it.id}` : `/courses/${it.id}`) as any}
-              className="flex w-64 shrink-0 items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/40"
+              className="flex w-56 sm:w-64 shrink-0 items-center gap-2 sm:gap-3 rounded-xl border border-border bg-card p-2.5 sm:p-3 shadow-sm transition-colors hover:border-primary/40"
             >
               <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted`}>
                 {type === 'test' ? <BookOpen className="h-4 w-4 text-primary/60" /> : <PlayCircle className="h-4 w-4 text-emerald-500/60" />}
@@ -120,36 +120,36 @@ function Dashboard() {
       </div>
 
       {/* Compact Stats Grid */}
-      <div className="dashboard-grid mt-8">
+      <div className="dashboard-grid mt-6">
         {cards.map((c) => (
-          <Link key={c.t} to={c.to} className="compact-card flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-            <div className={`grid h-10 w-10 place-items-center rounded-xl bg-muted/50 shrink-0 ${c.color}`}>
-              <c.icon className="h-5 w-5" />
+          <Link key={c.t} to={c.to} className="compact-card p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4">
+            <div className={`grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-xl bg-muted/50 shrink-0 ${c.color}`}>
+              <c.icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">{c.t}</p>
-              <p className="font-display text-lg sm:text-xl font-bold leading-none mt-1">{c.v}</p>
+              <p className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">{c.t}</p>
+              <p className="font-display text-base sm:text-xl font-bold leading-none mt-0.5 sm:mt-1">{c.v}</p>
             </div>
           </Link>
         ))}
       </div>
 
       {/* Quick Access / Shortcuts Grid */}
-      <div className="mt-8 md:hidden">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Quick Access</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-6 md:hidden">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Quick Access</h3>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {quickLinks.map((ql) => (
             <Link
               key={ql.to}
               to={ql.to as any}
-              className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-soft active:scale-[0.98]"
+              className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-3.5 transition-all hover:border-primary/30 hover:shadow-soft active:scale-[0.98]"
             >
-              <div className={`grid h-8 w-8 place-items-center rounded-xl shrink-0 ${ql.color}`}>
-                <ql.icon className="h-4 w-4" />
+              <div className={`grid h-7 w-7 place-items-center rounded-lg shrink-0 ${ql.color}`}>
+                <ql.icon className="h-3.5 w-3.5" />
               </div>
-              <div className="mt-4">
-                <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{ql.label}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{ql.desc}</p>
+              <div className="mt-3">
+                <p className="text-[11px] font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors">{ql.label}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight line-clamp-1 opacity-80">{ql.desc}</p>
               </div>
             </Link>
           ))}

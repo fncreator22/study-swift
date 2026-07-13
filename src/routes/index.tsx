@@ -163,7 +163,7 @@ function Landing() {
       <div className="marquee-container">
         <div className="marquee-content">
           {(items.length > 0 ? [...items, ...items, ...items] : []).map((it, i) => (
-            <div key={`${it.id}-${i}`} className="w-[280px] sm:w-[340px] shrink-0 px-2">
+            <div key={`${it.id}-${i}`} className="w-[230px] sm:w-[340px] shrink-0 px-1.5 sm:px-2">
               <ItemCard item={it} type={type} isLoggedIn={!!user} />
             </div>
           ))}
@@ -256,14 +256,14 @@ function Landing() {
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary animate-in fade-in slide-in-from-bottom-4 duration-700">
               <Zap className="h-3 w-3" /> Next-Gen Learning Platform
             </div>
-            <h1 className="mt-6 font-display text-4xl sm:text-5xl font-black leading-[1.1] tracking-tight md:text-7xl animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <h1 className="mt-4 sm:mt-6 font-display text-3xl sm:text-5xl font-black leading-[1.1] tracking-tight md:text-7xl animate-in fade-in slide-in-from-bottom-8 duration-700">
               Master your <span className="gradient-text font-black">exams</span> with confidence.
             </h1>
-            <p className="mt-6 text-base sm:text-lg text-muted-foreground md:text-xl animate-in fade-in slide-in-from-bottom-12 duration-700 max-w-2xl">
+            <p className="mt-4 sm:mt-6 text-sm sm:text-lg text-muted-foreground md:text-xl animate-in fade-in slide-in-from-bottom-12 duration-700 max-w-2xl">
               The most advanced LMS for professional certifications and academic excellence.
               Real-time practice, expert-curated courses, and detailed analytics.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom-16 duration-700">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom-16 duration-700">
               <Button size="lg" className="rounded-2xl h-12 sm:h-14 px-6 sm:px-8 text-base shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] glow-effect w-full sm:w-auto" asChild>
                 <Link to="/login">Get Started Free <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
@@ -608,33 +608,33 @@ function Landing() {
 }
 
 const CardContentInner = ({ item, type }: { item: any, type: 'test' | 'course' }) => (
-  <div className="group overflow-hidden rounded-[28px] sm:rounded-[32px] border border-border bg-card shadow-soft transition-all hover:-translate-y-1 hover:border-primary/20 hover:shadow-card active:scale-[0.98] cursor-pointer">
+  <div className="group overflow-hidden rounded-2xl sm:rounded-[32px] border border-border bg-card shadow-soft transition-all hover:-translate-y-1 hover:border-primary/20 hover:shadow-card active:scale-[0.98] cursor-pointer">
     <div className="relative aspect-video w-full bg-muted">
       {item.thumbnail_url ? (
         <img src={item.thumbnail_url} alt={item.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-primary/10">
-          {type === 'test' ? <BookOpen className="h-12 w-12 sm:h-16 sm:w-16" /> : <PlayCircle className="h-12 w-12 sm:h-16 sm:w-16" />}
+          {type === 'test' ? <BookOpen className="h-10 w-10 sm:h-16 sm:w-16" /> : <PlayCircle className="h-10 w-10 sm:h-16 sm:w-16" />}
         </div>
       )}
       <div className="absolute top-3 left-3">
-        <span className="rounded-full bg-background/90 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest backdrop-blur">
+        <span className="rounded-full bg-background/90 px-2.5 py-0.5 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest backdrop-blur">
           {item.tier}
         </span>
       </div>
     </div>
-    <div className="p-4 sm:p-6">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+    <div className="p-3.5 sm:p-6">
+      <div className="flex items-center gap-2 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
         <span>{item.category || (type === 'test' ? 'Academic' : 'Professional')}</span>
         <span className="h-1 w-1 rounded-full bg-border" />
         <span>{item.difficulty || 'All Levels'}</span>
       </div>
-      <h3 className="font-display font-bold text-base sm:text-xl leading-tight group-hover:text-primary transition-colors line-clamp-1">{item.title}</h3>
-      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground leading-relaxed">{item.description}</p>
-      <div className="mt-4 sm:mt-6 flex items-center justify-between border-t border-border pt-3 sm:pt-4">
-        <span className="text-base font-black text-foreground">{item.tier === 'free' ? 'FREE' : `${item.price} Tokens`}</span>
-        <Button size="sm" variant="ghost" className="rounded-xl font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all px-3 sm:px-4">
-          View <ArrowRight className="ml-1 h-3.5 w-3.5" />
+      <h3 className="font-display font-bold text-sm sm:text-xl leading-tight group-hover:text-primary transition-colors line-clamp-1">{item.title}</h3>
+      <p className="mt-2 line-clamp-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+      <div className="mt-3 sm:mt-6 flex items-center justify-between border-t border-border pt-2.5 sm:pt-4">
+        <span className="text-sm sm:text-base font-black text-foreground">{item.tier === 'free' ? 'FREE' : `${item.price} Tokens`}</span>
+        <Button size="sm" variant="ghost" className="rounded-xl font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all px-2.5 sm:px-4 h-8 sm:h-9 text-xs sm:text-sm">
+          View <ArrowRight className="ml-1 h-3 sm:h-3.5 w-3 sm:w-3.5" />
         </Button>
       </div>
     </div>

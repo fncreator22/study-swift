@@ -15,12 +15,53 @@ function Purchased() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("purchases").select("test_id, course_id, tests(*), courses:courses(*)").eq("user_id", user.id);
-      const mapped = (data ?? []).map((r: any) => ({
-        ... (r.tests || r.courses),
-        type: r.test_id ? 'test' : 'course'
-      }));
-      setItems(mapped);
+      // 1. Fetch purchased tests and courses
+      const { data: purchases } = await supabase
+        .from("purchases")
+        .select("test_id, course_id, tests(*), courses:courses_v2(*)")
+        .eq("user_id", user.id);
+      
+      // 2. Fetch active membership subscription courses
+      const { data: membership } = await supabase
+        .from("memberships")
+        .select("subscription_id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .gt("valid_until", new Date().toISOString())
+        .maybeSingle();
+
+      let subCourses: any[] = [];
+      if (membership?.subscription_id) {
+        const { data: mappings } = await supabase
+          .from("subscription_courses_v2" as any)
+          .select("course_id, courses:courses_v2(*)")
+          .eq("subscription_id", membership.subscription_id);
+        
+        if (mappings) {
+          subCourses = mappings
+            .map((m: any) => m.courses)
+            .filter(Boolean)
+            .map((c: any) => ({ ...c, type: 'course', unlocked_via: 'subscription' }));
+        }
+      }
+
+      // 3. Map and merge everything
+      const purchaseItems = (purchases ?? [])
+        .map((r: any) => {
+          const item = r.tests || r.courses;
+          if (!item) return null;
+          return {
+            ...item,
+            type: r.test_id ? 'test' : 'course',
+            unlocked_via: 'purchase'
+          };
+        })
+        .filter(Boolean);
+
+      const seenIds = new Set(purchaseItems.map(item => item.id));
+      const filteredSubs = subCourses.filter(c => !seenIds.has(c.id));
+
+      setItems([...purchaseItems, ...filteredSubs]);
       setLoading(false);
     })();
   }, [user]);
@@ -56,7 +97,7 @@ function Purchased() {
               )}
               <div className="absolute top-3 right-3 flex gap-2">
                 <span className="rounded-full bg-background/90 px-2 py-1 text-[10px] font-bold text-success backdrop-blur shadow-sm">
-                  <CheckCircle2 className="mr-1 inline h-3 w-3" /> Purchased
+                  <CheckCircle2 className="mr-1 inline h-3 w-3" /> {item.unlocked_via === 'subscription' ? 'Subscription' : 'Purchased'}
                 </span>
               </div>
             </div>

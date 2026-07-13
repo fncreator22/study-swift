@@ -31,14 +31,24 @@ function AdminCourses() {
   const [editing, setEditing] = useState<string | null>(null);
 
   async function load() {
-    const [{ data: cs }, { data: subs }, { data: ts }, { data: cats }] = await Promise.all([
-      supabase.from("courses").select("*").order("created_at", { ascending: false }),
-      supabase.from("subscriptions" as any).select("id, name, course_ids"),
+    const [{ data: cs }, { data: subs }, { data: ts }, { data: cats }, { data: mappings }] = await Promise.all([
+      supabase.from("courses_v2").select("*, difficulty:difficulty_level, price:pricing_tokens").order("created_at", { ascending: false }),
+      supabase.from("subscriptions" as any).select("id, name"),
       supabase.from("tests").select("id, title, test_type").order("title"),
       supabase.from("categories").select("*").order("name"),
+      supabase.from("subscription_courses_v2" as any).select("subscription_id, course_id")
     ]);
+
+    // Map course_ids manually to maintain backward compatibility in local subscriptions array
+    const mappedSubs = (subs ?? []).map(s => {
+      const courseIds = (mappings ?? [])
+        .filter((m: any) => m.subscription_id === s.id)
+        .map((m: any) => m.course_id);
+      return { ...s, course_ids: courseIds };
+    });
+
     setCourses(cs ?? []);
-    setSubscriptions(subs ?? []);
+    setSubscriptions(mappedSubs);
     setTests(ts ?? []);
     setCategories(cats ?? []);
   }
@@ -63,33 +73,29 @@ function AdminCourses() {
       category: form.category,
       description: form.description,
       tier: form.tier,
-      price: Number(form.price),
-      difficulty: form.difficulty,
+      pricing_tokens: Number(form.price),
+      difficulty_level: form.difficulty,
       thumbnail_url: form.thumbnail_url,
-      instructor_name: form.instructor_name,
-      instructor_bio: form.instructor_bio,
+      instructor_name: form.instructor_name || 'Expert Educator',
+      instructor_bio: form.instructor_bio || '',
       completion_test_id: completionTestId
     };
 
     const { data: courseResult, error } = editing 
-      ? await supabase.from("courses").update(payload).eq("id", editing).select("id").single()
-      : await supabase.from("courses").insert(payload).select("id").single();
+      ? await supabase.from("courses_v2").update(payload).eq("id", editing).select("id").single()
+      : await supabase.from("courses_v2").insert(payload).select("id").single();
     
     if (error) return toast.error(error.message);
 
-    // Update subscription course mapping array
+    // Update subscription courses junction mapping atomically
     const courseId = editing || courseResult.id;
-    const oldPlan = subscriptions.find(s => s.course_ids?.includes(courseId));
-    if (oldPlan && oldPlan.id !== selectedPlanId) {
-      const updatedIds = (oldPlan.course_ids || []).filter((id: string) => id !== courseId);
-      await supabase.from("subscriptions" as any).update({ course_ids: updatedIds }).eq("id", oldPlan.id);
-    }
-    if (selectedPlanId !== "none" && (!oldPlan || oldPlan.id !== selectedPlanId)) {
-      const newPlan = subscriptions.find(s => s.id === selectedPlanId);
-      if (newPlan) {
-        const updatedIds = [...(newPlan.course_ids || []), courseId];
-        await supabase.from("subscriptions" as any).update({ course_ids: updatedIds }).eq("id", selectedPlanId);
-      }
+    await supabase.from("subscription_courses_v2" as any).delete().eq("course_id", courseId);
+    
+    if (selectedPlanId !== "none") {
+      await supabase.from("subscription_courses_v2" as any).insert({
+        subscription_id: selectedPlanId,
+        course_id: courseId
+      });
     }
 
     toast.success(editing ? "Updated" : "Added"); 
@@ -101,7 +107,7 @@ function AdminCourses() {
 
   async function remove(id: string) {
     if (!confirm("Delete this course and all associated data?")) return;
-    const { error } = await supabase.from("courses").delete().eq("id", id);
+    const { error } = await supabase.from("courses_v2").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Deleted");
     load();
@@ -136,8 +142,8 @@ function AdminCourses() {
                   <Link to="/admin/videos/$courseId" params={{ courseId: c.id }}>
                     <Button size="sm" variant="outline"><Film className="mr-1 h-3 w-3" /> Modules</Button>
                   </Link>
-                  <Button size="sm" variant="ghost" onClick={() => startEdit(c)}><Pencil className="h-3.5 w-3.5" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => startEdit(c)} aria-label="Edit course"><Pencil className="h-3.5 w-3.5" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => remove(c.id)} aria-label="Delete course"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                 </div>
               </div>
             </div>

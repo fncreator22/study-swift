@@ -41,12 +41,26 @@ function VideosAdmin() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
-    const [{ data: c }, { data: vs }] = await Promise.all([
-      supabase.from("courses").select("title").eq("id", courseId).maybeSingle(),
-      supabase.from("videos").select("*").eq("course_id", courseId).order("position"),
+    const [{ data: c }, { data: modules }] = await Promise.all([
+      supabase.from("courses_v2").select("title").eq("id", courseId).maybeSingle(),
+      supabase.from("course_modules_v2").select("id").eq("course_id", courseId)
     ]);
     setCourse(c);
-    setVideos((vs as any) ?? []);
+    const moduleIds = (modules ?? []).map((m: any) => m.id);
+    const { data: vs } = moduleIds.length > 0
+      ? await supabase.from("course_lessons_v2").select("id, title, video_url, video_provider, text_content, order_index").in("module_id", moduleIds).order("order_index")
+      : { data: [] };
+
+    const mapped = (vs ?? []).map((v: any) => ({
+      id: v.id,
+      title: v.title,
+      description: v.text_content ? "Reading module" : "Video module",
+      video_url: v.video_url,
+      position: v.order_index,
+      text_content: v.text_content,
+      storage_path: v.video_provider === "s3" ? v.video_url : null
+    }));
+    setVideos(mapped);
   }
   useEffect(() => { load(); }, [courseId]);
 
@@ -63,72 +77,61 @@ function VideosAdmin() {
     setDescription(v.description || "");
     if (v.text_content) {
       setMode("text");
+      setTextContent(v.text_content);
     } else {
-      setMode(v.storage_path ? "upload" : "external");
+      setMode(v.video_url ? "external" : "upload");
+      if (v.video_url) setExternalUrl(v.video_url);
     }
-    setExternalUrl(v.video_url || "");
-    setTextContent(v.text_content || "");
-    setFile(null);
-    setProgress(0);
     setOpen(true);
   }
 
   async function save() {
-    if (!title.trim()) return toast.error("Title required");
+    if (!title.trim()) return toast.error("Please enter a title");
     setBusy(true);
     try {
-      let storage_path: string | null = editingVideo?.storage_path ?? null;
-      let video_url: string = editingVideo?.video_url ?? "";
-      let text_content: string | null = null;
-      
-      if (mode === "upload") {
-        if (file) {
-          if (editingVideo?.storage_path) {
-            await supabase.storage.from("course-videos").remove([editingVideo.storage_path]);
-          }
-          const ext = file.name.split(".").pop() || "mp4";
-          const path = `${courseId}/${crypto.randomUUID()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("course-videos").upload(path, file, {
-            contentType: file.type || "video/mp4",
-          });
-          if (upErr) throw upErr;
-          storage_path = path;
-          video_url = "";
-        }
-      } else if (mode === "external") {
-        if (!externalUrl.trim()) { setBusy(false); return toast.error("Paste a URL"); }
-        video_url = externalUrl.trim();
-        if (editingVideo?.storage_path) {
-          await supabase.storage.from("course-videos").remove([editingVideo.storage_path]);
-          storage_path = null;
-        }
-      } else {
-        // Text mode
-        text_content = textContent.trim();
-        video_url = "";
-        if (editingVideo?.storage_path) {
-          await supabase.storage.from("course-videos").remove([editingVideo.storage_path]);
-          storage_path = null;
-        }
+      let storage_path = editingVideo?.storage_path || null;
+      let video_url = externalUrl.trim();
+
+      if (mode === "upload" && file) {
+        const path = `${courseId}/${Date.now()}-${file.name}`;
+        const { error: uploadErr } = await supabase.storage.from("course-videos").upload(path, file, {
+          onUploadProgress: (p) => setProgress(Math.round((p.loaded / p.total) * 100))
+        });
+        if (uploadErr) throw uploadErr;
+        storage_path = path;
+        video_url = path;
+      }
+
+      // Get or create default course module in V2
+      let { data: defaultMod } = await supabase.from("course_modules_v2").select("id").eq("course_id", courseId).order("order_index").limit(1).maybeSingle();
+      if (!defaultMod) {
+        const { data: newMod, error: modErr } = await supabase.from("course_modules_v2").insert({
+          course_id: courseId,
+          title: "Course Content",
+          description: "Main curriculum modules.",
+          order_index: 1
+        }).select("id").single();
+        if (modErr) throw modErr;
+        defaultMod = newMod;
       }
 
       const rowPayload = {
         title,
-        description,
-        storage_path,
-        video_url,
-        text_content,
+        content_type: mode === "text" ? "text" : "video",
+        video_url: mode === "text" ? null : video_url,
+        video_provider: mode === "text" ? null : (mode === "external" ? "youtube" : "s3"),
+        text_content: mode === "text" ? text_content : ""
       };
 
       if (editingVideo) {
-        const { error } = await supabase.from("videos").update(rowPayload).eq("id", editingVideo.id);
+        const { error } = await supabase.from("course_lessons_v2").update(rowPayload).eq("id", editingVideo.id);
         if (error) throw error;
         toast.success("Module updated");
       } else {
-        const { error } = await supabase.from("videos").insert({
-          course_id: courseId,
+        const { error } = await supabase.from("course_lessons_v2").insert({
+          module_id: defaultMod.id,
           ...rowPayload,
-          position: videos.length,
+          order_index: videos.length + 1
         });
         if (error) throw error;
         toast.success("Module added");
@@ -144,7 +147,7 @@ function VideosAdmin() {
     if (v.storage_path) {
       await supabase.storage.from("course-videos").remove([v.storage_path]);
     }
-    const { error } = await supabase.from("videos").delete().eq("id", v.id);
+    const { error } = await supabase.from("course_lessons_v2").delete().eq("id", v.id);
     if (error) return toast.error(error.message);
     toast.success("Deleted"); load();
   }

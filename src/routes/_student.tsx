@@ -406,7 +406,7 @@ function StudentLayout() {
           </>
         )}
 
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-w-0 max-w-full overflow-x-hidden">
           {!isExamMode && (
             <header className="flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur md:h-16">
               <div className="flex items-center gap-2">
