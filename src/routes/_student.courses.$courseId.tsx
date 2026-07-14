@@ -239,6 +239,7 @@ function CourseDetail() {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
 
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
@@ -418,7 +419,7 @@ function CourseDetail() {
   const isFree =
     !course?.tier || course.tier === "free" || (course?.pricing_tokens ?? 0) === 0;
   const priceTokens = course?.pricing_tokens ?? 0;
-  const avgRating = course?.avg_rating ?? 4.8;
+  const avgRating = Number(course?.avg_rating || 0);
   const enrollCount = course?.enrollment_count ?? 0;
 
   const enrollButtonLabel = enrolling
@@ -467,14 +468,18 @@ function CourseDetail() {
 
       {/* ── Hero Banner ── */}
       <div className="relative w-full rounded-3xl overflow-hidden min-h-[280px] md:min-h-[340px] flex items-end mb-8">
-        {course.thumbnail_url ? (
+        {course.thumbnail_url && !imgErrors['hero'] ? (
           <img
             src={course.thumbnail_url}
             alt={course.title}
             className="absolute inset-0 h-full w-full object-cover"
+            onError={() => setImgErrors(prev => ({ ...prev, hero: true }))}
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1e3a8a] via-[#1e40af] to-[#3730a3]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1e3a8a] via-[#1e40af] to-[#3730a3] flex flex-col items-center justify-center text-center p-6 gap-2">
+            <PlayCircle className="h-16 w-16 text-white/20 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Preview Banner Unavailable</span>
+          </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
 
@@ -875,15 +880,17 @@ function CourseDetail() {
           <div className="lg:sticky lg:top-6 space-y-4">
             <div className="rounded-3xl border border-border bg-card shadow-lg overflow-hidden">
               {/* Thumbnail */}
-              {course.thumbnail_url ? (
+              {course.thumbnail_url && !imgErrors['sticky'] ? (
                 <img
                   src={course.thumbnail_url}
                   alt={course.title}
                   className="w-full aspect-video object-cover"
+                  onError={() => setImgErrors(prev => ({ ...prev, sticky: true }))}
                 />
               ) : (
-                <div className="w-full aspect-video bg-gradient-to-br from-[#1e3a8a] via-[#1e40af] to-[#3730a3] flex items-center justify-center">
-                  <BookOpen className="h-16 w-16 text-white/20" />
+                <div className="w-full aspect-video bg-primary/5 flex flex-col items-center justify-center text-center p-4 gap-2">
+                  <PlayCircle className="h-10 w-10 text-muted-foreground/35" />
+                  <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground/60">Preview Unavailable</span>
                 </div>
               )}
 

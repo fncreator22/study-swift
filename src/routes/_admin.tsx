@@ -80,7 +80,10 @@ function AdminLayout() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {items.map((it) => {
-                    const active = it.exact ? path === it.to : path === it.to || path.startsWith(it.to + "/");
+                    let active = it.exact ? path === it.to : path === it.to || path.startsWith(it.to + "/");
+                    if (it.to === "/admin/courses" && (path.startsWith("/admin/videos") || path.startsWith("/admin/modules"))) {
+                      active = true;
+                    }
                     return (
                       <SidebarMenuItem key={it.to}>
                         <SidebarMenuButton asChild isActive={active}>

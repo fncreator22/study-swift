@@ -35,7 +35,6 @@ import { Route as StudentDashboardRouteImport } from './routes/_student.dashboar
 import { Route as StudentTestsIndexRouteImport } from './routes/_student.tests.index'
 import { Route as StudentCoursesIndexRouteImport } from './routes/_student.courses.index'
 import { Route as AdminAdminIndexRouteImport } from './routes/_admin.admin.index'
-import { Route as StudentPortalCourseIdRouteImport } from './routes/_student.portal.$courseId'
 import { Route as StudentCoursesCourseIdRouteImport } from './routes/_student.courses.$courseId'
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin.admin.users'
 import { Route as AdminAdminTokensRouteImport } from './routes/_admin.admin.tokens'
@@ -51,6 +50,7 @@ import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.cou
 import { Route as AdminAdminCourseReviewsRouteImport } from './routes/_admin.admin.course-reviews'
 import { Route as AdminAdminBugsRouteImport } from './routes/_admin.admin.bugs'
 import { Route as StudentTestsTestIdIndexRouteImport } from './routes/_student.tests.$testId.index'
+import { Route as StudentPortalCourseIdIndexRouteImport } from './routes/_student.portal.$courseId.index'
 import { Route as StudentTestsTestIdAttemptRouteImport } from './routes/_student.tests.$testId.attempt'
 import { Route as StudentPortalCourseIdCompleteRouteImport } from './routes/_student.portal.$courseId.complete'
 import { Route as StudentPortalCourseIdAssessmentRouteImport } from './routes/_student.portal.$courseId.assessment'
@@ -186,11 +186,6 @@ const AdminAdminIndexRoute = AdminAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => AdminRoute,
 } as any)
-const StudentPortalCourseIdRoute = StudentPortalCourseIdRouteImport.update({
-  id: '/portal/$courseId',
-  path: '/portal/$courseId',
-  getParentRoute: () => StudentRoute,
-} as any)
 const StudentCoursesCourseIdRoute = StudentCoursesCourseIdRouteImport.update({
   id: '/courses/$courseId',
   path: '/courses/$courseId',
@@ -266,6 +261,12 @@ const StudentTestsTestIdIndexRoute = StudentTestsTestIdIndexRouteImport.update({
   path: '/tests/$testId/',
   getParentRoute: () => StudentRoute,
 } as any)
+const StudentPortalCourseIdIndexRoute =
+  StudentPortalCourseIdIndexRouteImport.update({
+    id: '/portal/$courseId/',
+    path: '/portal/$courseId/',
+    getParentRoute: () => StudentRoute,
+  } as any)
 const StudentTestsTestIdAttemptRoute =
   StudentTestsTestIdAttemptRouteImport.update({
     id: '/tests/$testId/attempt',
@@ -274,15 +275,15 @@ const StudentTestsTestIdAttemptRoute =
   } as any)
 const StudentPortalCourseIdCompleteRoute =
   StudentPortalCourseIdCompleteRouteImport.update({
-    id: '/complete',
-    path: '/complete',
-    getParentRoute: () => StudentPortalCourseIdRoute,
+    id: '/portal/$courseId/complete',
+    path: '/portal/$courseId/complete',
+    getParentRoute: () => StudentRoute,
   } as any)
 const StudentPortalCourseIdAssessmentRoute =
   StudentPortalCourseIdAssessmentRouteImport.update({
-    id: '/assessment',
-    path: '/assessment',
-    getParentRoute: () => StudentPortalCourseIdRoute,
+    id: '/portal/$courseId/assessment',
+    path: '/portal/$courseId/assessment',
+    getParentRoute: () => StudentRoute,
   } as any)
 const AdminAdminVideosCourseIdRoute =
   AdminAdminVideosCourseIdRouteImport.update({
@@ -339,7 +340,6 @@ export interface FileRoutesByFullPath {
   '/admin/tokens': typeof AdminAdminTokensRoute
   '/admin/users': typeof AdminAdminUsersRoute
   '/courses/$courseId': typeof StudentCoursesCourseIdRoute
-  '/portal/$courseId': typeof StudentPortalCourseIdRouteWithChildren
   '/admin/': typeof AdminAdminIndexRoute
   '/courses/': typeof StudentCoursesIndexRoute
   '/tests/': typeof StudentTestsIndexRoute
@@ -348,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/portal/$courseId/assessment': typeof StudentPortalCourseIdAssessmentRoute
   '/portal/$courseId/complete': typeof StudentPortalCourseIdCompleteRoute
   '/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/portal/$courseId/': typeof StudentPortalCourseIdIndexRoute
   '/tests/$testId/': typeof StudentTestsTestIdIndexRoute
   '/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
@@ -387,7 +388,6 @@ export interface FileRoutesByTo {
   '/admin/tokens': typeof AdminAdminTokensRoute
   '/admin/users': typeof AdminAdminUsersRoute
   '/courses/$courseId': typeof StudentCoursesCourseIdRoute
-  '/portal/$courseId': typeof StudentPortalCourseIdRouteWithChildren
   '/admin': typeof AdminAdminIndexRoute
   '/courses': typeof StudentCoursesIndexRoute
   '/tests': typeof StudentTestsIndexRoute
@@ -396,6 +396,7 @@ export interface FileRoutesByTo {
   '/portal/$courseId/assessment': typeof StudentPortalCourseIdAssessmentRoute
   '/portal/$courseId/complete': typeof StudentPortalCourseIdCompleteRoute
   '/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/portal/$courseId': typeof StudentPortalCourseIdIndexRoute
   '/tests/$testId': typeof StudentTestsTestIdIndexRoute
   '/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
@@ -438,7 +439,6 @@ export interface FileRoutesById {
   '/_admin/admin/tokens': typeof AdminAdminTokensRoute
   '/_admin/admin/users': typeof AdminAdminUsersRoute
   '/_student/courses/$courseId': typeof StudentCoursesCourseIdRoute
-  '/_student/portal/$courseId': typeof StudentPortalCourseIdRouteWithChildren
   '/_admin/admin/': typeof AdminAdminIndexRoute
   '/_student/courses/': typeof StudentCoursesIndexRoute
   '/_student/tests/': typeof StudentTestsIndexRoute
@@ -447,6 +447,7 @@ export interface FileRoutesById {
   '/_student/portal/$courseId/assessment': typeof StudentPortalCourseIdAssessmentRoute
   '/_student/portal/$courseId/complete': typeof StudentPortalCourseIdCompleteRoute
   '/_student/tests/$testId/attempt': typeof StudentTestsTestIdAttemptRoute
+  '/_student/portal/$courseId/': typeof StudentPortalCourseIdIndexRoute
   '/_student/tests/$testId/': typeof StudentTestsTestIdIndexRoute
   '/_student/tests/$testId/review/$attemptId': typeof StudentTestsTestIdReviewAttemptIdRoute
 }
@@ -488,7 +489,6 @@ export interface FileRouteTypes {
     | '/admin/tokens'
     | '/admin/users'
     | '/courses/$courseId'
-    | '/portal/$courseId'
     | '/admin/'
     | '/courses/'
     | '/tests/'
@@ -497,6 +497,7 @@ export interface FileRouteTypes {
     | '/portal/$courseId/assessment'
     | '/portal/$courseId/complete'
     | '/tests/$testId/attempt'
+    | '/portal/$courseId/'
     | '/tests/$testId/'
     | '/tests/$testId/review/$attemptId'
   fileRoutesByTo: FileRoutesByTo
@@ -536,7 +537,6 @@ export interface FileRouteTypes {
     | '/admin/tokens'
     | '/admin/users'
     | '/courses/$courseId'
-    | '/portal/$courseId'
     | '/admin'
     | '/courses'
     | '/tests'
@@ -545,6 +545,7 @@ export interface FileRouteTypes {
     | '/portal/$courseId/assessment'
     | '/portal/$courseId/complete'
     | '/tests/$testId/attempt'
+    | '/portal/$courseId'
     | '/tests/$testId'
     | '/tests/$testId/review/$attemptId'
   id:
@@ -586,7 +587,6 @@ export interface FileRouteTypes {
     | '/_admin/admin/tokens'
     | '/_admin/admin/users'
     | '/_student/courses/$courseId'
-    | '/_student/portal/$courseId'
     | '/_admin/admin/'
     | '/_student/courses/'
     | '/_student/tests/'
@@ -595,6 +595,7 @@ export interface FileRouteTypes {
     | '/_student/portal/$courseId/assessment'
     | '/_student/portal/$courseId/complete'
     | '/_student/tests/$testId/attempt'
+    | '/_student/portal/$courseId/'
     | '/_student/tests/$testId/'
     | '/_student/tests/$testId/review/$attemptId'
   fileRoutesById: FileRoutesById
@@ -800,13 +801,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/_student/portal/$courseId': {
-      id: '/_student/portal/$courseId'
-      path: '/portal/$courseId'
-      fullPath: '/portal/$courseId'
-      preLoaderRoute: typeof StudentPortalCourseIdRouteImport
-      parentRoute: typeof StudentRoute
-    }
     '/_student/courses/$courseId': {
       id: '/_student/courses/$courseId'
       path: '/courses/$courseId'
@@ -912,6 +906,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentTestsTestIdIndexRouteImport
       parentRoute: typeof StudentRoute
     }
+    '/_student/portal/$courseId/': {
+      id: '/_student/portal/$courseId/'
+      path: '/portal/$courseId'
+      fullPath: '/portal/$courseId/'
+      preLoaderRoute: typeof StudentPortalCourseIdIndexRouteImport
+      parentRoute: typeof StudentRoute
+    }
     '/_student/tests/$testId/attempt': {
       id: '/_student/tests/$testId/attempt'
       path: '/tests/$testId/attempt'
@@ -921,17 +922,17 @@ declare module '@tanstack/react-router' {
     }
     '/_student/portal/$courseId/complete': {
       id: '/_student/portal/$courseId/complete'
-      path: '/complete'
+      path: '/portal/$courseId/complete'
       fullPath: '/portal/$courseId/complete'
       preLoaderRoute: typeof StudentPortalCourseIdCompleteRouteImport
-      parentRoute: typeof StudentPortalCourseIdRoute
+      parentRoute: typeof StudentRoute
     }
     '/_student/portal/$courseId/assessment': {
       id: '/_student/portal/$courseId/assessment'
-      path: '/assessment'
+      path: '/portal/$courseId/assessment'
       fullPath: '/portal/$courseId/assessment'
       preLoaderRoute: typeof StudentPortalCourseIdAssessmentRouteImport
-      parentRoute: typeof StudentPortalCourseIdRoute
+      parentRoute: typeof StudentRoute
     }
     '/_admin/admin/videos/$courseId': {
       id: '/_admin/admin/videos/$courseId'
@@ -997,21 +998,6 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface StudentPortalCourseIdRouteChildren {
-  StudentPortalCourseIdAssessmentRoute: typeof StudentPortalCourseIdAssessmentRoute
-  StudentPortalCourseIdCompleteRoute: typeof StudentPortalCourseIdCompleteRoute
-}
-
-const StudentPortalCourseIdRouteChildren: StudentPortalCourseIdRouteChildren = {
-  StudentPortalCourseIdAssessmentRoute: StudentPortalCourseIdAssessmentRoute,
-  StudentPortalCourseIdCompleteRoute: StudentPortalCourseIdCompleteRoute,
-}
-
-const StudentPortalCourseIdRouteWithChildren =
-  StudentPortalCourseIdRoute._addFileChildren(
-    StudentPortalCourseIdRouteChildren,
-  )
-
 interface StudentRouteChildren {
   StudentDashboardRoute: typeof StudentDashboardRoute
   StudentHistoryRoute: typeof StudentHistoryRoute
@@ -1023,10 +1009,12 @@ interface StudentRouteChildren {
   StudentSupportCenterRoute: typeof StudentSupportCenterRoute
   StudentWalletRoute: typeof StudentWalletRoute
   StudentCoursesCourseIdRoute: typeof StudentCoursesCourseIdRoute
-  StudentPortalCourseIdRoute: typeof StudentPortalCourseIdRouteWithChildren
   StudentCoursesIndexRoute: typeof StudentCoursesIndexRoute
   StudentTestsIndexRoute: typeof StudentTestsIndexRoute
+  StudentPortalCourseIdAssessmentRoute: typeof StudentPortalCourseIdAssessmentRoute
+  StudentPortalCourseIdCompleteRoute: typeof StudentPortalCourseIdCompleteRoute
   StudentTestsTestIdAttemptRoute: typeof StudentTestsTestIdAttemptRoute
+  StudentPortalCourseIdIndexRoute: typeof StudentPortalCourseIdIndexRoute
   StudentTestsTestIdIndexRoute: typeof StudentTestsTestIdIndexRoute
   StudentTestsTestIdReviewAttemptIdRoute: typeof StudentTestsTestIdReviewAttemptIdRoute
 }
@@ -1042,10 +1030,12 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentSupportCenterRoute: StudentSupportCenterRoute,
   StudentWalletRoute: StudentWalletRoute,
   StudentCoursesCourseIdRoute: StudentCoursesCourseIdRoute,
-  StudentPortalCourseIdRoute: StudentPortalCourseIdRouteWithChildren,
   StudentCoursesIndexRoute: StudentCoursesIndexRoute,
   StudentTestsIndexRoute: StudentTestsIndexRoute,
+  StudentPortalCourseIdAssessmentRoute: StudentPortalCourseIdAssessmentRoute,
+  StudentPortalCourseIdCompleteRoute: StudentPortalCourseIdCompleteRoute,
   StudentTestsTestIdAttemptRoute: StudentTestsTestIdAttemptRoute,
+  StudentPortalCourseIdIndexRoute: StudentPortalCourseIdIndexRoute,
   StudentTestsTestIdIndexRoute: StudentTestsTestIdIndexRoute,
   StudentTestsTestIdReviewAttemptIdRoute:
     StudentTestsTestIdReviewAttemptIdRoute,

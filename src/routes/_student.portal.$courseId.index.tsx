@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_student/portal/$courseId")({
+export const Route = createFileRoute("/_student/portal/$courseId/")({
   component: LearningPortal,
 });
 

@@ -402,17 +402,17 @@ function Courses() {
               >
                 {/* Thumbnail */}
                 <div className="relative aspect-video overflow-hidden bg-muted">
-                  {c.thumbnail_url ? (
+                  {c.thumbnail_url && !imgErrors[c.id] ? (
                     <img
                       src={c.thumbnail_url}
                       alt={c.title}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={() => setImgErrors(prev => ({ ...prev, [c.id]: true }))}
                     />
                   ) : (
-                    <div
-                      className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${gradient}`}
-                    >
-                      <PlayCircle className="h-12 w-12 text-white/30" />
+                    <div className="flex h-full w-full flex-col items-center justify-center bg-primary/5 text-muted-foreground/60 p-3 text-center gap-1.5">
+                      <PlayCircle className="h-8 w-8 text-muted-foreground/35" />
+                      <span className="text-[9px] font-black uppercase tracking-wider">Preview Unavailable</span>
                     </div>
                   )}
 
@@ -500,7 +500,7 @@ function Courses() {
                     <div className="flex items-center gap-1 shrink-0">
                       <span className="text-amber-400 text-xs leading-none">★</span>
                       <span className="text-xs font-bold">
-                        {(c.avg_rating ?? 0) > 0 ? c.avg_rating.toFixed(1) : "4.9"}
+                        Number(c.avg_rating || 0).toFixed(1)
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         ({c.enrollment_count ?? 0})

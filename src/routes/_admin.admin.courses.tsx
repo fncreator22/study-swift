@@ -30,6 +30,7 @@ function AdminCourses() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(empty);
   const [editing, setEditing] = useState<string | null>(null);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   // Course Assessment Settings States
   const [assessmentOpen, setAssessmentOpen] = useState(false);
@@ -47,8 +48,8 @@ function AdminCourses() {
   const [mcqC, setMcqC] = useState("");
   const [mcqD, setMcqD] = useState("");
   const [mcqCorrect, setMcqCorrect] = useState("a");
-  const [referenceAnswer, setReferenceAnswer] = useState("");
-  const [requiredKeywords, setRequiredKeywords] = useState("");
+  const [writtenReference, setWrittenReference] = useState("");
+  const [writtenKeywords, setWrittenKeywords] = useState("");
   const [minSimilarity, setMinSimilarity] = useState("70");
   const [savingAssessment, setSavingAssessment] = useState(false);
 
@@ -234,7 +235,7 @@ function AdminCourses() {
     setMcqD("");
     setMcqCorrect("a");
     setWrittenReference("");
-    setRequiredKeywords("");
+    setWrittenKeywords("");
     setMinSimilarity("70");
   }
 
@@ -253,7 +254,7 @@ function AdminCourses() {
       setMcqCorrect(q.correct_answers?.[0] || "a");
     } else {
       setWrittenReference(q.correct_answers?.reference || q.correct_answers || "");
-      setRequiredKeywords((q.correct_answers?.keywords || []).join(", "));
+      setWrittenKeywords((q.correct_answers?.keywords || []).join(", "));
       setMinSimilarity(q.correct_answers?.min_similarity?.toString() || "70");
     }
   }
@@ -308,7 +309,7 @@ function AdminCourses() {
         toast.error("Please provide the reference/expected answer.");
         return;
       }
-      const kws = requiredKeywords
+      const kws = writtenKeywords
         .split(",")
         .map(k => k.trim())
         .filter(k => k.length > 0);
@@ -364,7 +365,19 @@ function AdminCourses() {
         {courses.map((c) => (
           <div key={c.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
             <div className="relative aspect-video w-full bg-muted">
-              {c.thumbnail_url ? <img src={c.thumbnail_url} alt={c.title} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-primary/5 text-primary/20"><PlayCircle className="h-10 w-10" /></div>}
+              {c.thumbnail_url && !imgErrors[c.id] ? (
+                <img 
+                  src={c.thumbnail_url} 
+                  alt={c.title} 
+                  className="h-full w-full object-cover" 
+                  onError={() => setImgErrors(prev => ({ ...prev, [c.id]: true }))}
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center bg-primary/5 text-muted-foreground/60 p-3 text-center gap-1.5">
+                  <PlayCircle className="h-8 w-8 text-muted-foreground/35" />
+                  <span className="text-[9px] font-black uppercase tracking-wider">Preview Unavailable</span>
+                </div>
+              )}
               <div className="absolute top-2 left-2">
                 <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold uppercase backdrop-blur">{c.tier}</span>
               </div>
@@ -640,7 +653,7 @@ function AdminCourses() {
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs font-semibold">Required keywords/concepts (comma-separated)</Label>
-                          <Input value={writtenKeywords} onChange={(e) => setRequiredKeywords(e.target.value)} placeholder="e.g. React, hook, state, effect" className="h-9 text-xs" />
+                          <Input value={writtenKeywords} onChange={(e) => setWrittenKeywords(e.target.value)} placeholder="e.g. React, hook, state, effect" className="h-9 text-xs" />
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-xs font-semibold">Similarity Threshold required to pass (%)</Label>
