@@ -52,6 +52,8 @@ function AdminCourses() {
   const [writtenKeywords, setWrittenKeywords] = useState("");
   const [minSimilarity, setMinSimilarity] = useState("70");
   const [savingAssessment, setSavingAssessment] = useState(false);
+  const [passingScore, setPassingScore] = useState("80");
+  const [timeLimit, setTimeLimit] = useState("60");
 
   async function load() {
     const [{ data: cs }, { data: subs }, { data: ts }, { data: cats }, { data: mappings }] = await Promise.all([
