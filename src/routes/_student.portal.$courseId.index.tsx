@@ -481,17 +481,7 @@ function LearningPortal() {
             </span>
           </div>
 
-          {progressPercent >= 95 && (
-            <Link to="/portal/$courseId/complete" params={{ courseId }}>
-              <Button
-                size="sm"
-                className="h-7 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg gap-1.5"
-              >
-                <Trophy className="h-3.5 w-3.5" />
-                Complete Course
-              </Button>
-            </Link>
-          )}
+
         </div>
       </div>
 
@@ -504,11 +494,12 @@ function LearningPortal() {
               Ready to get certified? You must complete a feedback form, confirm your credentials, and then pass the final Course Assessment test based on which you will receive your certificate.
             </p>
           </div>
-          <Link to="/portal/$courseId/complete" params={{ courseId }}>
-            <Button className="bg-white text-emerald-700 hover:bg-white/90 font-bold text-xs h-8 px-3 rounded-xl shrink-0">
-              Get Certified →
-            </Button>
-          </Link>
+          <Button 
+            className="bg-white text-emerald-700 hover:bg-white/90 font-bold text-xs h-8 px-3 rounded-xl shrink-0"
+            onClick={() => navigate({ to: "/portal/$courseId/complete", params: { courseId } })}
+          >
+            Start Certification →
+          </Button>
         </div>
       )}
 
