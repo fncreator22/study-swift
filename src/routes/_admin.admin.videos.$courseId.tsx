@@ -120,7 +120,7 @@ function VideosAdmin() {
         content_type: mode === "text" ? "text" : "video",
         video_url: mode === "text" ? null : video_url,
         video_provider: mode === "text" ? null : (mode === "external" ? "youtube" : "s3"),
-        text_content: mode === "text" ? text_content : ""
+        text_content: mode === "text" ? textContent : ""
       };
 
       if (editingVideo) {

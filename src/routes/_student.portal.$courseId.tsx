@@ -501,7 +501,7 @@ function LearningPortal() {
           <div>
             <p className="font-bold text-sm">🎉 Course Complete!</p>
             <p className="text-xs opacity-90">
-              Ready to get certified? Complete your feedback and take the final assessment.
+              Ready to get certified? You must complete a feedback form, confirm your credentials, and then pass the final Course Assessment test based on which you will receive your certificate.
             </p>
           </div>
           <Link to={`/portal/${courseId}/complete`}>

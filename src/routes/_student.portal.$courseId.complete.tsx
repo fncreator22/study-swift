@@ -104,6 +104,7 @@ function CompletionGate() {
   // Step 3 � Declaration
   const [checkbox1, setCheckbox1] = useState(false);
   const [checkbox2, setCheckbox2] = useState(false);
+  const [checkbox3, setCheckbox3] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -202,8 +203,8 @@ function CompletionGate() {
 
   async function submitDeclaration() {
     if (!enrollmentId) return;
-    if (!checkbox1 || !checkbox2) {
-      toast.error("Please confirm both checkboxes to proceed.");
+    if (!checkbox1 || !checkbox2 || !checkbox3) {
+      toast.error("Please confirm all three checkboxes to proceed.");
       return;
     }
     setSubmitting(true);
@@ -348,14 +349,20 @@ function CompletionGate() {
                     I accept the certification terms and conditions and the academic integrity policy.
                   </span>
                 </label>
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input type="checkbox" checked={checkbox3} onChange={(e) => setCheckbox3(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                    I agree to follow the exam instructions, will not cheat or use unauthorized aids, and understand that violation is punishable under academic policy.
+                  </span>
+                </label>
               </div>
               <Button
                 onClick={submitDeclaration}
-                disabled={submitting || !checkbox1 || !checkbox2}
+                disabled={submitting || !checkbox1 || !checkbox2 || !checkbox3}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold h-12 rounded-xl text-base shadow-lg shadow-emerald-200 dark:shadow-emerald-900 transition-all"
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Proceed to Assessment &rarr;
+                Start the Test →
               </Button>
             </div>
           )}

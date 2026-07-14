@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, PlayCircle, Film, Pencil, Trash2, Trophy, Clock, FileText, CheckCircle } from "lucide-react";
+import { Plus, PlayCircle, Film, Pencil, Trash2, Trophy, Clock, FileText, CheckCircle, ShieldAlert } from "lucide-react";
 
 export const Route = createFileRoute("/_admin/admin/courses")({ component: AdminCourses });
 
