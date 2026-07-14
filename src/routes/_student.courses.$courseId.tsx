@@ -415,6 +415,28 @@ function CourseDetail() {
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
+  // Calculate actual rating distribution percentages from loaded database reviews
+  const ratingDistribution = useMemo(() => {
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let total = 0;
+    
+    reviews.forEach((r) => {
+      const score = Math.round(Number(r.satisfaction_score || 0));
+      if (score >= 1 && score <= 5) {
+        counts[score as 5 | 4 | 3 | 2 | 1]++;
+        total++;
+      }
+    });
+
+    return {
+      5: total > 0 ? Math.round((counts[5] / total) * 100) : 0,
+      4: total > 0 ? Math.round((counts[4] / total) * 100) : 0,
+      3: total > 0 ? Math.round((counts[3] / total) * 100) : 0,
+      2: total > 0 ? Math.round((counts[2] / total) * 100) : 0,
+      1: total > 0 ? Math.round((counts[1] / total) * 100) : 0,
+    };
+  }, [reviews]);
+
   const totalLessons = modules.reduce((a, m) => a + m.lessons.length, 0);
   const isFree =
     !course?.tier || course.tier === "free" || (course?.pricing_tokens ?? 0) === 0;
@@ -789,11 +811,11 @@ function CourseDetail() {
                   <p className="text-xs text-muted-foreground mt-1">Course Rating</p>
                 </div>
                 <div className="flex-1 min-w-[140px] space-y-2 justify-center flex flex-col">
-                  <RatingBar label="5" pct={72} />
-                  <RatingBar label="4" pct={18} />
-                  <RatingBar label="3" pct={7} />
-                  <RatingBar label="2" pct={2} />
-                  <RatingBar label="1" pct={1} />
+                  <RatingBar label="5" pct={ratingDistribution[5]} />
+                  <RatingBar label="4" pct={ratingDistribution[4]} />
+                  <RatingBar label="3" pct={ratingDistribution[3]} />
+                  <RatingBar label="2" pct={ratingDistribution[2]} />
+                  <RatingBar label="1" pct={ratingDistribution[1]} />
                 </div>
               </div>
 

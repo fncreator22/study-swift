@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, PlayCircle, Film, Pencil, Trash2, Trophy, Clock, FileText, CheckCircle, ShieldAlert } from "lucide-react";
+import { Plus, PlayCircle, Film, Pencil, Trash2, Trophy, Clock, FileText, CheckCircle, ShieldAlert, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/_admin/admin/courses")({ component: AdminCourses });
 
@@ -592,9 +592,27 @@ function AdminCourses() {
 
                 {/* Right side: Add/Edit Question Form */}
                 <div className="border border-gray-100 dark:border-gray-800 rounded-2xl p-5 bg-slate-50/30 dark:bg-slate-900/10 space-y-4 text-left">
-                  <h4 className="font-bold text-sm text-gray-900 dark:text-white">
-                    {activeQuestionId ? "Modify Question" : "Create New Question"}
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+                      {activeQuestionId && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 p-0 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800" 
+                          onClick={resetQuestionForm}
+                        >
+                          <ArrowLeft className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {activeQuestionId ? "Modify Question" : "Create New Question"}
+                    </h4>
+                    {activeQuestionId && (
+                      <span className="text-[9px] bg-amber-500/10 text-amber-500 font-bold px-2 py-0.5 rounded-full">
+                        Editing Mode
+                      </span>
+                    )}
+                  </div>
 
                   <div className="space-y-3">
                     <div className="space-y-1.5">
