@@ -86,7 +86,7 @@ function AdminLayout() {
                     }
                     return (
                       <SidebarMenuItem key={it.to}>
-                        <SidebarMenuButton asChild isActive={active}>
+                        <SidebarMenuButton asChild isActive={active} tooltip={it.label}>
                           <Link to={it.to as any}><it.icon className="h-4 w-4" /><span>{it.label}</span></Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
