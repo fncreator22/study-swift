@@ -68,6 +68,7 @@ function gradientForId(id: string) {
 
 function Courses() {
   const { user } = useAuth();
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   // Data
   const [courses, setCourses] = useState<Course[]>([]);
