@@ -14,10 +14,11 @@ import { Plus, PlayCircle, Film, Pencil, Trash2, Trophy } from "lucide-react";
 export const Route = createFileRoute("/_admin/admin/courses")({ component: AdminCourses });
 
 const empty = {
-  title: "", category: "Professional", description: "",
-  tier: "free", price: 0, difficulty: "Beginner",
-  thumbnail_url: "", instructor_name: "", instructor_bio: "",
-  completion_test_id: null
+  title: '', subtitle: '', category: 'Professional', description: '',
+  tier: 'free', price: 0, difficulty: 'Beginner',
+  thumbnail_url: '', instructor_name: '', instructor_bio: '',
+  completion_test_id: null, skills_learned: [], university_partner: '',
+  language: 'English', duration_hours: 0, faqs: []
 };
 
 function AdminCourses() {
@@ -58,7 +59,13 @@ function AdminCourses() {
     setForm({
       ...empty,
       ...c,
-      completion_test_id: c.completion_test_id || "none"
+      subtitle: c.subtitle || '',
+      skills_learned: c.skills_learned || [],
+      university_partner: c.university_partner || '',
+      language: c.language || 'English',
+      duration_hours: c.duration_hours || 0,
+      faqs: c.faqs || [],
+      completion_test_id: c.completion_test_id || 'none'
     });
     setEditing(c.id);
     const plan = subscriptions.find(s => s.course_ids?.includes(c.id));
@@ -70,6 +77,7 @@ function AdminCourses() {
     const completionTestId = form.completion_test_id === "none" ? null : form.completion_test_id;
     const payload = { 
       title: form.title,
+      subtitle: form.subtitle || '',
       category: form.category,
       description: form.description,
       tier: form.tier,
@@ -78,7 +86,12 @@ function AdminCourses() {
       thumbnail_url: form.thumbnail_url,
       instructor_name: form.instructor_name || 'Expert Educator',
       instructor_bio: form.instructor_bio || '',
-      completion_test_id: completionTestId
+      completion_test_id: completionTestId,
+      skills_learned: form.skills_learned || [],
+      university_partner: form.university_partner || null,
+      language: form.language || 'English',
+      duration_hours: Number(form.duration_hours) || 0,
+      faqs: form.faqs || []
     };
 
     const { data: courseResult, error } = editing 
@@ -171,7 +184,38 @@ function AdminCourses() {
                 </select>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Subtitle</Label>
+              <Input value={form.subtitle || ''} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} placeholder="Short compelling subtitle..." />
+            </div>
+
             <div className="space-y-2"><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+
+            <div className="space-y-2">
+              <Label>Instructor Bio</Label>
+              <Textarea value={form.instructor_bio || ''} onChange={(e) => setForm({ ...form, instructor_bio: e.target.value })} placeholder="Brief instructor biography..." rows={3} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Skills Learned (comma-separated)</Label>
+              <Input 
+                value={(form.skills_learned || []).join(', ')}
+                onChange={(e) => setForm({ ...form, skills_learned: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) })}
+                placeholder="React, TypeScript, Node.js, ..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>University / Partner Organization</Label>
+              <Input value={form.university_partner || ''} onChange={(e) => setForm({ ...form, university_partner: e.target.value })} placeholder="MIT, Google, IIT Delhi..." />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Language</Label><Input value={form.language || 'English'} onChange={(e) => setForm({ ...form, language: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Duration (hours)</Label><Input type="number" value={form.duration_hours || 0} onChange={(e) => setForm({ ...form, duration_hours: parseFloat(e.target.value) || 0 })} /></div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Tier</Label>
@@ -229,9 +273,17 @@ function AdminCourses() {
             </div>
 
             <div className="space-y-2"><Label>Thumbnail URL</Label><Input value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} /></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Instructor Name</Label><Input value={form.instructor_name} onChange={(e) => setForm({ ...form, instructor_name: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Instructor Bio</Label><Input value={form.instructor_bio} onChange={(e) => setForm({ ...form, instructor_bio: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Instructor Name</Label><Input value={form.instructor_name} onChange={(e) => setForm({ ...form, instructor_name: e.target.value })} /></div>
+
+            <div className="space-y-2">
+              <Label>FAQs (JSON array: [{`{"q": "...", "a": "..."}`}])</Label>
+              <Textarea 
+                value={JSON.stringify(form.faqs || [], null, 2)}
+                onChange={(e) => { try { setForm({ ...form, faqs: JSON.parse(e.target.value) }); } catch {} }}
+                rows={4}
+                className="font-mono text-xs"
+                placeholder='[{"q": "How long is this course?", "a": "8 weeks"}]'
+              />
             </div>
           </div>
           <DialogFooter><Button onClick={save} className="w-full">{editing ? "Update" : "Create"} Course</Button></DialogFooter>

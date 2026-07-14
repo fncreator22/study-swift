@@ -316,18 +316,23 @@ function UsersAdmin() {
                       disabled={resettingPassword} 
                       onClick={async () => {
                         if (newPassword.length < 6) return toast.error("Password must be 6+ characters");
-                        if (!viewUser?.email) return toast.error("User email not found");
+                        if (!viewUser?.id) return toast.error("User ID not found");
                         setResettingPassword(true);
-                        const { success, error } = await adminResetUserPassword({
-                          email: viewUser.email,
-                          password: newPassword,
-                        });
-                        setResettingPassword(false);
-                        if (success) {
-                          toast.success("Password updated successfully");
-                          setNewPassword("");
-                        } else {
-                          toast.error(error || "Failed to update password");
+                        try {
+                          const res = await adminResetUserPassword({
+                            targetUserId: viewUser.id,
+                            newPassword: newPassword,
+                          });
+                          if (res?.success) {
+                            toast.success("Password updated successfully");
+                            setNewPassword("");
+                          } else {
+                            toast.error("Failed to update password");
+                          }
+                        } catch (err: any) {
+                          toast.error(err.message || "Failed to update password");
+                        } finally {
+                          setResettingPassword(false);
                         }
                       }}
                     >

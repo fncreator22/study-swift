@@ -35,7 +35,7 @@ const items = [
   { to: "/courses", label: "Courses", icon: PlayCircle },
   { to: "/subscriptions", label: "Subscriptions", icon: Crown },
   { to: "/notifications", label: "Notifications", icon: Bell },
-  { to: "/support", label: "Support", icon: MessageSquare },
+  { to: "/support-center", label: "Support", icon: MessageSquare },
   { to: "/profile", label: "Profile", icon: Settings },
 ] as const;
 
@@ -50,7 +50,7 @@ function getUserInitials(name?: string, email?: string) {
 }
 
 function StudentLayout() {
-  const { user, loading, signOut, tokens, isBlocked, isAdmin, refreshProfile } = useAuth();
+  const { user, loading, signOut, tokens, isBlocked, isAdmin, refreshProfile, profileVersion } = useAuth();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const isExamMode = path.includes("/attempt");
@@ -112,11 +112,11 @@ function StudentLayout() {
           const incomplete = !profData.country || !profData.state;
           setIsProfileIncomplete(incomplete);
         }
-        const activeMem = memData && memData.length > 0;
+        const activeMem = (memData && memData.length > 0) || (profData?.membership_status === 'basic' || profData?.membership_status === 'premium');
         setHasMembership(activeMem);
       });
     }
-  }, [user, path]);
+  }, [user, path, profileVersion]);
 
   useEffect(() => {
     if (!user) return;
@@ -321,10 +321,10 @@ function StudentLayout() {
         nav({ to: "/login" });
       } else if (isAdmin) {
         nav({ to: "/admin" });
-      } else if (isProfileIncomplete === true && path !== "/profile" && !isExamMode) {
+      } else if (isProfileIncomplete === true && !path.startsWith("/profile") && !isExamMode) {
         toast.info("Please complete your profile details (Country and State) to proceed.");
         nav({ to: "/profile" });
-      } else if (isProfileIncomplete === false && hasMembership === false && path !== "/welcome-subscription" && !isExamMode) {
+      } else if (isProfileIncomplete === false && hasMembership === false && !path.startsWith("/welcome-subscription") && !path.startsWith("/profile") && !isExamMode) {
         nav({ to: "/welcome-subscription" });
       }
     }
@@ -346,9 +346,9 @@ function StudentLayout() {
             Your Examly account has been suspended by an administrator. Please contact support for assistance.
           </p>
           <div className="mt-6 flex flex-col gap-2">
-            <a href="mailto:support@examly.com" className="w-full">
+            <Link to="/support" className="w-full">
               <Button className="w-full">Contact Support</Button>
-            </a>
+            </Link>
             <Button variant="outline" className="w-full" onClick={() => signOut()}>
               Sign Out
             </Button>
@@ -513,7 +513,7 @@ function StudentLayout() {
                           { to: "/subscriptions", label: "Subscriptions & Upgrade", icon: Crown },
                           { to: "/rankings", label: "Leaderboard Rankings", icon: Trophy },
                           { to: "/purchased", label: "My Purchased Items", icon: CheckCircle },
-                          { to: "/support", label: "Support & Help Desk", icon: MessageSquare },
+                          { to: "/support-center", label: "Support & Help Desk", icon: MessageSquare },
                           { to: "/wallet", label: "Wallet & Transactions", icon: Wallet },
                           { to: "/history", label: "Attempt History", icon: Clock },
                         ].map((lnk) => {

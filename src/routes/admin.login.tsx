@@ -38,10 +38,15 @@ function AdminLogin() {
           <h1 className="font-display text-2xl font-bold">Admin access</h1>
           <p className="mt-1 text-sm text-muted-foreground">Restricted login.</p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
-            <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label>Password</Label><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <div><Label htmlFor="email">Email</Label><Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div><Label htmlFor="password">Password</Label><Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <Button type="submit" className="w-full" disabled={loading}>{loading ? "Signing in..." : "Sign in"}</Button>
           </form>
+          <div className="mt-4 text-center border-t border-border/50 pt-4">
+            <Link to="/support" className="text-xs text-muted-foreground hover:text-primary hover:underline">
+              Problems accessing console? Contact Support
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -73,6 +73,11 @@ function ResetPassword() {
                 <Button className="w-full rounded-xl">Request New Link</Button>
               </Link>
             </div>
+            <div className="mt-4 text-center border-t border-border/20 pt-4">
+              <Link to="/support" className="text-xs text-muted-foreground hover:text-primary hover:underline">
+                Having trouble resetting your password? Contact Support
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -128,6 +133,12 @@ function ResetPassword() {
               {loading ? "Updating password..." : "Reset Password"}
             </Button>
           </form>
+
+          <div className="mt-6 text-center border-t border-border/50 pt-4">
+            <Link to="/support" className="text-xs text-muted-foreground hover:text-primary hover:underline">
+              Having trouble resetting your password? Contact Support
+            </Link>
+          </div>
         </div>
       </div>
     </div>

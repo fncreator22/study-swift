@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, AlertCircle } from "lucide-react";
@@ -76,6 +76,11 @@ function AuthCallback() {
               <Button variant="outline" onClick={() => nav({ to: "/" })} className="w-full rounded-xl">
                 Go to Home
               </Button>
+            </div>
+            <div className="mt-4 text-center border-t border-border/20 pt-4">
+              <Link to="/support" className="text-xs text-muted-foreground hover:text-primary hover:underline">
+                Verification failing? Contact Support
+              </Link>
             </div>
           </div>
         ) : (

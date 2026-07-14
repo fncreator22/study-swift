@@ -26,8 +26,33 @@
     *   Wired Top-right header avatar trigger button and side sheet drawer containing user metadata, token balance card, navigation links, and logout trigger.
 2.  **`src/routes/_student.dashboard.tsx`**:
     *   Imported `Settings`, `MessageSquare`, `CheckCircle`, and `Coins` icons.
-    *   Created `quickLinks` configuration array mapping labels, paths, and styles.
-    *   Rendered a responsive 2-column "Quick Access" grid below the stats section for quick tap targeting.
+    *   Created `quickLinks` c![Login Page Support Link](//auth_01_login.png)
+<!-- slide -->
+![Signup Duplication Warn](//auth_02_signup_duplicate_warn.png)
+<!-- slide -->
+![Forgot Password Support Link](//auth_03_forgot_password.png)
+<!-- slide -->
+![Reset Password Session Expired](//auth_04_reset_password_expired.png)
+<!-- slide -->
+![Auth Callback Verification Error](//auth_05_auth_callback_error.png)
+<!-- slide -->
+![Admin Login Support Link](//auth_06_admin_login.png)
+<!-- slide -->
+![Student Profile Initial](//auth_07_profile_initial.png)
+<!-- slide -->
+![Student Profile Saved Stays on Page](//auth_08_profile_saved.png)
+<!-- slide -->
+![Admin Edit User Modal](//auth_09_admin_edit_user_modal.png)
+<!-- slide -->
+![Admin Switch to Actions Tab](//auth_09b_admin_actions_tab.png)
+<!-- slide -->
+![Admin Password Reset Successful](//auth_10_admin_password_updated.png)
+    *   Opening the Sheet slides in a clean mobile panel from the right.
+    *   Displays user full name, email address, and a colored tier badge ("Premium" or "Free Basic").
+    *   Embeds a high-visibility token balance summary block displaying current value in INR.
+    *   Lists all secondary pages with icons, highlight colors, and text links. Tapping closes the drawer automatically.
+    *   Includes a prominent "Upgrade to Premium" CTA button for Free Basic accounts.
+    *   Includes a Destructive Sign Out action button at the bottom.
 
 ---
 

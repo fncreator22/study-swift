@@ -18,6 +18,7 @@ function Signup() {
   const [name, setName] = useState("");
   const [college, setCollege] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -29,15 +30,35 @@ function Signup() {
     }
   }, [user, isAdmin, authLoading, nav]);
 
+  async function checkEmailExists(val: string) {
+    if (!val || !val.includes("@") || !val.includes(".")) {
+      setEmailError("");
+      return;
+    }
+    try {
+      const { data, error } = await supabase.rpc("check_email_exists", {
+        _email: val.trim().toLowerCase()
+      });
+      if (data) {
+        setEmailError("This email address is already registered. Please sign in or use Forgot Password.");
+      } else {
+        setEmailError("");
+      }
+    } catch {
+      setEmailError("");
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (emailError) {
+      return toast.error("An account with this email address already exists. Please sign in or reset your password.");
+    }
     setLoading(true);
 
-    const { data: existing, error: checkError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email.trim().toLowerCase())
-      .maybeSingle();
+    const { data: existing, error: checkError } = await supabase.rpc("check_email_exists", {
+      _email: email.trim().toLowerCase()
+    });
 
     if (checkError) {
       setLoading(false);
@@ -46,6 +67,7 @@ function Signup() {
 
     if (existing) {
       setLoading(false);
+      setEmailError("This email address is already registered. Please sign in or use Forgot Password.");
       return toast.error("An account with this email address already exists. Please sign in or reset your password.");
     }
 
@@ -72,10 +94,26 @@ function Signup() {
           <h1 className="font-display text-2xl font-bold">Create your account</h1>
           <p className="mt-1 text-sm text-muted-foreground">Start practicing in minutes.</p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
-            <div><Label>Full name</Label><Input required value={name} onChange={(e) => setName(e.target.value)} /></div>
-            <div><Label>College / University</Label><Input required value={college} onChange={(e) => setCollege(e.target.value)} /></div>
-            <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div><Label>Password</Label><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <div><Label htmlFor="name">Full name</Label><Input id="name" required value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div><Label htmlFor="college">College / University</Label><Input id="college" required value={college} onChange={(e) => setCollege(e.target.value)} /></div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                required 
+                value={email} 
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailError("");
+                }} 
+                onBlur={(e) => checkEmailExists(e.target.value)}
+              />
+              {emailError && (
+                <p className="text-xs text-destructive mt-1 font-semibold">{emailError}</p>
+              )}
+            </div>
+            <div><Label htmlFor="password">Password</Label><Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
             <Button type="submit" className="w-full" disabled={loading}>{loading ? "Creating..." : "Create account"}</Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">

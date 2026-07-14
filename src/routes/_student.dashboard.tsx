@@ -14,6 +14,7 @@ function Dashboard() {
   const [recent, setRecent] = useState<any[]>([]);
   const [latestTests, setLatestTests] = useState<any[]>([]);
   const [latestCourses, setLatestCourses] = useState<any[]>([]);
+  const [enrolledCourses, setEnrolledCourses] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [membership, setMembership] = useState<{ status: string; expiry: string | null }>({ status: "free", expiry: null });
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,44 @@ function Dashboard() {
       setRecent(atts ?? []);
       setLatestTests(lt ?? []);
       setLatestCourses(lc ?? []);
+
+      // Fetch enrolled courses progress details
+      const { data: enrollments } = await supabase
+        .from("course_enrollments_v2")
+        .select(`
+          id,
+          course_id,
+          courses_v2 (
+            id,
+            title,
+            tier,
+            category,
+            thumbnail_url
+          )
+        `)
+        .eq("user_id", user.id);
+
+      const { data: progress } = await supabase.from("course_progress_v2").select("enrollment_id, lesson_id");
+      const { data: allLessons } = await supabase.from("course_lessons_v2").select("id, course_modules_v2!inner(course_id)");
+
+      const mappedEnrolled = (enrollments ?? []).map((e: any) => {
+        const c = e.courses_v2;
+        if (!c) return null;
+        const courseLessons = (allLessons ?? []).filter((l: any) => l.course_modules_v2?.course_id === c.id);
+        const totalCount = courseLessons.length;
+        const completedCount = (progress ?? []).filter((p: any) => p.enrollment_id === e.id).length;
+        const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+        return {
+          id: c.id,
+          title: c.title,
+          tier: c.tier,
+          category: c.category,
+          thumbnail_url: c.thumbnail_url,
+          progress: pct
+        };
+      }).filter(Boolean);
+
+      setEnrolledCourses(mappedEnrolled);
       setLoading(false);
     })();
   }, [user]);
@@ -57,7 +96,7 @@ function Dashboard() {
     { label: "Subscriptions", to: "/subscriptions", icon: Crown, desc: "Upgrade plan", color: "text-amber-500 bg-amber-500/10" },
     { label: "Rankings", to: "/rankings", icon: Trophy, desc: "Leaderboards", color: "text-yellow-500 bg-yellow-500/10" },
     { label: "Purchases", to: "/purchased", icon: CheckCircle, desc: "Owned content", color: "text-emerald-500 bg-emerald-500/10" },
-    { label: "Support", to: "/support", icon: MessageSquare, desc: "Get help 24/7", color: "text-blue-500 bg-blue-500/10" },
+    { label: "Support", to: "/support-center", icon: MessageSquare, desc: "Get help 24/7", color: "text-blue-500 bg-blue-500/10" },
     { label: "Wallet", to: "/wallet", icon: Coins, desc: "Tokens & billing", color: "text-purple-500 bg-purple-500/10" },
   ];
 
@@ -159,6 +198,41 @@ function Dashboard() {
       <div className="mt-10 grid gap-8 lg:grid-cols-3">
         {/* Main Content: Marquees */}
         <div className="lg:col-span-2">
+           {enrolledCourses.length > 0 && (
+             <div className="mb-8">
+               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">My Learning (Enrolled Courses)</h3>
+               <div className="grid gap-4 sm:grid-cols-2">
+                 {enrolledCourses.map((c) => (
+                   <div key={c.id} className="group relative rounded-2xl border border-border bg-card p-4 transition-all hover:border-primary/30 shadow-sm flex flex-col justify-between">
+                     <div className="flex items-start gap-3">
+                       <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/5 text-primary shrink-0">
+                         <PlayCircle className="h-5 w-5 text-emerald-500" />
+                       </div>
+                       <div className="min-w-0 flex-1">
+                         <h4 className="font-display text-sm font-bold truncate leading-snug">{c.title}</h4>
+                         <p className="text-[10px] text-muted-foreground capitalize mt-0.5">{c.category || 'General'}</p>
+                       </div>
+                     </div>
+                     <div className="mt-4 space-y-2">
+                       <div className="flex items-center justify-between text-[10px] font-bold">
+                         <span className="text-muted-foreground">Course Progress</span>
+                         <span className="text-primary">{c.progress}%</span>
+                       </div>
+                       <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                         <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${c.progress}%` }} />
+                       </div>
+                       <Link to={`/courses/${c.id}` as any} className="block pt-2">
+                         <Button size="sm" className="w-full rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/95 h-9 text-xs">
+                           Continue Learning <ChevronRight className="ml-1.5 h-3.5 w-3.5" />
+                         </Button>
+                       </Link>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
+
            <MarqueeRow title="Newly Published Tests" items={latestTests} type="test" />
            <MarqueeRow title="Explore Fresh Courses" items={latestCourses} type="course" />
            

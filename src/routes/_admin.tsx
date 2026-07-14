@@ -38,10 +38,15 @@ function AdminLayout() {
       nav({ to: "/admin/login" });
       return;
     }
-    if (!isAdmin) {
+    if (isAdmin) return;
+
+    // Grace period for async role check to resolve
+    const timer = setTimeout(() => {
       console.warn("[AdminGuard] Not an admin, redirecting.");
       nav({ to: "/admin/login" });
-    }
+    }, 4000);
+
+    return () => clearTimeout(timer);
   }, [user, isAdmin, loading, nav]);
 
   if (loading) {

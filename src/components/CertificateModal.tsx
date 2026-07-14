@@ -1,6 +1,6 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, Share2, Award, CheckCircle } from "lucide-react";
+import { Printer, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface CertificateModalProps {
@@ -15,190 +15,333 @@ interface CertificateModalProps {
     total: number;
     issued_at: string;
     certificate_code: string;
+    instructor_name?: string;
   } | null;
 }
 
+// ── Inline SVG Barcode Generator ───────────────────────────────────────────
+function AuthBarcode({ value }: { value: string }) {
+  // Deterministic bar pattern from certificate hash
+  const bars: { x: number; w: number }[] = [];
+  let hash = 5381;
+  for (let i = 0; i < value.length; i++) {
+    hash = ((hash << 5) + hash) ^ value.charCodeAt(i);
+    hash = hash & 0x7fffffff;
+  }
+  let xPos = 0;
+  for (let i = 0; i < 52; i++) {
+    const byte = (hash >> (i % 28)) & 0xff;
+    const w = (byte % 3) + 1;
+    if (i % 2 === 0) bars.push({ x: xPos, w });
+    xPos += w + 1;
+  }
+  const totalWidth = xPos;
+
+  return (
+    <div className="flex flex-col items-center gap-0.5 bg-white px-2 py-1.5 rounded border border-slate-100 select-none">
+      <svg width={totalWidth} height="32" className="overflow-visible">
+        {bars.map((b, i) => (
+          <rect key={i} x={b.x} y={0} width={b.w} height={32} fill="#1a1a2e" />
+        ))}
+      </svg>
+      <span className="text-[6px] font-mono tracking-[0.15em] text-slate-500 font-bold uppercase">
+        AUTH: {value.substring(0, 20).toUpperCase()}
+      </span>
+    </div>
+  );
+}
+
+// ── Official Gold Seal SVG ──────────────────────────────────────────────────
+function GoldSeal({ size = 72 }: { size?: number }) {
+  const r = size / 2;
+  const pts = 18;
+  // Generate starburst points for the seal edge
+  const starPoints = Array.from({ length: pts * 2 }, (_, i) => {
+    const angle = (i * Math.PI) / pts - Math.PI / 2;
+    const radius = i % 2 === 0 ? r - 2 : r - 8;
+    return `${r + radius * Math.cos(angle)},${r + radius * Math.sin(angle)}`;
+  }).join(" ");
+
+  return (
+    <svg width={size} height={size} className="drop-shadow-md select-none">
+      <defs>
+        <radialGradient id="goldGrad" cx="40%" cy="35%" r="70%">
+          <stop offset="0%" stopColor="#f9e784" />
+          <stop offset="40%" stopColor="#d4af37" />
+          <stop offset="100%" stopColor="#8b6914" />
+        </radialGradient>
+        <radialGradient id="innerGold" cx="40%" cy="35%" r="70%">
+          <stop offset="0%" stopColor="#fcf6ba" />
+          <stop offset="60%" stopColor="#d4af37" />
+          <stop offset="100%" stopColor="#aa771c" />
+        </radialGradient>
+      </defs>
+
+      {/* Outer starburst */}
+      <polygon points={starPoints} fill="url(#goldGrad)" />
+
+      {/* Inner circle */}
+      <circle cx={r} cy={r} r={r - 10} fill="url(#innerGold)" />
+      <circle cx={r} cy={r} r={r - 13} fill="none" stroke="#8b6914" strokeWidth="0.5" />
+      <circle cx={r} cy={r} r={r - 16} fill="none" stroke="#8b6914" strokeWidth="0.5" />
+
+      {/* Text: EXAMLY */}
+      <text x={r} y={r - 10} textAnchor="middle" fill="#3d2200" fontSize="7" fontWeight="900" fontFamily="sans-serif" letterSpacing="1.5" textDecoration="none" style={{ textTransform: "uppercase" }}>EXAMLY</text>
+      {/* Text: LMS */}
+      <text x={r} y={r - 1} textAnchor="middle" fill="#3d2200" fontSize="6" fontWeight="800" fontFamily="sans-serif" letterSpacing="1">LMS</text>
+      {/* Divider */}
+      <line x1={r - 12} y1={r + 2} x2={r + 12} y2={r + 2} stroke="#3d2200" strokeWidth="0.5" />
+      {/* Text: OFFICIAL */}
+      <text x={r} y={r + 10} textAnchor="middle" fill="#3d2200" fontSize="5.5" fontWeight="900" fontFamily="sans-serif" letterSpacing="1.2">OFFICIAL</text>
+      {/* Text: VERIFIED */}
+      <text x={r} y={r + 18} textAnchor="middle" fill="#3d2200" fontSize="5.5" fontWeight="900" fontFamily="sans-serif" letterSpacing="1.2">VERIFIED</text>
+    </svg>
+  );
+}
+
+// ── Corner Ornament SVG ────────────────────────────────────────────────────
+function CornerOrnament({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg width="40" height="40" className={`text-[#d4af37] ${flip ? "rotate-90" : ""}`} viewBox="0 0 40 40">
+      <path d="M2 2 L18 2 L18 6 L6 6 L6 18 L2 18 Z" fill="none" stroke="#d4af37" strokeWidth="1.5" />
+      <path d="M2 2 L2 10" stroke="#d4af37" strokeWidth="1" />
+      <path d="M2 2 L10 2" stroke="#d4af37" strokeWidth="1" />
+      <circle cx="18" cy="18" r="1.5" fill="#d4af37" />
+    </svg>
+  );
+}
+
+// ── Main Certificate Modal ─────────────────────────────────────────────────
 export function CertificateModal({ open, onOpenChange, certificate }: CertificateModalProps) {
   if (!certificate) return null;
 
-  const issueDate = new Date(certificate.issued_at).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const issueDateObj = new Date(certificate.issued_at);
+  const awardDate = issueDateObj.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" });
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // Calculate course duration window (60 days before completion)
+  const startDateObj = new Date(issueDateObj.getTime() - 60 * 24 * 60 * 60 * 1000);
+  const startDateStr = startDateObj.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const endDateStr = issueDateObj.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
+  const verifyUrl = `${window.location.origin}/verify-certificate/${certificate.certificate_code}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(verifyUrl)}&bgcolor=ffffff&color=1e3a8a&margin=4`;
+  const instructorName = certificate.instructor_name || "Maria Chen";
+  const instructorTitle = "Director of Education, Examly";
+  const certId = `EX-${certificate.certificate_code.substring(0, 8).toUpperCase()}-${issueDateObj.getFullYear()}`;
+
+  const handlePrint = () => window.print();
   const handleShare = () => {
-    const shareUrl = `${window.location.origin}/verify-certificate/${certificate.certificate_code}`;
-    navigator.clipboard.writeText(shareUrl);
-    toast.success("Certificate verification link copied to clipboard!");
+    navigator.clipboard.writeText(verifyUrl);
+    toast.success("Verification link copied to clipboard!");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[850px] p-0 overflow-hidden bg-white border-0 shadow-2xl rounded-2xl print:shadow-none print:rounded-none">
-        
-        {/* Certificate Landscape Layout (Coursera Double-Border Luxury Replica) */}
-        <div 
+      <DialogContent className="max-w-[900px] p-0 overflow-hidden bg-white border-0 shadow-2xl rounded-2xl print:shadow-none print:rounded-none">
+
+        {/* ── Certificate Paper Area ── */}
+        <div
           id="certificate-print-area"
-          className="relative bg-[#fafaf9] p-5 text-slate-800 font-sans border border-slate-300 print:p-0 print:border-0"
-          style={{ minHeight: "580px", aspectRatio: "1.414 / 1" }}
+          className="relative"
+          style={{
+            background: "linear-gradient(135deg, #fdfcf7 0%, #f9f5e8 50%, #fdfcf7 100%)",
+            padding: "0",
+            fontFamily: "Georgia, serif",
+          }}
         >
-          {/* Inner border line (spaced from outer border by 20px padding) */}
-          <div className="relative w-full h-full border border-slate-300/70 bg-white p-12 grid grid-cols-12 z-10 box-border">
-            
-            {/* Subtle Guilloche/Grid Watermark Pattern */}
-            <div className="absolute inset-0 opacity-[0.025] pointer-events-none select-none bg-[radial-gradient(circle_at_center,_#000000_1px,_transparent_1px)] bg-[size:18px_18px]"></div>
+          {/* Outer gold double border */}
+          <div
+            style={{
+              margin: "16px",
+              border: "6px double #d4af37",
+              position: "relative",
+              minHeight: "520px",
+            }}
+          >
+            {/* Inner navy border */}
+            <div
+              style={{
+                margin: "8px",
+                border: "1.5px solid #1e3a8a",
+                padding: "32px 48px 24px",
+                minHeight: "492px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                position: "relative",
+              }}
+            >
+              {/* Corner ornaments */}
+              <div style={{ position: "absolute", top: "8px", left: "8px" }}><CornerOrnament /></div>
+              <div style={{ position: "absolute", top: "8px", right: "8px", transform: "rotate(90deg)" }}><CornerOrnament /></div>
+              <div style={{ position: "absolute", bottom: "8px", left: "8px", transform: "rotate(-90deg)" }}><CornerOrnament /></div>
+              <div style={{ position: "absolute", bottom: "8px", right: "8px", transform: "rotate(180deg)" }}><CornerOrnament /></div>
 
-            {/* Left Column (Main Certification Info) - col-span-8 */}
-            <div className="col-span-8 flex flex-col justify-between pr-4 z-10 text-left">
-              
-              {/* Top: Institution/Authorized Partner Brand Logo */}
-              <div className="flex items-center gap-4">
-                {/* Gold Crest Monogram Logo Accent */}
-                <div className="flex items-center justify-center w-12 h-12 rounded bg-slate-900 border-b-2 border-amber-500 text-amber-500 font-serif font-black text-2xl shadow-sm">
-                  V
+              {/* ── TOP: Examly Brand Header ── */}
+              <div style={{ textAlign: "center", marginBottom: "8px" }}>
+                <div style={{ fontFamily: "'Times New Roman', serif", fontSize: "32px", fontWeight: "900", color: "#1e3a8a", letterSpacing: "4px", textTransform: "uppercase" }}>
+                  Examly
                 </div>
-                <div className="flex flex-col">
-                  <span className="font-display text-xs font-black tracking-[0.25em] text-slate-900">EXAMLY UNIVERSITY</span>
-                  <span className="text-[7.5px] uppercase tracking-wider text-slate-400 font-bold">Authorized learning partner</span>
-                </div>
-              </div>
-
-              {/* Middle: Certificate Credentials */}
-              <div className="space-y-6 my-auto py-8">
-                <div>
-                  <p className="text-[10px] font-mono text-slate-400 font-semibold">{issueDate}</p>
-                </div>
-
-                <div className="space-y-2">
-                  <h2 className="font-serif text-3xl font-normal text-slate-900 leading-none">
-                    {certificate.recipient_name}
-                  </h2>
-                  <p className="text-[11px] text-slate-500 italic font-medium leading-none">has successfully completed</p>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="font-serif text-2xl font-bold text-slate-900 leading-snug tracking-tight">
-                    {certificate.course_title}
-                  </h3>
-                  <p className="text-[10px] text-slate-500 max-w-md leading-relaxed">
-                    an online non-credit course authorized by Examly University and offered through Examly's learning platform
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom: Signature Area */}
-              <div className="flex items-end justify-between">
-                <div>
-                  {/* Simulated Cursive Signature */}
-                  <p className="font-serif italic text-2xl font-medium text-slate-800 tracking-wide select-none" style={{ fontFamily: "'Brush Script MT', cursive, sans-serif" }}>
-                    Jules White
-                  </p>
-                  <div className="w-48 h-[0.5px] bg-slate-300 my-1"></div>
-                  <p className="text-[8.5px] uppercase font-bold text-slate-400 tracking-wider">Dr. Jules White</p>
-                  <p className="text-[7.5px] text-slate-400 font-medium">Dean of Computer Science, Examly Academy</p>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Right Column (Verification Ribbon & Stamp) - col-span-4 */}
-            <div className="col-span-4 flex flex-col justify-between border-l border-slate-100 pl-8 relative z-10 p-2 text-left">
-              
-              {/* Hanging Vertical Gray Ribbon */}
-              <div className="absolute top-0 right-4 w-28 h-72 bg-[#f1f1f0] border-b border-l border-r border-slate-200/60 shadow-sm flex flex-col items-center justify-between pb-6 rounded-b-md print:bg-[#f1f1f0]">
-                <div className="w-full bg-slate-300/40 h-[6px]"></div>
-                {/* Vertical Ribbon Text */}
-                <span className="text-[8px] font-sans font-black tracking-[0.45em] text-slate-500 uppercase select-none [writing-mode:vertical-lr] my-auto">
-                  COURSE CERTIFICATE
-                </span>
-                
-                {/* Circular Crest Seal */}
-                <div className="w-20 h-20 rounded-full border-[3px] border-double border-slate-400/80 bg-white flex items-center justify-center shadow-soft">
-                  <div className="w-14 h-14 rounded-full border border-dashed border-slate-300 flex flex-col items-center justify-center text-[6.5px] font-bold text-slate-400 tracking-tighter scale-95 leading-tight">
-                    <span>EDUCATION</span>
-                    <span className="font-black text-slate-800 font-serif text-[7.5px] py-0.5">examly</span>
-                    <span>VERIFIED</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "4px" }}>
+                  <div style={{ height: "1px", width: "48px", background: "#d4af37" }} />
+                  {/* LMS Badge with laurel */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span style={{ fontSize: "9px", color: "#8b6914" }}>❧</span>
+                    <span style={{ fontSize: "9px", fontWeight: "900", letterSpacing: "4px", color: "#8b6914", textTransform: "uppercase" }}>LMS</span>
+                    <span style={{ fontSize: "9px", color: "#8b6914" }}>❧</span>
                   </div>
+                  <div style={{ height: "1px", width: "48px", background: "#d4af37" }} />
                 </div>
               </div>
 
-              {/* Bottom-right: Verification links */}
-              <div className="mt-auto space-y-3 pt-64">
-                <div className="space-y-1">
-                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Verify at:</p>
-                  <a 
-                    href={`${window.location.origin}/verify-certificate/${certificate.certificate_code}`}
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="text-[9.5px] text-blue-600 hover:underline font-mono break-all font-semibold"
+              {/* ── MIDDLE: Award Statement ── */}
+              <div style={{ textAlign: "center", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "10px", padding: "8px 0" }}>
+                <p style={{ fontStyle: "italic", fontSize: "13px", color: "#666", margin: 0 }}>
+                  This <strong style={{ fontWeight: "700", letterSpacing: "1px", textTransform: "uppercase" }}>Certificate</strong> is proudly awarded to
+                </p>
+
+                {/* Recipient name in blackletter/Gothic style */}
+                <div style={{ margin: "4px 0" }}>
+                  <p
+                    style={{
+                      fontFamily: "'UnifrakturMaguntia', 'MedievalSharp', 'IM Fell English', 'Palatino Linotype', Georgia, serif",
+                      fontSize: "38px",
+                      fontWeight: "700",
+                      color: "#0f1a30",
+                      letterSpacing: "2px",
+                      margin: 0,
+                      lineHeight: "1.1",
+                      borderBottom: "1px solid #e2d5a0",
+                      paddingBottom: "8px",
+                      display: "inline-block",
+                      minWidth: "300px",
+                    }}
                   >
-                    examy.org/verify/{certificate.certificate_code}
-                  </a>
+                    {certificate.recipient_name}
+                  </p>
                 </div>
-                <p className="text-[8.5px] text-slate-400 leading-normal">
-                  Examly has confirmed the identity of this individual and their participation in the course.
+
+                <p style={{ fontSize: "11px", color: "#777", margin: "2px 0", maxWidth: "400px", alignSelf: "center" }}>
+                  in recognition of successfully completing the professional training course:
+                </p>
+
+                <div style={{ margin: "4px 0" }}>
+                  <p style={{ fontFamily: "'Times New Roman', Georgia, serif", fontSize: "20px", fontWeight: "900", color: "#1e3a8a", margin: 0, lineHeight: "1.2", maxWidth: "500px", alignSelf: "center" }}>
+                    {certificate.course_title}
+                  </p>
+                </div>
+
+                <p style={{ fontSize: "11px", color: "#666", margin: "4px 0" }}>
+                  Conducted through the Examly LMS platform from <strong>[{startDateStr}]</strong> to <strong>[{endDateStr}]</strong>
+                </p>
+                <p style={{ fontSize: "11px", color: "#555", fontWeight: "600", margin: 0 }}>
+                  Awarded on this day: {awardDate}
                 </p>
               </div>
 
-            </div>
+              {/* ── BOTTOM: Signatures + QR + Seal ── */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", alignItems: "flex-end", gap: "16px", marginTop: "16px" }}>
 
-            {/* Footer Legal/Disclaimer Banner (Full Width) */}
-            <div className="col-span-12 border-t border-slate-200 mt-6 pt-4 text-center z-10">
-              <p className="text-[7.5px] text-slate-400 leading-normal max-w-2xl mx-auto">
-                This certificate attests to the learner's completion of an online course / project delivered via Examly. It does not constitute formal academic enrollment at any university or entity and does not itself grant academic credit, grades, or a degree.
-              </p>
-            </div>
+                {/* CEO Signature */}
+                <div style={{ textAlign: "center" }}>
+                  <p style={{ fontFamily: "'Great Vibes', 'Brush Script MT', cursive", fontSize: "28px", color: "#1e3a8a", margin: "0 0 4px 0", letterSpacing: "2px" }}>
+                    James L. Albright
+                  </p>
+                  <div style={{ height: "1px", background: "#d4af37", marginBottom: "4px" }} />
+                  <p style={{ fontSize: "9px", fontWeight: "700", color: "#1a1a2e", margin: 0, letterSpacing: "0.5px" }}>James L. Albright</p>
+                  <p style={{ fontSize: "8px", color: "#888", margin: 0 }}>CEO & Co-Founder, Examly LMS</p>
+                </div>
 
+                {/* Center: QR Code */}
+                <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                  <span style={{ fontSize: "7px", fontWeight: "700", letterSpacing: "2px", textTransform: "uppercase", color: "#999" }}>Scan to Verify</span>
+                  <img
+                    src={qrUrl}
+                    alt="QR Verification Code"
+                    width="64"
+                    height="64"
+                    style={{ border: "1px solid #e2d5a0", padding: "2px", background: "white" }}
+                  />
+                </div>
+
+                {/* Instructor Signature + Gold Seal */}
+                <div style={{ textAlign: "center", position: "relative" }}>
+                  {/* Gold Seal positioned top-right of this column */}
+                  <div style={{ position: "absolute", top: "-52px", right: "0px" }}>
+                    <GoldSeal size={68} />
+                  </div>
+
+                  <p style={{ fontFamily: "'Great Vibes', 'Brush Script MT', cursive", fontSize: "28px", color: "#1e3a8a", margin: "0 0 4px 0", letterSpacing: "2px" }}>
+                    {instructorName}
+                  </p>
+                  <div style={{ height: "1px", background: "#d4af37", marginBottom: "4px" }} />
+                  <p style={{ fontSize: "9px", fontWeight: "700", color: "#1a1a2e", margin: 0, letterSpacing: "0.5px" }}>{instructorName}</p>
+                  <p style={{ fontSize: "8px", color: "#888", margin: 0 }}>{instructorTitle}</p>
+                </div>
+              </div>
+
+              {/* ── FOOTER: Barcode + Hash ── */}
+              <div style={{ borderTop: "1px solid #e8dfc0", marginTop: "16px", paddingTop: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: "7px", fontFamily: "monospace", color: "#aaa", margin: "0 0 3px 0" }}>
+                    Verification Hash: {certificate.certificate_code}
+                  </p>
+                  <p style={{ fontSize: "7px", color: "#aaa", margin: 0 }}>
+                    Verify Online at: <strong style={{ color: "#1e3a8a" }}>verify.examlylms.com</strong> &nbsp;|&nbsp; 
+                    Examly Learning Management Systems &nbsp;|&nbsp; 
+                    Certificate ID: <strong>{certId}</strong> &nbsp;|&nbsp; 
+                    Issued by: Examly LMS &nbsp;|&nbsp; Non-Transferable
+                  </p>
+                </div>
+                <AuthBarcode value={certificate.certificate_code} />
+              </div>
+
+            </div>
           </div>
         </div>
 
-        {/* Certificate Modal Control Buttons (Hidden during Print) */}
+        {/* ── Action Controls (hidden in print) ── */}
         <div className="flex items-center justify-between gap-4 p-4 border-t border-slate-100 bg-slate-50 print:hidden">
           <p className="text-xs text-muted-foreground italic">
-            Tip: Choose "Landscape" layout in the print settings to save/print properly.
+            💡 Enable "Background Graphics" in print settings for best results. Use Landscape orientation.
           </p>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={handleShare}>
-              <Share2 className="mr-2 h-4 w-4" /> Copy Share Link
+              <Share2 className="mr-2 h-4 w-4" /> Copy Link
             </Button>
-            <Button size="sm" onClick={handlePrint} className="bg-slate-900 hover:bg-slate-800 text-white font-bold">
-              <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
+            <Button size="sm" onClick={handlePrint} className="bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white font-bold gap-2">
+              <Printer className="h-4 w-4" /> Print / Save PDF
             </Button>
           </div>
         </div>
 
-        {/* Dynamic Landscape Printing Styles */}
+        {/* ── Print CSS ── */}
         <style dangerouslySetInnerHTML={{ __html: `
+          @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=UnifrakturMaguntia&display=swap');
           @media print {
-            body * {
-              visibility: hidden;
-            }
-            #certificate-print-area, #certificate-print-area * {
-              visibility: visible;
+            body > * { display: none !important; }
+            body > [data-radix-portal] { display: block !important; }
+            [data-radix-portal] > * { display: none !important; }
+            [data-radix-portal] [role="dialog"] {
+              display: block !important;
+              position: fixed !important;
+              inset: 0 !important;
+              max-width: none !important;
+              max-height: none !important;
+              border-radius: 0 !important;
+              border: 0 !important;
+              padding: 0 !important;
+              overflow: visible !important;
             }
             #certificate-print-area {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              height: 100%;
-              border: 0 !important;
-              background-color: white !important;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
+              width: 100% !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
-            @page {
-              size: landscape;
-              margin: 0;
-            }
+            .print\\:hidden { display: none !important; }
+            @page { size: landscape; margin: 0; }
           }
         `}} />
-
       </DialogContent>
     </Dialog>
   );

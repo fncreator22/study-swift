@@ -9,12 +9,13 @@ type AuthCtx = {
   isAdmin: boolean;
   isBlocked: boolean;
   tokens: number;
+  profileVersion: number;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx>({
-  user: null, session: null, loading: true, isAdmin: false, isBlocked: false, tokens: 0,
+  user: null, session: null, loading: true, isAdmin: false, isBlocked: false, tokens: 0, profileVersion: 0,
   signOut: async () => {}, refreshProfile: async () => {},
 });
 
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [tokens, setTokens] = useState(0);
+  const [profileVersion, setProfileVersion] = useState(0);
 
   async function fetchProfile(uid: string) {
     supabase.rpc("claim_anonymous_reports").then(() => {});
@@ -88,8 +90,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         isBlocked,
         tokens,
+        profileVersion,
         signOut: async () => { await supabase.auth.signOut(); },
-        refreshProfile: async () => { if (session?.user) await fetchProfile(session.user.id); },
+        refreshProfile: async () => { 
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+            setProfileVersion((v) => v + 1);
+          }
+        },
       }}
     >
       {children}
