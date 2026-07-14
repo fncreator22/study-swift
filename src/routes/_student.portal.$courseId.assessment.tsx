@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Clock, CheckCircle, ArrowLeft, ArrowRight, Trophy,
-  AlertCircle, Loader2, BookOpen, Shield, FileText, CheckCircle2
+  AlertCircle, Loader2, BookOpen, Shield, FileText, CheckCircle2, XCircle
 } from "lucide-react";
 
 export const Route = createFileRoute("/_student/portal/$courseId/assessment")({
@@ -42,6 +42,8 @@ function CourseAssessment() {
   const [lockedName, setLockedName] = useState("");
   const [lockedDob, setLockedDob] = useState("");
   const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
+  const [lastAttemptInfo, setLastAttemptInfo] = useState<any>(null);
+  const [reviewFeedback, setReviewFeedback] = useState<string>("");
 
   // Exam state
   const [phase, setPhase] = useState<ExamPhase>("pre");
@@ -91,18 +93,42 @@ function CourseAssessment() {
         return;
       }
 
-      // Check if already approved
-      const { data: existingAttempt } = await supabase
+      // Check latest attempt status
+      const { data: attempts } = await supabase
         .from("course_assessment_attempts_v2")
-        .select("id, status, score")
+        .select("id, status, score, grading_details")
         .eq("enrollment_id", enrollment.id)
-        .eq("status", "approved")
-        .maybeSingle();
+        .order("started_at", { ascending: false });
 
-      if (existingAttempt) {
-        setPhase("already_approved");
-        setLoading(false);
-        return;
+      const latestAttempt = attempts?.[0];
+
+      if (latestAttempt) {
+        if (latestAttempt.status === "approved") {
+          setPhase("already_approved");
+          setLoading(false);
+          return;
+        } else if (latestAttempt.status === "under_review" || latestAttempt.status === "submitted") {
+          setPhase("submitted");
+      load();
+          setLoading(false);
+          return;
+        } else if (latestAttempt.status === "rejected" || latestAttempt.status === "resubmit") {
+          setLastAttemptInfo({
+            id: latestAttempt.id,
+            score: latestAttempt.score,
+            status: latestAttempt.status
+          });
+
+          // Fetch admin notes review feedback
+          const { data: review } = await supabase
+            .from("course_assessment_reviews_v2")
+            .select("admin_notes")
+            .eq("attempt_id", latestAttempt.id)
+            .maybeSingle();
+          if (review?.admin_notes) {
+            setReviewFeedback(review.admin_notes);
+          }
+        }
       }
 
       // Load profile name & DOB (locked from completion gate)

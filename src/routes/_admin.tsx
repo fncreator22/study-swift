@@ -16,6 +16,7 @@ const items: { to: string; label: string; icon: typeof LayoutDashboard; exact?: 
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/tests", label: "Tests", icon: BookOpen },
   { to: "/admin/reviews", label: "Review Tests", icon: FileText },
+  { to: "/admin/course-reviews", label: "Course Reviews", icon: GraduationCap },
   { to: "/admin/courses", label: "Courses", icon: PlayCircle },
   { to: "/admin/tokens", label: "Token Requests", icon: Coins },
   { to: "/admin/subscriptions", label: "Subscriptions", icon: Crown },

@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, PlayCircle, Film, Pencil, Trash2, Trophy } from "lucide-react";
+import { Plus, PlayCircle, Film, Pencil, Trash2, Trophy, Clock, FileText, CheckCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_admin/admin/courses")({ component: AdminCourses });
 
@@ -31,6 +31,27 @@ function AdminCourses() {
   const [form, setForm] = useState<any>(empty);
   const [editing, setEditing] = useState<string | null>(null);
 
+  // Course Assessment Settings States
+  const [assessmentOpen, setAssessmentOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [assessment, setAssessment] = useState<any>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
+  
+  // Assessment Question form states
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
+  const [questionText, setQuestionText] = useState("");
+  const [questionType, setQuestionType] = useState<"mcq" | "written" | "hybrid">("mcq");
+  const [questionWeight, setQuestionWeight] = useState("1");
+  const [mcqA, setMcqA] = useState("");
+  const [mcqB, setMcqB] = useState("");
+  const [mcqC, setMcqC] = useState("");
+  const [mcqD, setMcqD] = useState("");
+  const [mcqCorrect, setMcqCorrect] = useState("a");
+  const [referenceAnswer, setReferenceAnswer] = useState("");
+  const [requiredKeywords, setRequiredKeywords] = useState("");
+  const [minSimilarity, setMinSimilarity] = useState("70");
+  const [savingAssessment, setSavingAssessment] = useState(false);
+
   async function load() {
     const [{ data: cs }, { data: subs }, { data: ts }, { data: cats }, { data: mappings }] = await Promise.all([
       supabase.from("courses_v2").select("*, difficulty:difficulty_level, price:pricing_tokens").order("created_at", { ascending: false }),
@@ -40,7 +61,6 @@ function AdminCourses() {
       supabase.from("subscription_courses_v2" as any).select("subscription_id, course_id")
     ]);
 
-    // Map course_ids manually to maintain backward compatibility in local subscriptions array
     const mappedSubs = (subs ?? []).map(s => {
       const courseIds = (mappings ?? [])
         .filter((m: any) => m.subscription_id === s.id)
@@ -53,6 +73,7 @@ function AdminCourses() {
     setTests(ts ?? []);
     setCategories(cats ?? []);
   }
+  
   useEffect(() => { load(); }, []);
 
   function startEdit(c: any) {
@@ -100,7 +121,6 @@ function AdminCourses() {
     
     if (error) return toast.error(error.message);
 
-    // Update subscription courses junction mapping atomically
     const courseId = editing || courseResult.id;
     await supabase.from("subscription_courses_v2" as any).delete().eq("course_id", courseId);
     
@@ -126,6 +146,214 @@ function AdminCourses() {
     load();
   }
 
+  // --- Course Assessment Settings & Questions functions ---
+  async function openAssessmentSettings(course: any) {
+    setSelectedCourse(course);
+    setAssessment(null);
+    setQuestions([]);
+    resetQuestionForm();
+
+    // Fetch assessment
+    const { data: asm, error } = await supabase
+      .from("course_assessments_v2")
+      .select("*")
+      .eq("course_id", course.id)
+      .maybeSingle();
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    if (asm) {
+      setAssessment(asm);
+      setPassingScore(asm.passing_score.toString());
+      setTimeLimit(asm.time_limit_min.toString());
+      
+      // Load questions
+      const { data: qs } = await supabase
+        .from("course_assessment_questions_v2")
+        .select("*")
+        .eq("assessment_id", asm.id)
+        .order("order_index");
+      setQuestions(qs || []);
+    }
+    
+    setAssessmentOpen(true);
+  }
+
+  async function initializeAssessment() {
+    if (!selectedCourse) return;
+    setSavingAssessment(true);
+    const { data, error } = await supabase
+      .from("course_assessments_v2")
+      .insert({
+        course_id: selectedCourse.id,
+        passing_score: 80.00,
+        time_limit_min: 60
+      })
+      .select()
+      .single();
+
+    setSavingAssessment(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setAssessment(data);
+      toast.success("Completion Assessment initialized successfully!");
+    }
+  }
+
+  async function saveAssessmentSettings() {
+    if (!assessment) return;
+    setSavingAssessment(true);
+    const { error } = await supabase
+      .from("course_assessments_v2")
+      .update({
+        passing_score: parseFloat(passingScore) || 80.00,
+        time_limit_min: parseInt(timeLimit) || 60
+      })
+      .eq("id", assessment.id);
+
+    setSavingAssessment(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Assessment settings saved!");
+    }
+  }
+
+  function resetQuestionForm() {
+    setActiveQuestionId(null);
+    setQuestionText("");
+    setQuestionType("mcq");
+    setQuestionWeight("1");
+    setMcqA("");
+    setMcqB("");
+    setMcqC("");
+    setMcqD("");
+    setMcqCorrect("a");
+    setWrittenReference("");
+    setRequiredKeywords("");
+    setMinSimilarity("70");
+  }
+
+  function editQuestion(q: any) {
+    setActiveQuestionId(q.id);
+    setQuestionText(q.question_text);
+    setQuestionType(q.question_type);
+    setQuestionWeight(q.weight?.toString() || "1");
+    
+    if (q.question_type === "mcq") {
+      const opts = q.options || [];
+      setMcqA(opts[0]?.label || "");
+      setMcqB(opts[1]?.label || "");
+      setMcqC(opts[2]?.label || "");
+      setMcqD(opts[3]?.label || "");
+      setMcqCorrect(q.correct_answers?.[0] || "a");
+    } else {
+      setWrittenReference(q.correct_answers?.reference || q.correct_answers || "");
+      setRequiredKeywords((q.correct_answers?.keywords || []).join(", "));
+      setMinSimilarity(q.correct_answers?.min_similarity?.toString() || "70");
+    }
+  }
+
+  async function deleteQuestion(qId: string) {
+    if (!confirm("Are you sure you want to delete this question?")) return;
+    const { error } = await supabase
+      .from("course_assessment_questions_v2")
+      .delete()
+      .eq("id", qId);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Question deleted");
+      // Reload questions
+      const { data: qs } = await supabase
+        .from("course_assessment_questions_v2")
+        .select("*")
+        .eq("assessment_id", assessment.id)
+        .order("order_index");
+      setQuestions(qs || []);
+      resetQuestionForm();
+    }
+  }
+
+  async function saveQuestion() {
+    if (!assessment) return;
+    if (!questionText.trim()) {
+      toast.error("Please enter the question prompt.");
+      return;
+    }
+
+    let correctAnswersObj: any;
+    let optionsObj: any[] = [];
+
+    if (questionType === "mcq") {
+      if (!mcqA.trim() || !mcqB.trim()) {
+        toast.error("Please provide at least Option A and Option B.");
+        return;
+      }
+      optionsObj = [
+        { label: mcqA.trim(), value: "a" },
+        { label: mcqB.trim(), value: "b" }
+      ];
+      if (mcqC.trim()) optionsObj.push({ label: mcqC.trim(), value: "c" });
+      if (mcqD.trim()) optionsObj.push({ label: mcqD.trim(), value: "d" });
+      
+      correctAnswersObj = [mcqCorrect];
+    } else {
+      if (!writtenReference.trim()) {
+        toast.error("Please provide the reference/expected answer.");
+        return;
+      }
+      const kws = requiredKeywords
+        .split(",")
+        .map(k => k.trim())
+        .filter(k => k.length > 0);
+      
+      correctAnswersObj = {
+        reference: writtenReference.trim(),
+        keywords: kws,
+        min_similarity: parseFloat(minSimilarity) || 70.00
+      };
+    }
+
+    setSavingAssessment(true);
+    
+    const payload = {
+      assessment_id: assessment.id,
+      question_text: questionText.trim(),
+      question_type: questionType,
+      options: optionsObj,
+      correct_answers: correctAnswersObj,
+      weight: parseFloat(questionWeight) || 1.00,
+      order_index: activeQuestionId ? undefined : questions.length + 1
+    };
+
+    const { error } = activeQuestionId
+      ? await supabase.from("course_assessment_questions_v2").update(payload).eq("id", activeQuestionId)
+      : await supabase.from("course_assessment_questions_v2").insert(payload);
+
+    setSavingAssessment(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(activeQuestionId ? "Question updated!" : "Question added!");
+      resetQuestionForm();
+      
+      // Reload questions
+      const { data: qs } = await supabase
+        .from("course_assessment_questions_v2")
+        .select("*")
+        .eq("assessment_id", assessment.id)
+        .order("order_index");
+      setQuestions(qs || []);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex items-center justify-between">
@@ -144,17 +372,16 @@ function AdminCourses() {
             <div className="p-5">
               <h3 className="font-display font-semibold line-clamp-1">{c.title}</h3>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{c.description}</p>
-              {c.completion_test_id && (
-                <div className="mt-2 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
-                  <Trophy className="h-3 w-3" /> Certification Exam Linked
-                </div>
-              )}
+              
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-sm font-bold">{c.tier === 'free' ? 'Free' : `${c.price} Tokens`}</span>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5 items-center">
                   <Link to="/admin/videos/$courseId" params={{ courseId: c.id }}>
-                    <Button size="sm" variant="outline"><Film className="mr-1 h-3 w-3" /> Modules</Button>
+                    <Button size="sm" variant="outline"><Film className="h-3.5 w-3.5 mr-1" /> Modules</Button>
                   </Link>
+                  <Button size="sm" variant="outline" onClick={() => openAssessmentSettings(c)}>
+                    <Trophy className="h-3.5 w-3.5 mr-1 text-amber-500" /> Assessment
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => startEdit(c)} aria-label="Edit course"><Pencil className="h-3.5 w-3.5" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(c.id)} aria-label="Delete course"><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
                 </div>
@@ -164,6 +391,7 @@ function AdminCourses() {
         ))}
       </div>
 
+      {/* Course Edit/Create Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>{editing ? "Edit Course" : "New Course"}</DialogTitle></DialogHeader>
@@ -254,24 +482,6 @@ function AdminCourses() {
               </Select>
             </div>
 
-            {/* Linked Certification Test Select Box */}
-            <div className="space-y-2">
-              <Label>Linked Certification Exam</Label>
-              <Select 
-                value={form.completion_test_id || "none"} 
-                onValueChange={(v) => setForm({ ...form, completion_test_id: v })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None (No certificate issued for this course)</SelectItem>
-                  {tests.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.title} ({t.test_type})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-[10px] text-muted-foreground">Students must score marks in this exam after 100% course modules completion to receive their certificate.</p>
-            </div>
-
             <div className="space-y-2"><Label>Thumbnail URL</Label><Input value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} /></div>
             <div className="space-y-2"><Label>Instructor Name</Label><Input value={form.instructor_name} onChange={(e) => setForm({ ...form, instructor_name: e.target.value })} /></div>
 
@@ -287,6 +497,180 @@ function AdminCourses() {
             </div>
           </div>
           <DialogFooter><Button onClick={save} className="w-full">{editing ? "Update" : "Create"} Course</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dedicated Course Completion Assessment Settings Modal */}
+      <Dialog open={assessmentOpen} onOpenChange={setAssessmentOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-6 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Trophy className="h-5.5 w-5.5 text-amber-500 animate-bounce" />
+              Completion Assessment Manager: {selectedCourse?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Configure evaluation threshold rules, reference answers, expected keyword concepts, and scoring weights.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!assessment ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-4">
+              <ShieldAlert className="h-14 w-14 text-gray-300 dark:text-gray-700" />
+              <div>
+                <h3 className="font-bold text-lg text-gray-900 dark:text-white">Assessment Not Configured</h3>
+                <p className="text-sm text-gray-500 max-w-sm mt-1">This course does not have an independent completion assessment configured. Learners cannot earn a certificate without passing an assessment.</p>
+              </div>
+              <Button onClick={initializeAssessment} disabled={savingAssessment} className="rounded-xl font-bold">
+                {savingAssessment ? "Initializing..." : "Initialize Completion Assessment"}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto pr-2 space-y-6 py-4">
+              {/* Settings panel */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-gray-100 dark:border-gray-800 pb-5">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-gray-500 uppercase">Passing Score (%)</Label>
+                  <Input type="number" value={passingScore} onChange={(e) => setPassingScore(e.target.value)} placeholder="80" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-gray-500 uppercase">Time Limit (Minutes)</Label>
+                  <Input type="number" value={timeLimit} onChange={(e) => setTimeLimit(e.target.value)} placeholder="60" />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={saveAssessmentSettings} disabled={savingAssessment} className="w-full bg-slate-900 dark:bg-slate-100 dark:text-slate-950 font-bold rounded-xl h-10">
+                    Save General Settings
+                  </Button>
+                </div>
+              </div>
+
+              {/* Questions List & Editor Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Left side: Questions List */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-sm text-gray-800 dark:text-gray-200">Questions Queue ({questions.length})</h3>
+                    <Button size="sm" variant="ghost" onClick={resetQuestionForm} className="text-xs text-primary font-bold">
+                      Add New Question
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                    {questions.length === 0 ? (
+                      <p className="text-xs text-gray-500 italic py-4">No questions created yet. Add one on the right editor.</p>
+                    ) : (
+                      questions.map((q, idx) => (
+                        <div key={q.id} className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/10 flex items-start justify-between gap-3 text-left">
+                          <div>
+                            <span className="text-[9px] font-black uppercase text-primary tracking-widest">{q.question_type} · Weight: {q.weight || '1'}</span>
+                            <p className="text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2 mt-0.5">{idx + 1}. {q.question_text}</p>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => editQuestion(q)} className="h-7 w-7 p-0"><Pencil className="h-3 w-3" /></Button>
+                            <Button size="sm" variant="ghost" onClick={() => deleteQuestion(q.id)} className="h-7 w-7 p-0 text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Right side: Add/Edit Question Form */}
+                <div className="border border-gray-100 dark:border-gray-800 rounded-2xl p-5 bg-slate-50/30 dark:bg-slate-900/10 space-y-4 text-left">
+                  <h4 className="font-bold text-sm text-gray-900 dark:text-white">
+                    {activeQuestionId ? "Modify Question" : "Create New Question"}
+                  </h4>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Question Prompt Text</Label>
+                      <Textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} placeholder="Type question details..." rows={3} className="text-xs" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Type</Label>
+                        <Select value={questionType} onValueChange={(v: any) => setQuestionType(v)}>
+                          <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mcq">Multiple Choice (MCQ)</SelectItem>
+                            <SelectItem value="written">Written (Auto Similarity)</SelectItem>
+                            <SelectItem value="hybrid">Hybrid</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Weight (Score points)</Label>
+                        <Input type="number" step="0.5" value={questionWeight} onChange={(e) => setQuestionWeight(e.target.value)} className="h-9 text-xs" />
+                      </div>
+                    </div>
+
+                    {/* MCQ Options Config */}
+                    {questionType === "mcq" && (
+                      <div className="space-y-2 border-t border-gray-100 dark:border-gray-800 pt-3">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">MCQ options settings</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input size={1} value={mcqA} onChange={(e) => setMcqA(e.target.value)} placeholder="Option A (Required)" className="h-8 text-xs" />
+                          <Input size={1} value={mcqB} onChange={(e) => setMcqB(e.target.value)} placeholder="Option B (Required)" className="h-8 text-xs" />
+                          <Input size={1} value={mcqC} onChange={(e) => setMcqC(e.target.value)} placeholder="Option C" className="h-8 text-xs" />
+                          <Input size={1} value={mcqD} onChange={(e) => setMcqD(e.target.value)} placeholder="Option D" className="h-8 text-xs" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">Correct Option</Label>
+                          <Select value={mcqCorrect} onValueChange={setMcqCorrect}>
+                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="a">A</SelectItem>
+                              <SelectItem value="b">B</SelectItem>
+                              {mcqC.trim() && <SelectItem value="c">C</SelectItem>}
+                              {mcqD.trim() && <SelectItem value="d">D</SelectItem>}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Written / Hybrid Similarity config */}
+                    {questionType !== "mcq" && (
+                      <div className="space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Automated similarity rules</span>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">Expected Answer Key Reference</Label>
+                          <Textarea value={writtenReference} onChange={(e) => setWrittenReference(e.target.value)} placeholder="Type reference answer to compare against..." rows={3} className="text-xs font-mono" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">Required keywords/concepts (comma-separated)</Label>
+                          <Input value={writtenKeywords} onChange={(e) => setRequiredKeywords(e.target.value)} placeholder="e.g. React, hook, state, effect" className="h-9 text-xs" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">Similarity Threshold required to pass (%)</Label>
+                          <Input type="number" min="0" max="100" value={minSimilarity} onChange={(e) => setMinSimilarity(e.target.value)} className="h-9 text-xs" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-2">
+                      {activeQuestionId && (
+                        <Button variant="outline" size="sm" onClick={resetQuestionForm} className="flex-1 rounded-xl text-xs h-9">
+                          Cancel
+                        </Button>
+                      )}
+                      <Button onClick={saveQuestion} disabled={savingAssessment} size="sm" className="flex-1 rounded-xl text-xs h-9 font-bold bg-primary text-primary-foreground">
+                        {activeQuestionId ? "Save Changes" : "Create Question"}
+                      </Button>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+          <DialogFooter className="pt-4 border-t border-gray-100 dark:border-gray-800">
+            <Button variant="outline" onClick={() => setAssessmentOpen(false)} className="rounded-xl">Close settings</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

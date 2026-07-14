@@ -85,7 +85,7 @@ function CompletionGate() {
   const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Step 1 — Feedback
+  // Step 1 ï¿½ Feedback
   const [overallRating, setOverallRating] = useState(0);
   const [contentRating, setContentRating] = useState(0);
   const [instructorRating, setInstructorRating] = useState(0);
@@ -95,13 +95,13 @@ function CompletionGate() {
   const [suggestions, setSuggestions] = useState("");
   const [openResponse, setOpenResponse] = useState("");
 
-  // Step 2 — Identity
+  // Step 2 ï¿½ Identity
   const [profileName, setProfileName] = useState("");
   const [identityLocked, setIdentityLocked] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [dobInput, setDobInput] = useState("");
 
-  // Step 3 — Declaration
+  // Step 3 ï¿½ Declaration
   const [checkbox1, setCheckbox1] = useState(false);
   const [checkbox2, setCheckbox2] = useState(false);
 
@@ -166,13 +166,13 @@ function CompletionGate() {
     setSubmitting(true);
     const { error } = await supabase.from("course_feedback_v2").insert({
       enrollment_id: enrollmentId,
-      overall_rating: overallRating,
+      satisfaction_score: overallRating,
       content_rating: contentRating,
       instructor_rating: instructorRating,
-      platform_rating: platformRating,
+      usability_rating: platformRating,
       strengths: strengths || null,
       weaknesses: weaknesses || null,
-      suggestions: suggestions || null,
+      improvements: suggestions || null,
       open_response: openResponse || null,
     });
     if (error) { toast.error(error.message); setSubmitting(false); return; }

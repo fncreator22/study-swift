@@ -48,6 +48,7 @@ import { Route as AdminAdminNotificationsRouteImport } from './routes/_admin.adm
 import { Route as AdminAdminMonitoringRouteImport } from './routes/_admin.admin.monitoring'
 import { Route as AdminAdminMarketingRouteImport } from './routes/_admin.admin.marketing'
 import { Route as AdminAdminCoursesRouteImport } from './routes/_admin.admin.courses'
+import { Route as AdminAdminCourseReviewsRouteImport } from './routes/_admin.admin.course-reviews'
 import { Route as AdminAdminBugsRouteImport } from './routes/_admin.admin.bugs'
 import { Route as StudentTestsTestIdIndexRouteImport } from './routes/_student.tests.$testId.index'
 import { Route as StudentTestsTestIdAttemptRouteImport } from './routes/_student.tests.$testId.attempt'
@@ -250,6 +251,11 @@ const AdminAdminCoursesRoute = AdminAdminCoursesRouteImport.update({
   path: '/admin/courses',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminCourseReviewsRoute = AdminAdminCourseReviewsRouteImport.update({
+  id: '/admin/course-reviews',
+  path: '/admin/course-reviews',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAdminBugsRoute = AdminAdminBugsRouteImport.update({
   id: '/admin/bugs',
   path: '/admin/bugs',
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/bugs': typeof AdminAdminBugsRoute
+  '/admin/course-reviews': typeof AdminAdminCourseReviewsRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/marketing': typeof AdminAdminMarketingRoute
   '/admin/monitoring': typeof AdminAdminMonitoringRoute
@@ -367,6 +374,7 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/admin/bugs': typeof AdminAdminBugsRoute
+  '/admin/course-reviews': typeof AdminAdminCourseReviewsRoute
   '/admin/courses': typeof AdminAdminCoursesRoute
   '/admin/marketing': typeof AdminAdminMarketingRoute
   '/admin/monitoring': typeof AdminAdminMonitoringRoute
@@ -417,6 +425,7 @@ export interface FileRoutesById {
   '/admin/login': typeof AdminLoginRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_admin/admin/bugs': typeof AdminAdminBugsRoute
+  '/_admin/admin/course-reviews': typeof AdminAdminCourseReviewsRoute
   '/_admin/admin/courses': typeof AdminAdminCoursesRoute
   '/_admin/admin/marketing': typeof AdminAdminMarketingRoute
   '/_admin/admin/monitoring': typeof AdminAdminMonitoringRoute
@@ -466,6 +475,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/auth/callback'
     | '/admin/bugs'
+    | '/admin/course-reviews'
     | '/admin/courses'
     | '/admin/marketing'
     | '/admin/monitoring'
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/auth/callback'
     | '/admin/bugs'
+    | '/admin/course-reviews'
     | '/admin/courses'
     | '/admin/marketing'
     | '/admin/monitoring'
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/auth/callback'
     | '/_admin/admin/bugs'
+    | '/_admin/admin/course-reviews'
     | '/_admin/admin/courses'
     | '/_admin/admin/marketing'
     | '/_admin/admin/monitoring'
@@ -879,6 +891,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminCoursesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/course-reviews': {
+      id: '/_admin/admin/course-reviews'
+      path: '/admin/course-reviews'
+      fullPath: '/admin/course-reviews'
+      preLoaderRoute: typeof AdminAdminCourseReviewsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/bugs': {
       id: '/_admin/admin/bugs'
       path: '/admin/bugs'
@@ -940,6 +959,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAdminBugsRoute: typeof AdminAdminBugsRoute
+  AdminAdminCourseReviewsRoute: typeof AdminAdminCourseReviewsRoute
   AdminAdminCoursesRoute: typeof AdminAdminCoursesRoute
   AdminAdminMarketingRoute: typeof AdminAdminMarketingRoute
   AdminAdminMonitoringRoute: typeof AdminAdminMonitoringRoute
@@ -958,6 +978,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminBugsRoute: AdminAdminBugsRoute,
+  AdminAdminCourseReviewsRoute: AdminAdminCourseReviewsRoute,
   AdminAdminCoursesRoute: AdminAdminCoursesRoute,
   AdminAdminMarketingRoute: AdminAdminMarketingRoute,
   AdminAdminMonitoringRoute: AdminAdminMonitoringRoute,
