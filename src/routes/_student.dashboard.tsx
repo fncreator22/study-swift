@@ -79,7 +79,7 @@ function Dashboard() {
         };
       }).filter(Boolean);
 
-      setEnrolledCourses(mappedEnrolled);
+      setEnrolledCourses(mappedEnrolled.slice(0, 6));
       setLoading(false);
     })();
   }, [user]);

@@ -100,6 +100,8 @@ function CompletionGate() {
   const [identityLocked, setIdentityLocked] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [dobInput, setDobInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [certIssued, setCertIssued] = useState(false);
 
   // Step 3 � Declaration
   const [checkbox1, setCheckbox1] = useState(false);
@@ -141,17 +143,27 @@ function CompletionGate() {
         return;
       }
 
+      // Check if a certificate already exists
+      const { data: cert } = await supabase
+        .from("course_certificates_v2" as any)
+        .select("id")
+        .eq("enrollment_id", enrollment.id)
+        .maybeSingle();
+      const hasCert = !!cert;
+      setCertIssued(hasCert);
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, date_of_birth")
         .eq("id", user.id)
         .maybeSingle();
 
-      const locked = !!(profile?.full_name && profile?.date_of_birth);
+      const locked = hasCert || !!(profile?.full_name && profile?.date_of_birth);
       setIdentityLocked(locked);
       setProfileName(profile?.full_name ?? "");
       setNameInput(profile?.full_name ?? "");
       setDobInput(profile?.date_of_birth ?? "");
+      setEmailInput(user.email ?? "");
 
       if (hasFeedback) setStep(2);
       setLoading(false);
@@ -186,8 +198,8 @@ function CompletionGate() {
     if (!user) return;
     const finalName = identityLocked ? profileName : nameInput.trim();
     const finalDob = identityLocked ? dobInput : dobInput.trim();
-    if (!finalName || !finalDob) {
-      toast.error("Please enter your full name and date of birth.");
+    if (!finalName || !finalDob || !emailInput.trim()) {
+      toast.error("Please fill out all credentials to proceed.");
       return;
     }
     setSubmitting(true);
@@ -308,6 +320,13 @@ function CompletionGate() {
                     {identityLocked && <Lock className="h-3.5 w-3.5 text-gray-400" />}
                   </Label>
                   <Input className="mt-1.5" placeholder="Your official full name" value={nameInput} onChange={(e) => setNameInput(e.target.value)} disabled={identityLocked} />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    Email Address
+                    {identityLocked && <Lock className="h-3.5 w-3.5 text-gray-400" />}
+                  </Label>
+                  <Input className="mt-1.5" type="email" placeholder="Your email address" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} disabled={identityLocked} />
                 </div>
                 <div>
                   <Label className="text-sm font-medium flex items-center gap-1.5">

@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_student")({ component: StudentLayout });
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tests", label: "All Tests", icon: BookOpen },
-  { to: "/purchased", label: "Purchased", icon: CheckCircle },
+  { to: "/purchased", label: "My Learning", icon: BookOpen },
   { to: "/history", label: "History", icon: Clock },
   { to: "/rankings", label: "Rankings", icon: Trophy },
   { to: "/wallet", label: "Wallet", icon: Wallet },
@@ -512,7 +512,7 @@ function StudentLayout() {
                           { to: "/profile", label: "My Profile", icon: Settings },
                           { to: "/subscriptions", label: "Subscriptions & Upgrade", icon: Crown },
                           { to: "/rankings", label: "Leaderboard Rankings", icon: Trophy },
-                          { to: "/purchased", label: "My Purchased Items", icon: CheckCircle },
+                          { to: "/purchased", label: "My Learning", icon: BookOpen },
                           { to: "/support-center", label: "Support & Help Desk", icon: MessageSquare },
                           { to: "/wallet", label: "Wallet & Transactions", icon: Wallet },
                           { to: "/history", label: "Attempt History", icon: Clock },
