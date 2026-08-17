@@ -5,7 +5,7 @@
 ![License](https://img.shields.io/badge/License-Commercial-green?style=for-the-badge)
 
 ## Executive Overview
-**Examly Enterprise** is a high-performance, commercially-ready Learning Management System (LMS) and Assessment Platform designed for modern educational institutions, corporate training centers, and e-learning providers. 
+**Examly Enterprise** is a high-performance, commercially-ready Learning Management System and Assessment Platform designed for modern educational institutions, corporate training centers, and e-learning providers. 
 
 The platform bridges the gap between content delivery and performance evaluation, providing a seamless end-to-end workflow from course consumption to rigorous exam execution. Built with a focus on scalability and sub-second performance, Examly enables organizations to deliver high-stakes testing at scale while maintaining deep analytical insights into student progress.
 
